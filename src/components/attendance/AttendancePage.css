@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: #f9fafb;
+  background: #f0f0f0;
 }
 
 /* Back button */
@@ -12,6 +12,11 @@
   font-weight: 600;
   color: #555;
   cursor: pointer;
+  transition: color 0.2s ease-in-out;
+}
+
+.back-btn:hover {
+  color: #ca8a04; /* golden on hover */
 }
 
 /* Card grid */
@@ -30,26 +35,33 @@
   padding: 25px;
   text-align: center;
   box-shadow: 0px 4px 10px rgba(0,0,0,0.08);
-  transition: transform 0.2s ease-in-out;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   max-width: 300px;
   width: 100%;
-  max-height: 220px;
+  max-height: 170px;
+  cursor: pointer;
 }
 
 .card:hover {
   transform: translateY(-5px);
+  box-shadow: 0px 8px 18px rgba(202, 138, 4, 0.25); /* golden glow */
 }
 
 .card-icon {
   font-size: 30px;
-  color: #2e7d32;
+  color: #ca8a04; /* golden */
   margin-bottom: 10px;
+  transition: color 0.3s ease;
+}
+
+.card:hover .card-icon {
+  color: #b45309; /* darker golden on hover */
 }
 
 .card h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #2e7d32;
+  color: #ca8a04; /* golden */
   margin-bottom: 5px;
 }
 

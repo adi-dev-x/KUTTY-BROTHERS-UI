@@ -20,7 +20,7 @@
 }
 
 .footer-left .green {
-  color: #16a34a;
+  color: #ca8a04; /* replaced green with golden */
 }
 
 .footer-left p {
@@ -29,7 +29,7 @@
 }
 
 .footer-left a {
-  color: #16a34a;
+  color: #ca8a04; /* golden links */
   text-decoration: none;
   font-size: 13px;
 }
@@ -46,6 +46,5 @@
   margin: 0 5px;
   text-decoration: none;
   font-size: 20px;
+  color: #ca8a04; /* golden social icons */
 }
-
-

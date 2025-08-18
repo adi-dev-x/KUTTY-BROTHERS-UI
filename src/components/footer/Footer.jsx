@@ -7,7 +7,7 @@ const Footer = () => {
     <footer className="footer">
       {/* Left side */}
       <div className="footer-left">
-        <h3>
+        <h3 style={{ color: "#000000ff" }}>
           <span className="green">KUTTY</span>BROTHERS
         </h3>
         <p>

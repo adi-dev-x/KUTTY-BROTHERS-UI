@@ -14,11 +14,14 @@
   height: 100%;         /* Ensure it takes space before footer */
 }
 
-/* Left green welcome panel */
+/* Left yellow welcome panel */
 .welcome-panel {
   flex: 1;
-  background: #10b981;
-  color: white;
+  background: linear-gradient(rgb(255, 235, 155), rgba(220, 188, 58, 0.9)), 
+              url("/src/assets/green-bg.png"); /* ✅ your image */
+  background-size: cover;
+  background-position: center;
+  color: #333;         
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -27,15 +30,17 @@
   padding: 40px;
 }
 
+
 .welcome-panel h1 {
   font-size: 2.5rem;
   margin-bottom: 20px;
+  color: #78350f; /* muted brown for matte feel */
 }
 
 /* Right login panel */
 .form-panel {
   flex: 1;
-  background: #f9fafb;
+  background: #f0f0f0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -54,7 +59,7 @@
 
 .form-box h2 {
   margin-bottom: 20px;
-  color: #16a34a;
+  color: #ca8a04; /* earthy golden */
 }
 
 /* Social login */
@@ -100,8 +105,8 @@
   width: 100%;
   padding: 12px;
   margin-top: 15px;
-  background: #10b981;
-  color: white;
+  background: #facc15; /* matte yellow */
+  color: #333;
   font-size: 16px;
   border: none;
   border-radius: 8px;
@@ -109,7 +114,7 @@
 }
 
 .login-btn:hover {
-  background: #059669;
+  background: #eab308; /* darker yellow hover */
 }
 
 /* Footer */
@@ -135,7 +140,7 @@
 }
 
 .footer-left .green {
-  color: #16a34a;
+  color: #ca8a04; /* changed highlight to golden */
 }
 
 .footer-left p {
@@ -144,7 +149,7 @@
 }
 
 .footer-left a {
-  color: #16a34a;
+  color: #ca8a04; /* link highlight */
   text-decoration: none;
   font-size: 13px;
 }
@@ -162,6 +167,7 @@
   margin: 0 5px;
   text-decoration: none;
   font-size: 20px;
+  color: #ca8a04; /* yellow-golden for icons */
 }
 
 /* Responsive */
@@ -190,9 +196,27 @@
     text-align: center;
   }
 }
+
 .error-message {
   color: red;
   font-size: 14px;
   margin-top: 10px;
   text-align: center;
+}
+
+/* Logo inside welcome-panel */
+.welcome-logo {
+  width: 20%;            /* relative to parent panel */
+  max-width: 120px;      /* don’t grow too large */
+  height: auto;          /* keeps aspect ratio */
+  margin-bottom: 20px;
+  object-fit: contain;
+}
+
+/* On very small screens */
+@media (max-width: 600px) {
+  .welcome-logo {
+    width: 30%;          /* slightly bigger for small screens */
+    max-width: 100px;
+  }
 }

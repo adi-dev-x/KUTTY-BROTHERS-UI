@@ -3,7 +3,7 @@ import "./LoginPage.css";
 import { RiLockPasswordLine } from "react-icons/ri";
 import { FaRegUserCircle } from "react-icons/fa";
 import Footer from "../footer/Footer";
-
+import logo from "/src/assets/logo.png"; // ✅ Import logo
 
 const LoginPage = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState("");
@@ -30,6 +30,7 @@ const LoginPage = ({ onLoginSuccess }) => {
       <div className="login-container">
         {/* Left Section */}
         <div className="welcome-panel">
+          <img src={logo} alt="Logo" className="welcome-logo" /> {/* ✅ Logo added */}
           <h1>Welcome Back!</h1>
           <p>To keep connected with us please login with your personal info</p>
         </div>
@@ -69,13 +70,11 @@ const LoginPage = ({ onLoginSuccess }) => {
               </button>
             </form>
           </div>
-          
         </div>
-              
       </div>
-<Footer />
+
+      <Footer />
     </div>
-    
   );
 };
 
