@@ -1,11 +1,52 @@
-import { useState } from 'react'
+import { useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "./components/LoginPage/LoginPage";
-import './App.css'
+import MainPage from "./components/MainPage/MainPage";
+import AttendancePage from "./components/attendance/AttendancePage";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  return <LoginPage />;
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+  };
+
+  return (
+    <Router>
+      <Routes>
+        {/* Login Route */}
+        <Route
+          path="/login"
+          element={
+            isLoggedIn ? <Navigate to="/" /> : <LoginPage onLoginSuccess={handleLoginSuccess} />
+          }
+        />
+
+        {/* Main Page Route */}
+        <Route
+          path="/"
+          element={
+            isLoggedIn ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" />
+          }
+        />
+
+        {/* Attendance Page Route */}
+        <Route
+          path="/attendance"
+          element={
+            isLoggedIn ? <AttendancePage onLogout={handleLogout} /> : <Navigate to="/login" />
+          }
+        />
+
+        {/* Optional: Catch-all redirect */}
+        <Route path="*" element={<Navigate to={isLoggedIn ? "/" : "/login"} />} />
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;
