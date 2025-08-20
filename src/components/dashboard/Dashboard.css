@@ -1,0 +1,197 @@
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f6f8;
+}
+
+/* Body = sidebar + main */
+.dashboard-body {
+  display: flex;
+  flex: 1;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  background: #fff;
+  border-right: 1px solid #ddd;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  font-weight: bold;
+  color: #eab308; /* yellow-500 */
+}
+
+.logo span {
+  color: #000;
+}
+
+.sidebar-section {
+  margin-top: 30px;
+  font-size: 14px;
+  color: #888;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.sidebar ul li {
+  padding: 10px 5px;
+  cursor: pointer;
+  color: #333;
+  border-radius: 6px;
+}
+
+.sidebar ul li.active,
+.sidebar ul li:hover {
+  background: #fef9c3; /* yellow-100 */
+  color: #ca8a04;     /* yellow-600 */
+}
+
+.sub-menu {
+  margin-left: 15px;
+  font-size: 14px;
+  color: #666;
+}
+
+.sidebar-support {
+  margin-top: auto;
+  color: #555;
+  font-size: 14px;
+}
+
+/* Main content */
+.dashboard-main {
+  flex: 1;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Top stats */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.stats-cards .card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
+}
+
+.stats-cards .card h2 {
+  margin-top: 10px;
+  font-size: 22px;
+}
+
+.stats-cards .yellow {
+  border-left: 5px solid #facc15;
+}
+
+/* Chart + Upcoming Rentals row */
+.chart-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr; /* Chart smaller, Rentals wider */
+  gap: 20px;
+  align-items: stretch; /* ✅ equal height */
+}
+
+/* Chart Card */
+.chart-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
+
+  min-height: 260px;   /* ✅ same height as table */
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card canvas {
+  flex: 1;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Table Card (Upcoming Rentals + Transactions) */
+.table-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
+  overflow-x: auto;
+margin-left: 10px;
+  min-height: 260px;   /* ✅ matches chart card */
+  display: flex;
+  flex-direction: column;
+}
+
+.table-card table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.table-card th, 
+.table-card td {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.table-card th {
+  color: #333;
+  font-weight: 600;
+}
+
+/* Recent Transactions Row - SINGLE CARD */
+.transactions-row {
+  display: flex;         /* full width single row */
+  width: 100%;
+}
+
+.transactions-row .table-card {
+  flex: 1;
+  min-height: 220px;     /* ✅ consistent height */
+}
+
+/* ------------------- Responsive ------------------- */
+@media (max-width: 1200px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr); /* 2 cards per row */
+  }
+}
+
+@media (max-width: 900px) {
+  .chart-row {
+    grid-template-columns: 1fr; /* stack chart & rentals */
+  }
+  
+  .stats-cards {
+    grid-template-columns: 1fr; /* 1 card per row */
+  }
+
+  .chart-card,
+  .table-card {
+    min-height: 200px; /* smaller on mobile */
+  }
+
+  .tables-grid,
+  .transactions-row {
+    flex-direction: column; /* stack on mobile */
+  }
+}

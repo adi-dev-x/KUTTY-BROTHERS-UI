@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import LoginPage from "./components/LoginPage/LoginPage";
 import MainPage from "./components/MainPage/MainPage";
 import AttendancePage from "./components/attendance/AttendancePage";
+import Dashboard from "./components/dashboard/Dashboard"; // ✅ import your Dashboard component
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -42,7 +43,15 @@ function App() {
           }
         />
 
-        {/* Optional: Catch-all redirect */}
+        {/* Dashboard Page Route (All Employees redirect here) */}
+        <Route
+          path="/dashboard"
+          element={
+            isLoggedIn ? <Dashboard onLogout={handleLogout} /> : <Navigate to="/login" />
+          }
+        />
+
+        {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to={isLoggedIn ? "/" : "/login"} />} />
       </Routes>
     </Router>

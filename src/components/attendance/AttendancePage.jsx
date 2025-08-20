@@ -3,14 +3,15 @@ import "./AttendancePage.css";
 import Header from "../header/Header";
 import Footer from "../footer/Footer";
 import { FaMapMarkerAlt, FaUsers } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 const AttendancePage = ({ onLogout }) => {
+  const navigate = useNavigate();
+
   return (
     <div className="attendance-wrapper">
       {/* Header */}
       <Header onLogout={onLogout} />
-
-     
 
       {/* Cards Section */}
       <div className="card-grid">
@@ -32,7 +33,11 @@ const AttendancePage = ({ onLogout }) => {
           <p>Track performance and activities of Site 3</p>
         </div>
 
-        <div className="card">
+        {/* All Employees Card → Redirects to Dashboard */}
+        <div
+          className="card clickable"
+          onClick={() => navigate("/dashboard")}
+        >
           <FaUsers className="card-icon" />
           <h3>All Employees</h3>
           <p>Track performance and activities of all employees</p>
