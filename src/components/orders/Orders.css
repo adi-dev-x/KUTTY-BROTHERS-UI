@@ -1,0 +1,95 @@
+/* ===== Minimal Golden Theme Form ===== */
+.add-stock-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  max-width: 720px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #fff8e1; /* Light golden background */
+  border: 1px solid #ffd700; /* golden border */
+  border-radius: 10px;
+  font-family: Arial, sans-serif;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.add-stock-form label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #b87c15;
+}
+
+.add-stock-form input,
+.add-stock-form select {
+  padding: 8px 10px;
+  border: 1px solid #ffd700;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.add-stock-form input:focus,
+.add-stock-form select:focus {
+  border-color: #b87c15;
+  box-shadow: 0 0 5px rgba(184, 124, 21, 0.3);
+  outline: none;
+}
+
+/* Add Item section */
+.add-stock-form button {
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  background: #d9941a;
+  border: 1px solid #d9941a;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-stock-form button:hover {
+  background: #b87c15;
+  border-color: #b87c15;
+}
+
+/* Item subform inline */
+.item-subform {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.item-subform input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ffd700;
+  border-radius: 6px;
+}
+
+/* Form actions */
+.add-stock-form .submit-btn {
+  grid-column: span 2;
+  background: #d9941a;
+  color: #fff;
+  border: 1px solid #d9941a;
+}
+
+.add-stock-form .submit-btn:hover {
+  background: #b87c15;
+  border-color: #b87c15;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .add-stock-form {
+    grid-template-columns: 1fr;
+    padding: 15px;
+  }
+  .item-subform {
+    flex-direction: column;
+  }
+}

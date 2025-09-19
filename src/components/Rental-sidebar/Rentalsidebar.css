@@ -1,0 +1,120 @@
+.rental-sidebar {
+  width: 240px;
+  background: #fff;
+  padding: 20px;
+  border-right: 1px solid #eee;
+  min-height: 100vh;
+  box-shadow: 2px 0px 6px rgba(0, 0, 0, 0.05);
+  font-family: "Inter", sans-serif;
+}
+
+.sidebar-header {
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.sidebar-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #d9941a;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-menu li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* ✅ ensures chevron aligns properly */
+  padding: 12px 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  color: #444;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.sidebar-menu li .icon {
+  margin-right: 10px;
+  color: #d9941a;
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar-menu li:hover {
+  background: #f5f6f8;
+  color: #d9941a;
+}
+
+.sidebar-menu li a {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  width: 100%; /* ✅ aligns with submenu trigger */
+}
+
+.sidebar-menu li a.active-link {
+  color: #d9941a;
+  font-weight: 600;
+}
+
+/* ===== Submenu Styles ===== */
+.has-submenu {
+  padding: 12px 10px;
+}
+
+.menu-link {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.menu-link span {
+  flex: 1;
+}
+
+.menu-item .chevron {
+  margin-left: auto;
+  color: #666;
+  width: 16px;
+  height: 16px;
+}
+
+/* Submenu */
+.submenu {
+  list-style: none;
+  padding-left: 45px; /* ✅ indentation */
+  margin: 0 0 10px;
+  animation: slideDown 0.3s ease;
+}
+
+.submenu li {
+  margin-bottom: 6px;
+}
+
+.submenu li a {
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 6px;
+  color: #555;
+  display: block;
+  transition: all 0.2s ease-in-out;
+}
+
+.submenu li a:hover {
+  background: #fff4e1;
+  color: #d9941a;
+}
+
+.submenu li a.active-link {
+  color: #d9941a;
+  font-weight: 600;
+  background: #fff4e1;
+  box-shadow: inset 3px 0 0 #d9941a;
+}

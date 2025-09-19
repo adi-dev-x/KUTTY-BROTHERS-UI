@@ -1,0 +1,65 @@
+.rental-sidebar {
+  width: 240px;
+  background: #fff;
+  padding: 20px;
+  border-right: 1px solid #eee;
+  min-height: 100vh;
+  box-shadow: 2px 0px 6px rgba(0, 0, 0, 0.05);
+  font-family: "Inter", sans-serif;
+}
+
+.sidebar-header {
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.sidebar-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #d9941a;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-menu li {
+  display: flex;
+  align-items: center;
+  padding: 12px 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  color: #444;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.sidebar-menu li .icon {
+  margin-right: 10px;
+  color: #d9941a; /* ✅ Themed icon color */
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar-menu li:hover {
+  background: #f5f6f8;
+  color: #d9941a;
+}
+/* ✅ Active NavLink - only text turns yellow, no underline */
+.sidebar-menu li a.active-link {
+  color: #d9941a;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Remove underline from ALL links inside sidebar */
+.sidebar-menu li a {
+  text-decoration: none;
+  color: inherit; /* keep default text color */
+  display: flex;
+  align-items: center;
+}
