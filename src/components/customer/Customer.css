@@ -283,83 +283,56 @@
 .download-btn:hover .download-icon {
   color: white;
 }
+/* Add this to Customer.css */
+
+/* Form Container */
 .add-customer-form {
-  background-color: #2b1b0f; /* dark brown */
-  border: 2px solid #b8860b; /* dark golden border */
+  background-color: #ffffff; /* White background */
+  border: 2px solid #b8860b; /* Dark gold border */
   padding: 20px;
-  border-radius: 12px;
-  color: #ffd700; /* golden text */
-  max-width: 500px;
+  border-radius: 10px;
+  max-width: 600px;
   margin: 20px auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Form Inputs */
 .add-customer-form input {
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #b8860b;
-  background-color: #3a2a1a;
-  color: #ffd700;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 15px;
+  border: 1px solid #b8860b; /* Dark gold border */
+  border-radius: 5px;
+  font-size: 14px;
+  color: #333;
 }
 
-.add-customer-form input::placeholder {
-  color: #f5d76e;
+/* Input Focus */
+.add-customer-form input:focus {
+  outline: none;
+  border-color: #daa520; /* lighter gold on focus */
+  box-shadow: 0 0 5px rgba(218, 165, 32, 0.5);
 }
 
+/* Submit Button */
 .add-customer-form button {
-  background-color: #b8860b;
-  color: #2b1b0f;
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  background-color: #b8860b; /* Dark gold */
+  color: #ffffff;
+  padding: 10px 20px;
   font-weight: bold;
-  transition: 0.3s;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
+/* Submit Button Hover */
 .add-customer-form button:hover {
-  background-color: #ffd700;
-  color: #2b1b0f;
-}
-.add-customer-form {
-  background-color: #2b1b0f; /* dark brown */
-  border: 2px solid #b8860b; /* dark golden border */
-  padding: 20px;
-  border-radius: 12px;
-  color: #ffd700; /* golden text */
-  max-width: 500px;
-  margin: 20px auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  background-color: #daa520; /* lighter gold on hover */
 }
 
-.add-customer-form input {
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #b8860b;
-  background-color: #3a2a1a;
-  color: #ffd700;
-}
-
+/* Optional: Placeholder color */
 .add-customer-form input::placeholder {
-  color: #f5d76e;
-}
-
-.add-customer-form button {
-  background-color: #b8860b;
-  color: #2b1b0f;
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: 0.3s;
-}
-
-.add-customer-form button:hover {
-  background-color: #ffd700;
-  color: #2b1b0f;
+  color: #b8860b;
+  font-weight: 500;
 }
