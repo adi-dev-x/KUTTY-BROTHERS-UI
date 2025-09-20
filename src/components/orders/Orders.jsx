@@ -1,38 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import Header from "../header/Header";
-import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
-import "./Orders.css";
 import { FiDownload, FiPlus, FiTrash2 } from "react-icons/fi";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import axios from "axios";
+import Header from "../header/Header";
+import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
+import OrderForm from "./OrderForm";
+import "./Orders.css";
 
 const Orders = ({ onLogout }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [customers, setCustomers] = useState([]);
-  const [formData, setFormData] = useState({
-    customer_id: "",
-    customer_name: "",
-    contact_person: "",
-    contact_number: "",
-    contact_address: "",
-    inventory_id: "INV001",
-    advance_amount: 0,
-    returned_at: "",
-    status: "INITIATED",
-    items: [],
-  });
-  const [showItemForm, setShowItemForm] = useState(false);
-  const [itemData, setItemData] = useState({ amount: 0, returned_at: "" });
-
-  const navigate = useNavigate();
 
   useEffect(() => {
-    // Dummy orders for testing
+    // Dummy initial orders for testing
     const dummyOrders = [
       {
         customer_id: "CUST001",
@@ -44,52 +27,43 @@ const Orders = ({ onLogout }) => {
         advance_amount: 500,
         returned_at: "2025-09-25",
         status: "Pending",
-        items: [{ amount: 200, returned_at: "2025-09-23" }],
+        items: [
+          {
+            item_id: "1",
+            item_name: "Nike Air Max",
+            amount: 200,
+            expired_at: "2025-09-23",
+            status: "INITIATED",
+            images: [],
+          },
+        ],
       },
     ];
     setOrders(dummyOrders);
     setLoading(false);
   }, []);
 
-  // Fetch customers from API
-  useEffect(() => {
-    axios
-      .get("http://localhost:8080/irrl/genericApiUnjoin/customer")
-      .then((res) => setCustomers(res.data.data || []))
-      .catch((err) => console.error(err));
-  }, []);
+  const handleAddOrder = async (newOrder) => {
+    try {
+      // Prepare FormData for backend
+      const formData = new FormData();
+      newOrder.items.forEach((item, idx) => {
+        item.images.forEach((img) => {
+          formData.append("images", img.file);
+        });
+      });
+      formData.append("order", JSON.stringify(newOrder));
 
-  const handleCustomerSelect = (name) => {
-    const customer = customers.find((c) => c.name === name);
-    if (customer) {
-      setFormData({ ...formData, customer_name: name, customer_id: customer.customer_id });
-    } else {
-      setFormData({ ...formData, customer_name: name, customer_id: "" });
+      await axios.post("http://localhost:8080/irrl/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setOrders([...orders, newOrder]);
+      setShowForm(false);
+    } catch (err) {
+      console.error("Upload failed", err);
+      alert("Failed to save order");
     }
-  };
-
-  const handleAddItem = () => {
-    setFormData({ ...formData, items: [...formData.items, itemData] });
-    setItemData({ amount: 0, returned_at: "" });
-    setShowItemForm(false);
-  };
-
-  const handleAddOrder = () => {
-    setOrders([...orders, formData]);
-    setFormData({
-      customer_id: "",
-      customer_name: "",
-      contact_person: "",
-      contact_number: "",
-      contact_address: "",
-      inventory_id: "INV001",
-      advance_amount: 0,
-      returned_at: "",
-      status: "INITIATED",
-      items: [],
-    });
-    setShowForm(false);
-    setShowItemForm(false);
   };
 
   const handleDelete = (inventory_id) => {
@@ -100,11 +74,6 @@ const Orders = ({ onLogout }) => {
     setOrders(
       orders.map((o) => (o.inventory_id === inventory_id ? { ...o, status: newStatus } : o))
     );
-  };
-
-  const calculateNetAmount = (order) => {
-    const totalItemAmount = order.items.reduce((acc, i) => acc + (i.amount || 0), 0);
-    return order.advance_amount + totalItemAmount;
   };
 
   const handleDownloadPDF = () => {
@@ -128,7 +97,9 @@ const Orders = ({ onLogout }) => {
     const tableRows = [];
 
     orders.forEach((o, i) => {
-      const itemText = o.items.map((it, idx) => `${idx + 1}. ${it.amount} (${it.returned_at})`).join(", ");
+      const itemText = o.items
+        .map((it, idx) => `${idx + 1}. ${it.item_name} (${it.amount}, ${it.expired_at}, ${it.status})`)
+        .join(", ");
       tableRows.push([
         i + 1,
         o.customer_name || "-",
@@ -177,127 +148,8 @@ const Orders = ({ onLogout }) => {
             </button>
           </div>
 
-          {showForm && (
-            <div className="add-stock-form">
-              {/* Customer Name & hidden ID */}
-              <div>
-                <label>Customer Name</label>
-                <input
-                  type="text"
-                  placeholder="Customer Name"
-                  value={formData.customer_name}
-                  onChange={(e) => handleCustomerSelect(e.target.value)}
-                  list="customers-list"
-                />
-                <datalist id="customers-list">
-                  {customers.map((c) => (
-                    <option key={c.customer_id} value={c.name} />
-                  ))}
-                </datalist>
-              </div>
-              <div>
-                <label>Customer ID (hidden)</label>
-                <input type="text" value={formData.customer_id} readOnly hidden />
-              </div>
+          {showForm && <OrderForm onAddOrder={handleAddOrder} />}
 
-              {/* Contact Person & Number */}
-              <div>
-                <label>Contact Person</label>
-                <input
-                  type="text"
-                  value={formData.contact_person}
-                  onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-                />
-              </div>
-              <div>
-                <label>Contact Number</label>
-                <input
-                  type="text"
-                  value={formData.contact_number}
-                  onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })}
-                />
-              </div>
-
-              {/* Contact Address & Inventory ID */}
-              <div>
-                <label>Contact Address</label>
-                <input
-                  type="text"
-                  value={formData.contact_address}
-                  onChange={(e) => setFormData({ ...formData, contact_address: e.target.value })}
-                />
-              </div>
-              <div>
-                <label>Inventory ID</label>
-                <input type="text" value={formData.inventory_id} readOnly />
-              </div>
-
-              {/* Advance Amount & Returned At */}
-              <div>
-                <label>Advance Amount</label>
-                <input
-                  type="number"
-                  value={formData.advance_amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, advance_amount: parseInt(e.target.value) || 0 })
-                  }
-                />
-              </div>
-              <div>
-                <label>Returned At</label>
-                <input
-                  type="date"
-                  value={formData.returned_at}
-                  onChange={(e) => setFormData({ ...formData, returned_at: e.target.value })}
-                />
-              </div>
-
-              {/* Status */}
-              <div>
-                <label>Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                >
-                  <option value="INITIATED">INITIATED</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Returned">Returned</option>
-                  <option value="Declined">Declined</option>
-                </select>
-              </div>
-
-              {/* Add Item Fields */}
-              <div style={{ gridColumn: "span 2" }}>
-                <button type="button" onClick={() => setShowItemForm(!showItemForm)}>
-                  Add Item
-                </button>
-                {showItemForm && (
-                  <div style={{ marginTop: "10px" }}>
-                    <input
-                      type="number"
-                      placeholder="Item Amount"
-                      value={itemData.amount}
-                      onChange={(e) =>
-                        setItemData({ ...itemData, amount: parseInt(e.target.value) || 0 })
-                      }
-                    />
-                    <input
-                      type="date"
-                      value={itemData.returned_at}
-                      onChange={(e) => setItemData({ ...itemData, returned_at: e.target.value })}
-                    />
-                    <button onClick={handleAddItem}>Save Item</button>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ gridColumn: "span 2" }}>
-                <button onClick={handleAddOrder}>Add Order</button>
-              </div>
-            </div>
-          )}
-
-          {/* Orders Table */}
           {loading ? (
             <p>Loading orders...</p>
           ) : (
@@ -321,9 +173,9 @@ const Orders = ({ onLogout }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((o, index) => (
-                    <tr key={index}>
-                      <td>{index + 1}</td>
+                  {filteredOrders.map((o) => (
+                    <tr key={o.inventory_id}>
+                      <td>{orders.indexOf(o) + 1}</td>
                       <td>{o.customer_name || "-"}</td>
                       <td>{o.customer_id || "-"}</td>
                       <td>{o.contact_person || "-"}</td>
@@ -344,9 +196,16 @@ const Orders = ({ onLogout }) => {
                         </select>
                       </td>
                       <td>
-                        {o.items.map((it, idx) => (
-                          <div key={idx}>
-                            {it.amount} ({it.returned_at})
+                        {o.items.map((it) => (
+                          <div key={it.item_id || it.item_name} className="item-card-table">
+                            <strong>{it.item_name}</strong> | {it.amount} | {it.expired_at} | {it.status}
+                            {it.images?.length > 0 && (
+                              <div className="thumbs">
+                                {it.images.map((img, i) => (
+                                  <img key={i} src={img.url} alt={img.name} width="40" />
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </td>
