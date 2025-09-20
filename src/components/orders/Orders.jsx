@@ -15,46 +15,33 @@ const Orders = ({ onLogout }) => {
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    // Dummy initial orders for testing
-    const dummyOrders = [
-      {
-        customer_id: "CUST001",
-        customer_name: "Krishna Engineering",
-        contact_person: "John Doe",
-        contact_number: "9876543210",
-        contact_address: "123 Main St",
-        inventory_id: "INV001",
-        advance_amount: 500,
-        returned_at: "2025-09-25",
-        status: "Pending",
-        items: [
-          {
-            item_id: "1",
-            item_name: "Nike Air Max",
-            amount: 200,
-            expired_at: "2025-09-23",
-            status: "INITIATED",
-            images: [],
-          },
-        ],
-      },
-    ];
-    setOrders(dummyOrders);
-    setLoading(false);
+    const fetchOrders = async () => {
+      try {
+        const response = await axios.get(
+          "https://ems.binlaundry.com/irrl/genericApiUnjoin/listOrders"
+        );
+        const data = response.data?.data || [];
+        setOrders(data);
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
   }, []);
 
   const handleAddOrder = async (newOrder) => {
     try {
-      // Prepare FormData for backend
       const formData = new FormData();
-      newOrder.items.forEach((item, idx) => {
-        item.images.forEach((img) => {
+      newOrder.items.forEach((item) => {
+        item.images?.forEach((img) => {
           formData.append("images", img.file);
         });
       });
       formData.append("order", JSON.stringify(newOrder));
 
-      await axios.post("http://localhost:8080/irrl/upload", formData, {
+      await axios.post("https://ems.binlaundry.com/irrl/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -72,7 +59,9 @@ const Orders = ({ onLogout }) => {
 
   const handleStatusChange = (inventory_id, newStatus) => {
     setOrders(
-      orders.map((o) => (o.inventory_id === inventory_id ? { ...o, status: newStatus } : o))
+      orders.map((o) =>
+        o.inventory_id === inventory_id ? { ...o, status: newStatus } : o
+      )
     );
   };
 
@@ -97,8 +86,11 @@ const Orders = ({ onLogout }) => {
     const tableRows = [];
 
     orders.forEach((o, i) => {
-      const itemText = o.items
-        .map((it, idx) => `${idx + 1}. ${it.item_name} (${it.amount}, ${it.expired_at}, ${it.status})`)
+      const itemText = (o.items || [])
+        .map(
+          (it, idx) =>
+            `${idx + 1}. ${it.item_name} (${it.amount}, ${it.expired_at}, ${it.status})`
+        )
         .join(", ");
       tableRows.push([
         i + 1,
@@ -187,7 +179,9 @@ const Orders = ({ onLogout }) => {
                       <td>
                         <select
                           value={o.status}
-                          onChange={(e) => handleStatusChange(o.inventory_id, e.target.value)}
+                          onChange={(e) =>
+                            handleStatusChange(o.inventory_id, e.target.value)
+                          }
                         >
                           <option value="INITIATED">INITIATED</option>
                           <option value="Pending">Pending</option>
@@ -196,13 +190,22 @@ const Orders = ({ onLogout }) => {
                         </select>
                       </td>
                       <td>
-                        {o.items.map((it) => (
-                          <div key={it.item_id || it.item_name} className="item-card-table">
-                            <strong>{it.item_name}</strong> | {it.amount} | {it.expired_at} | {it.status}
+                        {(o.items || []).map((it) => (
+                          <div
+                            key={it.item_id || it.item_name}
+                            className="item-card-table"
+                          >
+                            <strong>{it.item_name}</strong> | {it.amount} |{" "}
+                            {it.expired_at} | {it.status}
                             {it.images?.length > 0 && (
                               <div className="thumbs">
                                 {it.images.map((img, i) => (
-                                  <img key={i} src={img.url} alt={img.name} width="40" />
+                                  <img
+                                    key={i}
+                                    src={img.url}
+                                    alt={img.name}
+                                    width="40"
+                                  />
                                 ))}
                               </div>
                             )}
@@ -210,7 +213,10 @@ const Orders = ({ onLogout }) => {
                         ))}
                       </td>
                       <td>
-                        <button className="delete-btn" onClick={() => handleDelete(o.inventory_id)}>
+                        <button
+                          className="delete-btn"
+                          onClick={() => handleDelete(o.inventory_id)}
+                        >
                           <FiTrash2 />
                         </button>
                       </td>

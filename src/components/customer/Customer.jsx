@@ -40,7 +40,7 @@ const RentalDashboard = ({ onLogout }) => {
 
   // ✅ Fetch customers from API
   useEffect(() => {
-    fetch("http://localhost:8080/irrl/genericApiUnjoin/customerlist")
+    fetch("https://ems.binlaundry.com/irrl/genericApiUnjoin/customerlist")
       .then((res) => res.json())
       .then((data) => {
         console.log("API Response:", data);

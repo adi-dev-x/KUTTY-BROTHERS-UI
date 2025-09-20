@@ -30,7 +30,7 @@ const ToolsDashboard = ({ onLogout }) => {
 
   // Fetch tools API
   useEffect(() => {
-    fetch("http://localhost:8080/irrl/genericApiUnjoin/toolslist")
+    fetch("https://ems.binlaundry.com/irrl/genericApiUnjoin/toolslist")
       .then((res) => res.json())
       .then((data) => {
         console.log("API Response:", data);

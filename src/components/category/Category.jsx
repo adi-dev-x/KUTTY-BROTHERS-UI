@@ -12,7 +12,7 @@ const CategoryDashboard = ({ onLogout }) => {
 
   // Fetch categories API
   useEffect(() => {
-    fetch("http://localhost:8080/irrl/attribute/category")
+    fetch("https://ems.binlaundry.com/irrl/attribute/category")
       .then((res) => res.json())
       .then((data) => {
         setCategories(Array.isArray(data.data) ? data.data : []);

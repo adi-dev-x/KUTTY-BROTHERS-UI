@@ -20,12 +20,16 @@ const StockReport = ({ onLogout }) => {
   const [formData, setFormData] = useState({
     item_name: "",
     brand: "",
-    description: "",
     item_main_type: "",
     item_sub_type: "",
+    description: "",
     main_code: "",
     sub_code: "",
-    count: 0,
+    available_count: "",
+    rented_count: "",
+    damaged_count: "",
+    not_initiated_count: "",
+    worn_out_count: "",
     status: "AVAILABLE",
   });
 
@@ -33,7 +37,7 @@ const StockReport = ({ onLogout }) => {
 
   // Fetch stock data
   useEffect(() => {
-    fetch("http://localhost:8080/irrl/genericApiUnjoin/productMain")
+    fetch("https://ems.binlaundry.com/irrl/genericApiUnjoin/productMain")
       .then((res) => res.json())
       .then((data) => {
         setStocks(Array.isArray(data.data) ? data.data : []);
@@ -47,57 +51,94 @@ const StockReport = ({ onLogout }) => {
 
   // Fetch brands
   useEffect(() => {
-    fetch("http://localhost:8080/irrl/attribute/brand")
+    fetch("https://ems.binlaundry.com/irrl/attribute/brand")
       .then((res) => res.json())
-      .then((data) => {
-        setBrands(Array.isArray(data.data) ? data.data : []);
-      })
+      .then((data) => setBrands(Array.isArray(data.data) ? data.data : []))
       .catch((err) => console.error("Error fetching brands:", err));
   }, []);
 
   // Fetch Main Types
   useEffect(() => {
-    fetch("http://localhost:8080/irrl/attribute/ItemMainType")
+    fetch("https://ems.binlaundry.com/irrl/attribute/ItemMainType")
       .then((res) => res.json())
-      .then((data) => {
-        setMainTypes(Array.isArray(data.data) ? data.data : []);
-      })
+      .then((data) => setMainTypes(Array.isArray(data.data) ? data.data : []))
       .catch((err) => console.error("Error fetching main types:", err));
   }, []);
 
   // Fetch Sub Types
   useEffect(() => {
-    fetch("http://localhost:8080/irrl/attribute/ItemSubType")
+    fetch("https://ems.binlaundry.com/irrl/attribute/ItemSubType")
       .then((res) => res.json())
-      .then((data) => {
-        setSubTypes(Array.isArray(data.data) ? data.data : []);
-      })
+      .then((data) => setSubTypes(Array.isArray(data.data) ? data.data : []))
       .catch((err) => console.error("Error fetching sub types:", err));
   }, []);
 
   // Add stock
-  const handleAddStock = () => {
-    setStocks([...stocks, formData]);
-    setFormData({
-      item_name: "",
-      brand: "",
-      description: "",
-      item_main_type: "",
-      item_sub_type: "",
-      main_code: "",
-      sub_code: "",
-      count: 0,
-      status: "AVAILABLE",
-    });
-    setShowForm(false);
+  const handleAddStock = async () => {
+    if (!formData.item_name || !formData.main_code || !formData.available_count) {
+      return alert("Please fill all required fields");
+    }
+
+    try {
+      // Map UI fields to backend field names
+      const payload = {
+        name: formData.item_name,
+        brand: formData.brand,
+        item_main_type: formData.item_main_type,
+        new_sub_code: formData.item_sub_type,
+        description: formData.description,
+        main_code: formData.main_code,
+        sub_code: formData.sub_code,
+        units: Number(formData.available_count), // send as units
+        rented_count: Number(formData.rented_count),
+        damaged_count: Number(formData.damaged_count),
+        not_initiated_count: Number(formData.not_initiated_count),
+        worn_out_count: Number(formData.worn_out_count),
+        category: formData.status, // keep old backend name
+      };
+
+      const response = await fetch("https://ems.binlaundry.com/irrl/addProduct", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to add stock: ${errorText}`);
+      }
+
+      const newStock = await response.json();
+      setStocks([...stocks, newStock]);
+
+      setFormData({
+        item_name: "",
+        brand: "",
+        item_main_type: "",
+        item_sub_type: "",
+        description: "",
+        main_code: "",
+        sub_code: "",
+        available_count: "",
+        rented_count: "",
+        damaged_count: "",
+        not_initiated_count: "",
+        worn_out_count: "",
+        status: "AVAILABLE",
+      });
+      setShowForm(false);
+    } catch (error) {
+      console.error("Error adding stock:", error);
+      alert("Failed to add stock. Check console for details.");
+    }
   };
 
   // Delete stock
-  const handleDelete = (code) => {
-    setStocks(stocks.filter((s) => s.main_code !== code));
+  const handleDelete = (sub_code) => {
+    setStocks(stocks.filter((s) => s.sub_code !== sub_code));
   };
 
-  // PDF Download
+  // Download PDF
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(16);
@@ -107,69 +148,59 @@ const StockReport = ({ onLogout }) => {
       "S.No",
       "Item Name",
       "Brand",
+      "Main Type",
+      "Sub Type",
       "Description",
       "Main Code",
       "Sub Code",
-      "Main Type",
-      "Sub Type",
       "Available",
       "Rented",
-      "Expired",
-      "Repairing",
+      "Damaged",
+      "Not Initiated",
+      "Worn Out",
+      "Category",
     ];
-    const tableRows = [];
 
-    stocks.forEach((s, i) => {
-      tableRows.push([
-        i + 1,
-        s.item_name,
-        s.brand,
-        s.description,
-        s.main_code,
-        s.sub_code,
-        s.item_main_type,
-        s.item_sub_type,
-        s.available_count || 0,
-        s.rented_count || 0,
-        s.expired_count || 0,
-        s.repairing_count || 0,
-      ]);
-    });
+    const tableRows = stocks.map((s, i) => [
+      i + 1,
+      s.item_name,
+      s.brand,
+      s.item_main_type,
+      s.item_sub_type,
+      s.description,
+      s.main_code,
+      s.sub_code,
+      s.available_count,
+      s.rented_count,
+      s.damaged_count,
+      s.not_initiated_count,
+      s.worn_out_count,
+      s.status || s.category,
+    ]);
 
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 30,
-    });
+    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30 });
     doc.save("stock_report.pdf");
   };
 
   // Filtered stock
   const filteredStock = stocks.filter(
     (s) =>
-      (s.item_name?.toLowerCase().includes(search.toLowerCase()) ||
-        s.brand?.toLowerCase().includes(search.toLowerCase()) ||
-        s.main_code?.toLowerCase().includes(search.toLowerCase()))
+      s.item_name?.toLowerCase().includes(search.toLowerCase()) ||
+      s.brand?.toLowerCase().includes(search.toLowerCase()) ||
+      s.sub_code?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Filtered options for autocomplete
-  const filteredBrands = brands
-    .map((b) => b.name)
-    .filter((name) =>
-      name.toLowerCase().includes(formData.brand.toLowerCase())
-    );
+  const filteredBrands = brands.map((b) => b.name).filter((b) =>
+    b.toLowerCase().includes(formData.brand.toLowerCase())
+  );
 
-  const filteredMainTypes = mainTypes
-    .map((m) => m.name)
-    .filter((name) =>
-      name.toLowerCase().includes(formData.item_main_type.toLowerCase())
-    );
+  const filteredMainTypes = mainTypes.map((m) => m.name).filter((m) =>
+    m.toLowerCase().includes(formData.item_main_type.toLowerCase())
+  );
 
-  const filteredSubTypes = subTypes
-    .map((s) => s.name)
-    .filter((name) =>
-      name.toLowerCase().includes(formData.item_sub_type.toLowerCase())
-    );
+  const filteredSubTypes = subTypes.map((s) => s.name).filter((s) =>
+    s.toLowerCase().includes(formData.item_sub_type.toLowerCase())
+  );
 
   return (
     <div className="dashboard-wrapper">
@@ -178,7 +209,6 @@ const StockReport = ({ onLogout }) => {
         <Rentalsidebar />
 
         <div className="main-content">
-          {/* Top bar */}
           <div className="stock-top-bar">
             <input
               type="text"
@@ -197,107 +227,68 @@ const StockReport = ({ onLogout }) => {
 
           {/* Add Stock Form */}
           {showForm && (
-            <div className="add-stock-form">
-              <input
-                type="text"
-                placeholder="Item Name"
-                value={formData.item_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, item_name: e.target.value })
-                }
-              />
-              <input
-                type="text"
-                placeholder="Brand"
-                list="brand-list"
-                value={formData.brand}
-                onChange={(e) =>
-                  setFormData({ ...formData, brand: e.target.value })
-                }
-              />
-              <datalist id="brand-list">
-                {filteredBrands.map((b, idx) => (
-                  <option key={idx} value={b.toUpperCase()} />
-                ))}
-              </datalist>
+            <div className="add-stock-form-floating">
+              {["item_name", "brand", "item_main_type", "item_sub_type", "description", "main_code", "sub_code", "available_count", "rented_count", "damaged_count", "not_initiated_count", "worn_out_count"].map((key, idx) => (
+                <div className="form-group" key={idx}>
+                  <label>{key.replace("_", " ").toUpperCase()}</label>
+                  <input
+                    type={key.includes("count") ? "number" : "text"}
+                    value={formData[key]}
+                    onChange={(e) =>
+                      setFormData({ ...formData, [key]: e.target.value })
+                    }
+                    list={
+                      key === "brand"
+                        ? "brand-list"
+                        : key === "item_main_type"
+                        ? "main-type-list"
+                        : key === "item_sub_type"
+                        ? "sub-type-list"
+                        : undefined
+                    }
+                  />
+                  {key === "brand" && (
+                    <datalist id="brand-list">
+                      {filteredBrands.map((b, i) => (
+                        <option key={i} value={b} />
+                      ))}
+                    </datalist>
+                  )}
+                  {key === "item_main_type" && (
+                    <datalist id="main-type-list">
+                      {filteredMainTypes.map((m, i) => (
+                        <option key={i} value={m} />
+                      ))}
+                    </datalist>
+                  )}
+                  {key === "item_sub_type" && (
+                    <datalist id="sub-type-list">
+                      {filteredSubTypes.map((s, i) => (
+                        <option key={i} value={s} />
+                      ))}
+                    </datalist>
+                  )}
+                </div>
+              ))}
 
-              <input
-                type="text"
-                placeholder="Main Type"
-                list="main-type-list"
-                value={formData.item_main_type}
-                onChange={(e) =>
-                  setFormData({ ...formData, item_main_type: e.target.value })
-                }
-              />
-              <datalist id="main-type-list">
-                {filteredMainTypes.map((m, idx) => (
-                  <option key={idx} value={m.toUpperCase()} />
-                ))}
-              </datalist>
+              <div className="form-group">
+                <label>Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value.toUpperCase() })
+                  }
+                >
+                  <option value="AVAILABLE">Available</option>
+                  <option value="RENTED">Rented</option>
+                  <option value="DAMAGED">Damaged</option>
+                  <option value="REPAIRING">Repairing</option>
+                </select>
+              </div>
 
-              <input
-                type="text"
-                placeholder="Sub Type"
-                list="sub-type-list"
-                value={formData.item_sub_type}
-                onChange={(e) =>
-                  setFormData({ ...formData, item_sub_type: e.target.value })
-                }
-              />
-              <datalist id="sub-type-list">
-                {filteredSubTypes.map((s, idx) => (
-                  <option key={idx} value={s.toUpperCase()} />
-                ))}
-              </datalist>
-
-              <input
-                type="text"
-                placeholder="Description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-              />
-              <input
-                type="text"
-                placeholder="Main Code"
-                value={formData.main_code}
-                onChange={(e) =>
-                  setFormData({ ...formData, main_code: e.target.value })
-                }
-              />
-              <input
-                type="text"
-                placeholder="Sub Code"
-                value={formData.sub_code}
-                onChange={(e) =>
-                  setFormData({ ...formData, sub_code: e.target.value })
-                }
-              />
-              <input
-                type="number"
-                placeholder="Count"
-                value={formData.count}
-                onChange={(e) =>
-                  setFormData({ ...formData, count: e.target.value })
-                }
-              />
-              <select
-                value={formData.status}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    status: e.target.value.toUpperCase(),
-                  })
-                }
-              >
-                <option value="AVAILABLE">Available</option>
-                <option value="RENTED">Rented</option>
-                <option value="DAMAGED">Damaged</option>
-                <option value="REPAIRING">Repairing</option>
-              </select>
-              <button onClick={handleAddStock}>Add</button>
+              <button className="add-btn-floating" onClick={handleAddStock}>
+                Add Stock
+              </button>
             </div>
           )}
 
@@ -313,41 +304,45 @@ const StockReport = ({ onLogout }) => {
                     <th>S.No</th>
                     <th>Item Name</th>
                     <th>Brand</th>
+                    <th>Main Type</th>
+                    <th>Sub Type</th>
                     <th>Description</th>
                     <th>Main Code</th>
                     <th>Sub Code</th>
-                    <th>Main Type</th>
-                    <th>Sub Type</th>
                     <th>Available</th>
                     <th>Rented</th>
-                    <th>Expired</th>
-                    <th>Repairing</th>
+                    <th>Damaged</th>
+                    <th>Not Initiated</th>
+                    <th>Worn Out</th>
+                    <th>Category</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredStock.map((item, index) => (
                     <tr
-                      key={item.main_code}
+                      key={`${item.sub_code}-${index}`}
+                      onClick={() => navigate(`/stock/${item.sub_code}`)}
                       style={{ cursor: "pointer" }}
-                      onClick={() => navigate(`/stock/${item.main_code}`)}
                     >
                       <td>{index + 1}</td>
                       <td>{item.item_name}</td>
                       <td>{item.brand}</td>
+                      <td>{item.item_main_type}</td>
+                      <td>{item.item_sub_type}</td>
                       <td>{item.description}</td>
                       <td>{item.main_code}</td>
                       <td>{item.sub_code}</td>
-                      <td>{item.item_main_type}</td>
-                      <td>{item.item_sub_type}</td>
-                      <td>{item.available_count || 0}</td>
-                      <td>{item.rented_count || 0}</td>
-                      <td>{item.expired_count || 0}</td>
-                      <td>{item.repairing_count || 0}</td>
+                      <td>{item.available_count}</td>
+                      <td>{item.rented_count}</td>
+                      <td>{item.damaged_count}</td>
+                      <td>{item.not_initiated_count}</td>
+                      <td>{item.worn_out_count}</td>
+                      <td>{item.status || item.category}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <button
                           className="delete-btn"
-                          onClick={() => handleDelete(item.main_code)}
+                          onClick={() => handleDelete(item.sub_code)}
                         >
                           <FiTrash2 />
                         </button>

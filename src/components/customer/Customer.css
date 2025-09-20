@@ -283,3 +283,83 @@
 .download-btn:hover .download-icon {
   color: white;
 }
+.add-customer-form {
+  background-color: #2b1b0f; /* dark brown */
+  border: 2px solid #b8860b; /* dark golden border */
+  padding: 20px;
+  border-radius: 12px;
+  color: #ffd700; /* golden text */
+  max-width: 500px;
+  margin: 20px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-customer-form input {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #b8860b;
+  background-color: #3a2a1a;
+  color: #ffd700;
+}
+
+.add-customer-form input::placeholder {
+  color: #f5d76e;
+}
+
+.add-customer-form button {
+  background-color: #b8860b;
+  color: #2b1b0f;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.add-customer-form button:hover {
+  background-color: #ffd700;
+  color: #2b1b0f;
+}
+.add-customer-form {
+  background-color: #2b1b0f; /* dark brown */
+  border: 2px solid #b8860b; /* dark golden border */
+  padding: 20px;
+  border-radius: 12px;
+  color: #ffd700; /* golden text */
+  max-width: 500px;
+  margin: 20px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-customer-form input {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #b8860b;
+  background-color: #3a2a1a;
+  color: #ffd700;
+}
+
+.add-customer-form input::placeholder {
+  color: #f5d76e;
+}
+
+.add-customer-form button {
+  background-color: #b8860b;
+  color: #2b1b0f;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.add-customer-form button:hover {
+  background-color: #ffd700;
+  color: #2b1b0f;
+}

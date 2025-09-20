@@ -21,7 +21,7 @@ const OrderForm = ({ onAddOrder }) => {
 
   const [showItemForm, setShowItemForm] = useState(false);
   const [itemData, setItemData] = useState({
-    item_id: "",       // will store the selected item's id
+    item_id: "",
     item_name: "",
     expired_at: "",
     amount: 0,
@@ -32,11 +32,11 @@ const OrderForm = ({ onAddOrder }) => {
 
   // Fetch customers and items
   useEffect(() => {
-    axios.get("http://localhost:8080/irrl/genericApiUnjoin/customer")
+    axios.get("https://ems.binlaundry.com/irrl/genericApiUnjoin/customer")
       .then(res => setCustomers(res.data.data || []))
       .catch(err => console.error(err));
 
-    axios.get("http://localhost:8080/irrl/genericApiUnjoin/itemRetrive")
+    axios.get("https://ems.binlaundry.com/irrl/genericApiUnjoin/itemRetrive")
       .then(res => setItemOptions(res.data.data || []))
       .catch(err => console.error(err));
   }, []);
@@ -69,13 +69,13 @@ const OrderForm = ({ onAddOrder }) => {
     itemData.tempImages.forEach(file => form.append("images", file));
 
     try {
-      const res = await axios.post("http://localhost:8080/irrl/upload", form, {
+      const res = await axios.post("https://ems.binlaundry.com/irrl/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       const uploadedFiles = res.data.filenames.map(filename => ({
         name: filename,
-        url: `http://localhost:8080/resources/${filename}`,
+        url: `https://ems.binlaundry.com/resources/${filename}`,
       }));
 
       setItemData(prev => ({
@@ -123,8 +123,9 @@ const OrderForm = ({ onAddOrder }) => {
     if (!formData.customer_id) return alert("Please select a valid customer");
     if (!formData.items || formData.items.length === 0) return alert("Add at least one item");
 
+    // Use item_newid instead of item_code
     const itemsPayload = formData.items.map(it => ({
-      item_code: it.item_id, // send item_id as item_code
+      item_newid: it.item_id,
       rent_amount: it.amount,
       before_images: it.images.map(img => img.name),
       returned_str: it.expired_at,
@@ -143,7 +144,7 @@ const OrderForm = ({ onAddOrder }) => {
     };
 
     try {
-      const res = await axios.post("http://localhost:8080/irrl/addOrder", orderPayload, {
+      const res = await axios.post("https://ems.binlaundry.com/irrl/addOrder", orderPayload, {
         headers: { "Content-Type": "application/json" },
       });
       alert("Order saved successfully!");
@@ -217,7 +218,7 @@ const OrderForm = ({ onAddOrder }) => {
             {itemData.images.length > 0 && (
               <div className="images-preview">
                 <h5>Before Images</h5>
-                {itemData.images.map((img, idx) => <img key={idx} src={img.url} alt={img.name} />)}
+                {itemData.images.map((img) => <img key={img.name} src={img.url} alt={img.name} />)}
               </div>
             )}
 
@@ -229,12 +230,16 @@ const OrderForm = ({ onAddOrder }) => {
       {/* Display Added Items */}
       {formData.items.length > 0 && (
         <div className="added-items">
-          {formData.items.map((it, idx) => (
-            <div key={idx} className="item-card">
+          {formData.items.map((it) => (
+            <div key={it.item_id} className="item-card">
               <h4>{it.item_name}</h4>
               <p>Amount: {it.amount}</p>
               <p>Returned At: {it.expired_at}</p>
-              {it.images.length > 0 && <div className="thumbs">{it.images.map((img, i) => <img key={i} src={img.url} alt={img.name} />)}</div>}
+              {it.images.length > 0 && (
+                <div className="thumbs">
+                  {it.images.map((img) => <img key={img.name} src={img.url} alt={img.name} />)}
+                </div>
+              )}
             </div>
           ))}
         </div>

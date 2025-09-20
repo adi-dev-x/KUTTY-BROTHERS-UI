@@ -242,3 +242,70 @@ tbody tr.zero-stock {
   padding: 8px 12px;
   cursor: pointer;
 }
+
+/* ===== Floating Add Stock Form ===== */
+.add-stock-form-floating {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 30px;
+  background-color: #ffffff; /* white background */
+  border: 2px solid #D99419; /* yellow border */
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #D99419;
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select {
+  padding: 12px;
+  border: 2px solid #D99419;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #333;
+  background-color: #fff;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #b87c15;
+  box-shadow: 0 0 5px rgba(217, 148, 25, 0.5);
+}
+
+/* Button */
+.add-btn-floating {
+  grid-column: span 2;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: bold;
+  background-color: #D99419; /* yellow button */
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.add-btn-floating:hover {
+  background-color: #b87c15; /* darker yellow on hover */
+}
+
+/* Make form responsive */
+@media (max-width: 768px) {
+  .add-stock-form-floating {
+    grid-template-columns: 1fr;
+  }
+}

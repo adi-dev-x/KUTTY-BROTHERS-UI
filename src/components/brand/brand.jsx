@@ -12,7 +12,7 @@ const BrandDashboard = ({ onLogout }) => {
 
   // ✅ Fetch brands from API
   useEffect(() => {
-    fetch("http://localhost:8080/irrl/attribute/brand")
+    fetch("https://ems.binlaundry.com/irrl/attribute/brand")
       .then((res) => res.json())
       .then((data) => {
         console.log("API Response:", data);

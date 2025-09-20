@@ -12,7 +12,7 @@ const StockDetail = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://localhost:8080/irrl/genericApiUnjoin/productSingle?item_code='${item_code}'`)
+    fetch(`https://ems.binlaundry.com/irrl/genericApiUnjoin/productSingle?item_code='${item_code}'`)
       .then((res) => res.json())
       .then((data) => {
         if (data.data) setStocks(data.data);
