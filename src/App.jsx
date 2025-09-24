@@ -12,11 +12,11 @@ import Brand from "./components/brand/brand";
 import Tools from "./components/tools/Tools"; 
 import Category from "./components/category/Category"; 
 
-// ✅ New imports
+// ✅ Orders
 import Orders from "./components/orders/Orders";
 import OrderDetails from "./components/orders/OrderDetails";
 
-// ✅ Import MainType & SubType
+// ✅ MainType & SubType
 import MainType from "./components/maintype/MainType";
 import SubType from "./components/subtype/SubType";
 
@@ -99,7 +99,7 @@ function App() {
 
         {/* Stock Detail Page */}
         <Route
-          path="/stock/:item_code"
+          path="/stock/:sub_code"
           element={isLoggedIn ? <StockDetail onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
@@ -115,9 +115,9 @@ function App() {
           element={isLoggedIn ? <Orders onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
-        {/* ✅ Order Details Page */}
+        {/* ✅ Order Details Page (using delivery_id) */}
         <Route
-          path="/order-details/:inventory_id"
+          path="/order-details/:delivery_id"
           element={isLoggedIn ? <OrderDetails onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 

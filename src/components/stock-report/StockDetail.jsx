@@ -6,13 +6,18 @@ import Footer from "../footer/Footer";
 import "./StockDetail.css"; // Use your dashboard theme
 
 const StockDetail = ({ onLogout }) => {
-  const { item_code } = useParams();
+  // ✅ now using sub_code instead of item_code
+  const { sub_code } = useParams();
   const navigate = useNavigate();
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`https://ems.binlaundry.com/irrl/genericApiUnjoin/productSingle?item_code='${item_code}'`)
+    // ✅ updated API call to use sub_code
+   console.log( `http://192.168.0.202:8080/irrl/genericApiUnjoin/productSingle?sub_code='${sub_code}'`)
+    fetch(
+      `http://192.168.0.202:8080/irrl/genericApiUnjoin/productSingle?sub_code='${sub_code}'`
+    )
       .then((res) => res.json())
       .then((data) => {
         if (data.data) setStocks(data.data);
@@ -22,7 +27,7 @@ const StockDetail = ({ onLogout }) => {
         console.error("Error fetching stock:", err);
         setLoading(false);
       });
-  }, [item_code]);
+  }, [sub_code]);
 
   if (loading) return <p style={{ padding: "20px" }}>Loading...</p>;
   if (!stocks.length) return <p style={{ padding: "20px" }}>Stock not found.</p>;
@@ -33,7 +38,7 @@ const StockDetail = ({ onLogout }) => {
     "Main Type",
     "Sub Type",
     "Description",
-    "Inventory ID",
+    "Item Code",
     "Sub Code",
     "Category",
     "Created At",
@@ -46,7 +51,9 @@ const StockDetail = ({ onLogout }) => {
         <Rentalsidebar />
 
         <div className="main-content full-page-detail">
-          <button className="close-btn" onClick={() => navigate(-1)}>Back</button>
+          <button className="close-btn" onClick={() => navigate(-1)}>
+            Back
+          </button>
           <h2>Stock Details: {stocks[0].item_name}</h2>
 
           <div className="table-card">
@@ -66,7 +73,7 @@ const StockDetail = ({ onLogout }) => {
                     <td>{s.item_main_type}</td>
                     <td>{s.item_sub_type}</td>
                     <td>{s.description}</td>
-                    <td>{s.inventory_id}</td>
+                    <td>{s.item_code}</td>
                     <td>{s.sub_code}</td>
                     <td>{s.category}</td>
                     <td>{new Date(s.created_at).toLocaleString()}</td>

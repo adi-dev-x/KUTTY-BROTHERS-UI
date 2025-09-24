@@ -3,6 +3,7 @@ import { FiDownload, FiPlus, FiTrash2 } from "react-icons/fi";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import OrderForm from "./OrderForm";
@@ -13,56 +14,76 @@ const Orders = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [statuses, setStatuses] = useState(["COMPLETED", "BLOCKED", "INITIATED"]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 8;
+  const navigate = useNavigate();
 
+  // Fetch orders
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         const response = await axios.get(
-          "https://ems.binlaundry.com/irrl/genericApiUnjoin/listOrders"
+          "http://192.168.0.202:8080/irrl/genericApiUnjoin/listOrders"
         );
-        const data = response.data?.data || [];
-        setOrders(data);
+        setOrders(response.data?.data || []);
       } catch (err) {
         console.error("Error fetching orders:", err);
       } finally {
         setLoading(false);
       }
     };
+
+    const fetchStatuses = async () => {
+      try {
+        const res = await axios.get(
+          "http://192.168.0.202:8080/irrl/genericApiUnjoin/statusOptions"
+        );
+        const apiStatuses = res.data?.data || [];
+        setStatuses(apiStatuses.filter((s) => ["COMPLETED", "BLOCKED", "INITIATED"].includes(s)));
+      } catch (err) {
+        console.error("Failed to fetch status options, using defaults", err);
+      }
+    };
+
     fetchOrders();
+    fetchStatuses();
   }, []);
 
-  const handleAddOrder = async (newOrder) => {
+  // Add new order locally
+  const handleAddOrder = (newOrder) => {
+    setOrders([...orders, newOrder]);
+    setShowForm(false);
+  };
+
+  // Update status
+  const handleStatusChange = async (delivery_id, newStatus) => {
     try {
-      const formData = new FormData();
-      newOrder.items.forEach((item) => {
-        item.images?.forEach((img) => {
-          formData.append("images", img.file);
-        });
-      });
-      formData.append("order", JSON.stringify(newOrder));
-
-      await axios.post("https://ems.binlaundry.com/irrl/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      setOrders([...orders, newOrder]);
-      setShowForm(false);
+      await axios.get(
+        `http://192.168.0.202:8080/irrl/updateOrder/${delivery_id}?status=${newStatus}`
+      );
+      setOrders(
+        orders.map((o) =>
+          o.delivery_id === delivery_id ? { ...o, status: newStatus } : o
+        )
+      );
     } catch (err) {
-      console.error("Upload failed", err);
-      alert("Failed to save order");
+      console.error("Status update failed", err);
+      alert("Failed to update status");
     }
   };
 
-  const handleDelete = (inventory_id) => {
-    setOrders(orders.filter((o) => o.inventory_id !== inventory_id));
-  };
-
-  const handleStatusChange = (inventory_id, newStatus) => {
-    setOrders(
-      orders.map((o) =>
-        o.inventory_id === inventory_id ? { ...o, status: newStatus } : o
-      )
-    );
+  // Delete order
+  const handleDelete = async (delivery_id) => {
+    try {
+      await axios.get(
+        `http://192.168.0.202:8080/irrl/updateOrder/${delivery_id}?status=DELETED`
+      );
+      setOrders(orders.filter((o) => o.delivery_id !== delivery_id));
+    } catch (err) {
+      console.error("Delete failed", err);
+      alert("Failed to delete order");
+    }
   };
 
   const handleDownloadPDF = () => {
@@ -76,36 +97,33 @@ const Orders = ({ onLogout }) => {
       "Customer ID",
       "Contact Person",
       "Contact Number",
-      "Contact Address",
+      "Shipping Address",
       "Inventory ID",
+      "Generated Amount",
+      "Current Amount",
       "Advance Amount",
+      "Placed At",
       "Returned At",
+      "Transaction Id",
       "Status",
-      "Items",
     ];
-    const tableRows = [];
 
-    orders.forEach((o, i) => {
-      const itemText = (o.items || [])
-        .map(
-          (it, idx) =>
-            `${idx + 1}. ${it.item_name} (${it.amount}, ${it.expired_at}, ${it.status})`
-        )
-        .join(", ");
-      tableRows.push([
-        i + 1,
-        o.customer_name || "-",
-        o.customer_id || "-",
-        o.contact_person || "-",
-        o.contact_number || "-",
-        o.contact_address || "-",
-        o.inventory_id,
-        o.advance_amount,
-        o.returned_at || "-",
-        o.status,
-        itemText || "-",
-      ]);
-    });
+    const tableRows = orders.map((o, i) => [
+      i + 1,
+      o.customer_name || "-",
+      o.customer_id || "-",
+      o.contact_name || "-",
+      o.contact_number || "-",
+      o.shipping_address || "-",
+      o.inventory_id || "-",
+      o.generated_amount || "-",
+      o.current_amount || "-",
+      o.advance_amount || "-",
+      o.placed_at || "-",
+      o.declined_at || "-",
+      o.transaction_id || "-",
+      o.status || "-",
+    ]);
 
     autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30 });
     doc.save("orders_report.pdf");
@@ -117,6 +135,12 @@ const Orders = ({ onLogout }) => {
       (o.customer_id || "").toLowerCase().includes(search.toLowerCase()) ||
       (o.status || "").toLowerCase().includes(search.toLowerCase())
   );
+
+  // Pagination
+  const indexOfLastRow = currentPage * rowsPerPage;
+  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+  const currentRows = filteredOrders.slice(indexOfFirstRow, indexOfLastRow);
+  const totalPages = Math.ceil(filteredOrders.length / rowsPerPage);
 
   return (
     <div className="dashboard-wrapper">
@@ -140,7 +164,12 @@ const Orders = ({ onLogout }) => {
             </button>
           </div>
 
-          {showForm && <OrderForm onAddOrder={handleAddOrder} />}
+          {showForm && (
+            <OrderForm
+              onAddOrder={handleAddOrder}
+              onClose={() => setShowForm(false)}
+            />
+          )}
 
           {loading ? (
             <p>Loading orders...</p>
@@ -155,67 +184,60 @@ const Orders = ({ onLogout }) => {
                     <th>Customer ID</th>
                     <th>Contact Person</th>
                     <th>Contact Number</th>
-                    <th>Contact Address</th>
+                    <th>Shipping Address</th>
                     <th>Inventory ID</th>
+                    <th>Generated Amount</th>
+                    <th>Current Amount</th>
                     <th>Advance Amount</th>
+                    <th>Placed At</th>
                     <th>Returned At</th>
+                    <th>Transaction Id</th>
                     <th>Status</th>
-                    <th>Items</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((o) => (
-                    <tr key={o.inventory_id}>
-                      <td>{orders.indexOf(o) + 1}</td>
+                  {currentRows.map((o, i) => (
+                    <tr
+                      key={o.delivery_id}
+                      onClick={() => navigate(`/order-details/${o.delivery_id}`)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td>{indexOfFirstRow + i + 1}</td>
                       <td>{o.customer_name || "-"}</td>
                       <td>{o.customer_id || "-"}</td>
-                      <td>{o.contact_person || "-"}</td>
+                      <td>{o.contact_name || "-"}</td>
                       <td>{o.contact_number || "-"}</td>
-                      <td>{o.contact_address || "-"}</td>
-                      <td>{o.inventory_id}</td>
-                      <td>{o.advance_amount}</td>
-                      <td>{o.returned_at || "-"}</td>
+                      <td>{o.shipping_address || "-"}</td>
+                      <td>{o.inventory_id || "-"}</td>
+                      <td>{o.generated_amount || "-"}</td>
+                      <td>{o.current_amount || "-"}</td>
+                      <td>{o.advance_amount || "-"}</td>
+                      <td>{o.placed_at || "-"}</td>
+                      <td>{o.declined_at || "-"}</td>
+                      <td>{o.transaction_id || "-"}</td>
                       <td>
                         <select
                           value={o.status}
+                          onClick={(e) => e.stopPropagation()} // prevent row click
                           onChange={(e) =>
-                            handleStatusChange(o.inventory_id, e.target.value)
+                            handleStatusChange(o.delivery_id, e.target.value)
                           }
                         >
-                          <option value="INITIATED">INITIATED</option>
-                          <option value="Pending">Pending</option>
-                          <option value="Returned">Returned</option>
-                          <option value="Declined">Declined</option>
+                          {statuses.map((s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
                         </select>
-                      </td>
-                      <td>
-                        {(o.items || []).map((it) => (
-                          <div
-                            key={it.item_id || it.item_name}
-                            className="item-card-table"
-                          >
-                            <strong>{it.item_name}</strong> | {it.amount} |{" "}
-                            {it.expired_at} | {it.status}
-                            {it.images?.length > 0 && (
-                              <div className="thumbs">
-                                {it.images.map((img, i) => (
-                                  <img
-                                    key={i}
-                                    src={img.url}
-                                    alt={img.name}
-                                    width="40"
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
                       </td>
                       <td>
                         <button
                           className="delete-btn"
-                          onClick={() => handleDelete(o.inventory_id)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // prevent row click
+                            handleDelete(o.delivery_id);
+                          }}
                         >
                           <FiTrash2 />
                         </button>
@@ -224,6 +246,29 @@ const Orders = ({ onLogout }) => {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="pagination">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Prev
+                  </button>
+                  <span>
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(p + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

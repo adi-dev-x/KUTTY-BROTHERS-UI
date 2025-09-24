@@ -1,15 +1,35 @@
-import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import "./OrderDetails.css";
 
 const OrderDetails = ({ onLogout }) => {
-  const location = useLocation();
+  const { delivery_id } = useParams();
   const navigate = useNavigate();
-  const { order } = location.state || {};
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!order) return <p>Order not found!</p>;
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
+      try {
+        const res = await axios.get(
+          `http://192.168.0.202:8080/irrl/genericApiUnjoin/orderDetails/${delivery_id}`
+        );
+        setOrder(res.data?.data || null);
+      } catch (err) {
+        console.error("Error fetching order details:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrderDetails();
+  }, [delivery_id]);
+
+  if (loading) return <p>Loading order details...</p>;
+  if (!order) return <p>No details found for this order.</p>;
 
   return (
     <div className="dashboard-wrapper">
@@ -17,72 +37,24 @@ const OrderDetails = ({ onLogout }) => {
       <div className="dashboard-body">
         <Rentalsidebar />
         <div className="main-content">
-          <button className="back-btn" onClick={() => navigate(-1)}>
-            ← Back
-          </button>
-          <h2>Order Details</h2>
-          <div className="order-info">
-            <p><strong>Customer ID:</strong> {order.customer_id}</p>
-            <p><strong>Inventory ID:</strong> {order.inventory_id}</p>
-            <p><strong>Advance Amount:</strong> {order.advance_amount}</p>
-            <p><strong>Generated Amount:</strong> {order.generated_amount}</p>
-            <p><strong>Placed At:</strong> {order.placed_at || "-"}</p>
-            <p><strong>Expiry At:</strong> {order.expiry_at || "-"}</p>
-            <p><strong>Status:</strong> {order.status}</p>
-            <p><strong>Notes:</strong> {order.notes || "-"}</p>
-          </div>
+          <h2>Order Details - #{delivery_id}</h2>
+          <button onClick={() => navigate(-1)} className="back-btn">⬅ Back</button>
 
-          <h3>Delivery Items</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>DeliveryItemID</th>
-                <th>Rent Amount</th>
-                <th>Generated Amount</th>
-                <th>Condition Out</th>
-                <th>Condition In</th>
-                <th>Placed At</th>
-                <th>Expiry At</th>
-                <th>Declined At</th>
-                <th>Status</th>
-                <th>Before Images</th>
-                <th>After Images</th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.items && order.items.length > 0 ? (
-                order.items.map((item) => (
-                  <tr key={item.delivery_item_id}>
-                    <td>{item.delivery_item_id}</td>
-                    <td>{item.rent_amount}</td>
-                    <td>{item.generaed_amount}</td>
-                    <td>{item.condition_out || "-"}</td>
-                    <td>{item.condition_in || "-"}</td>
-                    <td>{item.placed_at}</td>
-                    <td>{item.expiry_at || "-"}</td>
-                    <td>{item.declined_at || "-"}</td>
-                    <td>{item.status}</td>
-                    <td>
-                      {item.before_images &&
-                        item.before_images.map((img, idx) => (
-                          <img key={idx} src={img} alt="before" className="order-img" />
-                        ))}
-                    </td>
-                    <td>
-                      {item.after_images &&
-                        item.after_images.map((img, idx) => (
-                          <img key={idx} src={img} alt="after" className="order-img" />
-                        ))}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="11">No delivery items found</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <div className="order-details-card">
+            <p><strong>Customer Name:</strong> {order.customer_name}</p>
+            <p><strong>Customer ID:</strong> {order.customer_id}</p>
+            <p><strong>Contact Person:</strong> {order.contact_name}</p>
+            <p><strong>Contact Number:</strong> {order.contact_number}</p>
+            <p><strong>Shipping Address:</strong> {order.shipping_address}</p>
+            <p><strong>Inventory ID:</strong> {order.inventory_id}</p>
+            <p><strong>Generated Amount:</strong> {order.generated_amount}</p>
+            <p><strong>Current Amount:</strong> {order.current_amount}</p>
+            <p><strong>Advance Amount:</strong> {order.advance_amount}</p>
+            <p><strong>Placed At:</strong> {order.placed_at}</p>
+            <p><strong>Returned At:</strong> {order.declined_at}</p>
+            <p><strong>Transaction ID:</strong> {order.transaction_id}</p>
+            <p><strong>Status:</strong> {order.status}</p>
+          </div>
         </div>
       </div>
     </div>

@@ -1,11 +1,11 @@
 .rental-sidebar {
   width: 240px;
-  background: #fff;
+  background: linear-gradient(180deg, #d99419, #f7b84b);
   padding: 20px;
-  border-right: 1px solid #eee;
   min-height: 100vh;
-  box-shadow: 2px 0px 6px rgba(0, 0, 0, 0.05);
   font-family: "Inter", sans-serif;
+  color: #fff;
+  box-shadow: 2px 0px 8px rgba(0, 0, 0, 0.15);
 }
 
 .sidebar-header {
@@ -16,7 +16,8 @@
 .sidebar-header h2 {
   font-size: 18px;
   font-weight: 700;
-  color: #d9941a;
+  color: #fff;
+  letter-spacing: 1px;
 }
 
 .sidebar-menu {
@@ -28,27 +29,25 @@
 .sidebar-menu li {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* ✅ ensures chevron aligns properly */
   padding: 12px 10px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   border-radius: 8px;
-  color: #444;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   font-size: 15px;
   font-weight: 500;
+  color: #fff;
+}
+
+.sidebar-menu li:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .sidebar-menu li .icon {
   margin-right: 10px;
-  color: #d9941a;
+  color: #fff;
   width: 20px;
   height: 20px;
-}
-
-.sidebar-menu li:hover {
-  background: #f5f6f8;
-  color: #d9941a;
 }
 
 .sidebar-menu li a {
@@ -56,17 +55,22 @@
   color: inherit;
   display: flex;
   align-items: center;
-  width: 100%; /* ✅ aligns with submenu trigger */
+  width: 100%;
 }
 
 .sidebar-menu li a.active-link {
-  color: #d9941a;
+  color: #d99419;
+  background: #fff;
   font-weight: 600;
+  border-radius: 8px;
+  padding: 10px;
 }
 
 /* ===== Submenu Styles ===== */
 .has-submenu {
   padding: 12px 10px;
+  font-weight: 600;
+  opacity: 0.9;
 }
 
 .menu-link {
@@ -79,42 +83,40 @@
   flex: 1;
 }
 
-.menu-item .chevron {
-  margin-left: auto;
-  color: #666;
+/* Submenu */
+.submenu {
+  list-style: none;
+  padding-left: 25px; /* smaller margin */
+  margin: 6px 0 12px;
+}
+
+.submenu li {
+  margin-bottom: 4px;
+}
+
+.submenu li a {
+  padding: 8px 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease-in-out;
+}
+
+.submenu-icon {
+  margin-right: 8px;
   width: 16px;
   height: 16px;
 }
 
-/* Submenu */
-.submenu {
-  list-style: none;
-  padding-left: 45px; /* ✅ indentation */
-  margin: 0 0 10px;
-  animation: slideDown 0.3s ease;
-}
-
-.submenu li {
-  margin-bottom: 6px;
-}
-
-.submenu li a {
-  padding: 8px 12px;
-  font-size: 14px;
-  border-radius: 6px;
-  color: #555;
-  display: block;
-  transition: all 0.2s ease-in-out;
-}
-
 .submenu li a:hover {
-  background: #fff4e1;
-  color: #d9941a;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .submenu li a.active-link {
-  color: #d9941a;
+  color: #d99419;
+  background: #fff;
   font-weight: 600;
-  background: #fff4e1;
-  box-shadow: inset 3px 0 0 #d9941a;
+  box-shadow: inset 3px 0 0 #d99419;
 }
