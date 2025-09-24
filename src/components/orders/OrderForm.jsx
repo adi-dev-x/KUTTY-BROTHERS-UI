@@ -13,7 +13,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
     contact_number: "",
     contact_address: "",
     inventory_id: "550e8400-e29b-41d4-a716-446655440000",
-    advance_amount: 0,
+    advance_amount: "",
     returned_at: "",
     status: "INITIATED",
     items: [],
@@ -24,13 +24,12 @@ const OrderForm = ({ onAddOrder, onClose }) => {
     item_id: "",
     item_name: "",
     expired_at: "",
-    amount: 0,
+    amount: "",
     status: "INITIATED",
     images: [],
     tempImages: [],
   });
 
-  // Fetch customers and items
   useEffect(() => {
     axios
       .get("http://192.168.0.202:8080/irrl/genericApiUnjoin/customer")
@@ -106,14 +105,21 @@ const OrderForm = ({ onAddOrder, onClose }) => {
 
     setFormData({
       ...formData,
-      items: [...formData.items, { ...itemData, status: "INITIATED" }],
+      items: [
+        ...formData.items,
+        {
+          ...itemData,
+          status: "INITIATED",
+          amount: parseInt(itemData.amount) || 0, // ensure integer
+        },
+      ],
     });
 
     setItemData({
       item_id: "",
       item_name: "",
       expired_at: "",
-      amount: 0,
+      amount: "",
       status: "INITIATED",
       images: [],
       tempImages: [],
@@ -123,12 +129,11 @@ const OrderForm = ({ onAddOrder, onClose }) => {
   };
 
   const handleSaveOrder = async () => {
-    // API call (optional, but form will close anyway)
     try {
       if (formData.customer_id && formData.items.length > 0) {
         const itemsPayload = formData.items.map((it) => ({
           item_newid: it.item_id,
-          rent_amount: it.amount,
+          rent_amount: parseInt(it.amount) || 0, // ensure integer
           before_images: (it.images || []).map((img) => img.name),
           returned_str: it.expired_at,
           status: "INITIATED",
@@ -137,7 +142,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
         const orderPayload = {
           customer_id: formData.customer_id,
           inventory_id: formData.inventory_id,
-          advance_amount: formData.advance_amount,
+          advance_amount: parseInt(formData.advance_amount) || 0, // ensure integer
           status: formData.status,
           contact_name: formData.contact_person,
           contact_number: formData.contact_number,
@@ -154,23 +159,20 @@ const OrderForm = ({ onAddOrder, onClose }) => {
     } catch (err) {
       console.error("Save order failed", err.response?.data || err.message);
     } finally {
-      // Close form and refresh page regardless
       if (onClose) onClose();
       window.location.reload();
     }
   };
 
+  const distinctItemNames = [...new Set(itemOptions.map((i) => i.item_name))];
+
   return (
     <div className="form-overlay">
       <div className="order-form">
-        <button className="close-btn" onClick={() => { window.location.reload(); }}>
-          ×
-        </button>
+        <button className="close-btn" onClick={() =>  window.location.reload() }>×</button>
         <h2>Create New Order</h2>
 
-        {message.text && (
-          <div className={`message ${message.type}`}>{message.text}</div>
-        )}
+        {message.text && <div className={`message ${message.type}`}>{message.text}</div>}
 
         <div className="form-grid">
           <input
@@ -210,7 +212,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
             placeholder="Advance Amount"
             value={formData.advance_amount}
             onChange={(e) =>
-              setFormData({ ...formData, advance_amount: parseInt(e.target.value) || 0 })
+              setFormData({ ...formData, advance_amount: e.target.value })
             }
           />
           <input
@@ -227,7 +229,6 @@ const OrderForm = ({ onAddOrder, onClose }) => {
           </select>
         </div>
 
-        {/* Item Section */}
         <div className="item-section">
           <button className="btn" onClick={() => setShowItemForm(!showItemForm)}>
             + Add Item
@@ -244,8 +245,8 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                   onChange={(e) => handleItemSelect(e.target.value)}
                 />
                 <datalist id="item-options">
-                  {itemOptions.map((i, idx) => (
-                    <option key={`${i.item_id}-${idx}`} value={i.item_name} />
+                  {distinctItemNames.map((name, idx) => (
+                    <option key={`${name}-${idx}`} value={name} />
                   ))}
                 </datalist>
 
@@ -258,7 +259,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                   type="number"
                   placeholder="Amount"
                   value={itemData.amount}
-                  onChange={(e) => setItemData({ ...itemData, amount: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => setItemData({ ...itemData, amount: e.target.value })}
                 />
                 <input
                   type="file"
@@ -266,9 +267,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                   onChange={(e) => setItemData({ ...itemData, tempImages: Array.from(e.target.files) })}
                 />
                 {itemData.tempImages.length > 0 && (
-                  <button className="btn" onClick={handleUploadImages}>
-                    Upload Images
-                  </button>
+                  <button className="btn" onClick={handleUploadImages}>Upload Images</button>
                 )}
               </div>
 
@@ -280,14 +279,11 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                 </div>
               )}
 
-              <button className="btn save-btn" onClick={handleAddItem}>
-                Save Item
-              </button>
+              <button className="btn save-btn" onClick={handleAddItem}>Save Item</button>
             </div>
           )}
         </div>
 
-        {/* Added Items */}
         {formData.items.length > 0 && (
           <div className="added-items">
             {formData.items.map((it, idx) => (
@@ -307,9 +303,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
           </div>
         )}
 
-        <button className="btn save-btn" onClick={handleSaveOrder}>
-          Save Order
-        </button>
+        <button className="btn save-btn" onClick={handleSaveOrder}>Save Order</button>
       </div>
     </div>
   );
