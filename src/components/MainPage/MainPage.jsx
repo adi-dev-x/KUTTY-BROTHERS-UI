@@ -44,7 +44,7 @@ const MainPage = ({ onLogout }) => {
       icon: <FaUserTie size={30} />,
       title: "Rentals",
       description: "Providing rental tools and details.",
-      path: "/rental-dashboard", // ✅ updated path
+      path: "/irl-dashboard", // ✅ updated path
     },
     {
       icon: <FaCog size={30} />,

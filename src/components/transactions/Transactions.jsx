@@ -34,18 +34,21 @@ const Transactions = ({ onLogout }) => {
   }, [orderIdFromNav]);
 
   const handleSave = async () => {
-    try {
-      const { transaction_id, amount, status } = editingTransaction;
-      await axios.get(
-        `http://192.168.0.202:8080/irrl/editTransaction/${transaction_id}?status=${status}&amount=${amount}`
-      );
-      setEditingTransaction(null);
-      fetchTransactions();
-    } catch (err) {
-      console.error("Failed to update transaction", err);
-      alert("Failed to update transaction");
-    }
-  };
+  try {
+    const { transaction_id, amount, status } = editingTransaction;
+    const intAmount = parseInt(amount, 10) || 0; // convert to integer
+
+    await axios.get(
+      `http://192.168.0.202:8080/irrl/editTransaction/${transaction_id}?status=${status}&amount=${intAmount}`
+    );
+    setEditingTransaction(null);
+    fetchTransactions();
+  } catch (err) {
+    console.error("Failed to update transaction", err);
+    alert("Failed to update transaction");
+  }
+};
+
 
   return (
     <div className="dashboard-wrapper">

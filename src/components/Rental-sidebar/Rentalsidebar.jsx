@@ -5,10 +5,11 @@ import {
   Layers,
   FileText,
   ShoppingCart,
-  CreditCard,
   Tag,
   Grid,
   Boxes,
+  LayoutDashboard,
+  List,
   ChevronDown,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -20,6 +21,17 @@ const Rentalsidebar = () => {
         <h2>Rental Panel</h2>
       </div>
       <ul className="sidebar-menu">
+        {/* Dashboard */}
+        <li>
+          <NavLink
+            to="/irl-dashboard"
+            className={({ isActive }) => (isActive ? "active-link" : "")}
+          >
+            <LayoutDashboard className="icon" />
+            <span>Dashboard</span>
+          </NavLink>
+        </li>
+
         {/* Customers */}
         <li>
           <NavLink
@@ -91,14 +103,14 @@ const Rentalsidebar = () => {
           </NavLink>
         </li>
 
-        {/* Payments */}
+        {/* List Orders */}
         <li>
           <NavLink
-            to="/payments"
+            to="/list-orders"
             className={({ isActive }) => (isActive ? "active-link" : "")}
           >
-            <CreditCard className="icon" />
-            <span>Payments</span>
+            <List className="icon" />
+            <span>List Orders</span>
           </NavLink>
         </li>
       </ul>

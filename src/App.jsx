@@ -15,6 +15,7 @@ import Category from "./components/category/Category";
 // Orders
 import Orders from "./components/orders/Orders";
 import OrderDetails from "./components/orders/OrderDetails";
+import ListOrders from "./components/listorders/ListOrders"; // ✅ New import
 
 // MainType & SubType
 import MainType from "./components/maintype/MainType";
@@ -23,6 +24,9 @@ import SubType from "./components/subtype/SubType";
 // Transactions
 import Transactions from "./components/transactions/Transactions";
 import TransactionDetails from "./components/transactions/TransactionDetails";
+
+// IRL Dashboard
+import IRLDashboard from "./components/irlDashboard/IRLDashboard";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
@@ -59,6 +63,12 @@ function App() {
           element={isLoggedIn ? <Dashboard onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
+        {/* IRL Dashboard (new) */}
+        <Route
+          path="/irl-dashboard"
+          element={isLoggedIn ? <IRLDashboard onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+
         {/* Rental Dashboard */}
         <Route
           path="/rental-dashboard"
@@ -89,6 +99,7 @@ function App() {
         {/* Orders */}
         <Route path="/orders" element={isLoggedIn ? <Orders onLogout={handleLogout} /> : <Navigate to="/login" />} />
         <Route path="/order-details/:delivery_id" element={isLoggedIn ? <OrderDetails onLogout={handleLogout} /> : <Navigate to="/login" />} />
+        <Route path="/list-orders" element={isLoggedIn ? <ListOrders onLogout={handleLogout} /> : <Navigate to="/login" />} /> {/* ✅ New Route */}
 
         {/* Transactions */}
         <Route path="/transaction" element={isLoggedIn ? <Transactions onLogout={handleLogout} /> : <Navigate to="/login" />} />
