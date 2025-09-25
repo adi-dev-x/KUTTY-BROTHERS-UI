@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Header from "../header/Header";
-import "./Brand.css";
+import "./brand.css";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 
 const BrandDashboard = ({ onLogout }) => {
