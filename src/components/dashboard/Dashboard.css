@@ -1,197 +1,117 @@
 .dashboard-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background: #f5f6f8;
+  height: 100vh;
 }
 
-/* Body = sidebar + main */
 .dashboard-body {
   display: flex;
   flex: 1;
 }
 
-/* Sidebar */
 .sidebar {
-  width: 240px;
-  background: #fff;
-  border-right: 1px solid #ddd;
+  width: 220px;
+  background-color: #2d2d2d;
+  color: #fff;
   padding: 20px;
-  display: flex;
-  flex-direction: column;
-}
-
-.logo {
-  font-weight: bold;
-  color: #eab308; /* yellow-500 */
-}
-
-.logo span {
-  color: #000;
 }
 
 .sidebar-section {
-  margin-top: 30px;
   font-size: 14px;
-  color: #888;
+  margin-bottom: 10px;
+  color: #ccc;
 }
 
-.sidebar ul {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0;
-}
-
-.sidebar ul li {
-  padding: 10px 5px;
-  cursor: pointer;
-  color: #333;
-  border-radius: 6px;
-}
-
-.sidebar ul li.active,
-.sidebar ul li:hover {
-  background: #fef9c3; /* yellow-100 */
-  color: #ca8a04;     /* yellow-600 */
-}
-
-.sub-menu {
-  margin-left: 15px;
-  font-size: 14px;
-  color: #666;
-}
-
-.sidebar-support {
-  margin-top: auto;
-  color: #555;
-  font-size: 14px;
-}
-
-/* Main content */
 .dashboard-main {
   flex: 1;
-  padding: 30px;
+  padding: 20px;
+  background: #f5f5f5;
+}
+
+/* Top Stats Cards */
+.top-stats-cards {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
 }
 
-/* Top stats */
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+.stat-card {
+  flex: 1 1 180px;
+  background: rgba(217, 148, 25, 0.2); /* lighter yellow */
+  border-left: 5px solid #d99419;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  transition: all 0.3s;
 }
 
-.stats-cards .card {
+.stat-card h2 {
+  margin-top: 8px;
+  font-size: 24px;
+  color: #333;
+}
+
+/* Bottom Section */
+.bottom-section {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Transaction Card */
+.transaction-card {
+  flex: 1 1 300px;
   background: #fff;
   padding: 20px;
-  border-radius: 10px;
-  font-weight: 600;
-  box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
+  border-radius: 8px;
 }
 
-.stats-cards .card h2 {
-  margin-top: 10px;
-  font-size: 22px;
-}
-
-.stats-cards .yellow {
-  border-left: 5px solid #facc15;
-}
-
-/* Chart + Upcoming Rentals row */
-.chart-row {
-  display: grid;
-  grid-template-columns: 1fr 2fr; /* Chart smaller, Rentals wider */
-  gap: 20px;
-  align-items: stretch; /* ✅ equal height */
-}
-
-/* Chart Card */
-.chart-card {
-  background: #fff;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
-
-  min-height: 260px;   /* ✅ same height as table */
+.sub-cards {
   display: flex;
-  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
 }
 
-.chart-card canvas {
+.sub-card {
   flex: 1;
-  width: 100% !important;
-  height: 100% !important;
+  background: #d99419;
+  color: #fff;
+  padding: 15px;
+  border-radius: 6px;
+  text-align: center;
 }
 
-/* Table Card (Upcoming Rentals + Transactions) */
-.table-card {
+.sub-card p {
+  font-size: 14px;
+}
+
+.sub-card h2 {
+  font-size: 20px;
+  margin-top: 5px;
+}
+
+/* Top Products Table */
+.top-products-card {
+  flex: 2 1 500px;
   background: #fff;
-  border-radius: 10px;
   padding: 20px;
-  box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
-  overflow-x: auto;
-margin-left: 10px;
-  min-height: 260px;   /* ✅ matches chart card */
-  display: flex;
-  flex-direction: column;
+  border-radius: 8px;
 }
 
-.table-card table {
+.top-products-card table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
-  font-size: 14px;
 }
 
-.table-card th, 
-.table-card td {
-  padding: 8px;
-  border-bottom: 1px solid #eee;
+.top-products-card th,
+.top-products-card td {
+  border: 1px solid #ddd;
+  padding: 10px;
   text-align: left;
 }
 
-.table-card th {
-  color: #333;
-  font-weight: 600;
-}
-
-/* Recent Transactions Row - SINGLE CARD */
-.transactions-row {
-  display: flex;         /* full width single row */
-  width: 100%;
-}
-
-.transactions-row .table-card {
-  flex: 1;
-  min-height: 220px;     /* ✅ consistent height */
-}
-
-/* ------------------- Responsive ------------------- */
-@media (max-width: 1200px) {
-  .stats-cards {
-    grid-template-columns: repeat(2, 1fr); /* 2 cards per row */
-  }
-}
-
-@media (max-width: 900px) {
-  .chart-row {
-    grid-template-columns: 1fr; /* stack chart & rentals */
-  }
-  
-  .stats-cards {
-    grid-template-columns: 1fr; /* 1 card per row */
-  }
-
-  .chart-card,
-  .table-card {
-    min-height: 200px; /* smaller on mobile */
-  }
-
-  .tables-grid,
-  .transactions-row {
-    flex-direction: column; /* stack on mobile */
-  }
+.top-products-card th {
+  background-color: #f2f2f2;
 }
