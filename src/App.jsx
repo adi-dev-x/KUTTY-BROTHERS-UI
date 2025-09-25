@@ -12,16 +12,20 @@ import Brand from "./components/brand/brand";
 import Tools from "./components/tools/Tools"; 
 import Category from "./components/category/Category"; 
 
-// ✅ Orders
+// Orders
 import Orders from "./components/orders/Orders";
 import OrderDetails from "./components/orders/OrderDetails";
 
-// ✅ MainType & SubType
+// MainType & SubType
 import MainType from "./components/maintype/MainType";
 import SubType from "./components/subtype/SubType";
 
+// Transactions
+import Transactions from "./components/transactions/Transactions";
+import TransactionDetails from "./components/transactions/TransactionDetails";
+
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // set to false in production
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
 
   const handleLoginSuccess = () => setIsLoggedIn(true);
   const handleLogout = () => setIsLoggedIn(false);
@@ -29,7 +33,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Login Route */}
+        {/* Login */}
         <Route
           path="/login"
           element={
@@ -37,7 +41,7 @@ function App() {
           }
         />
 
-        {/* Main Page */}
+        {/* Main */}
         <Route
           path="/"
           element={isLoggedIn ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" />}
@@ -61,65 +65,34 @@ function App() {
           element={isLoggedIn ? <RentalDashboard onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
-        {/* Brand Page */}
+        {/* Brand */}
         <Route
           path="/brand"
           element={isLoggedIn ? <Brand onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
-        {/* ✅ MainType Page */}
-        <Route
-          path="/maintype"
-          element={isLoggedIn ? <MainType onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
+        {/* MainType & SubType */}
+        <Route path="/maintype" element={isLoggedIn ? <MainType onLogout={handleLogout} /> : <Navigate to="/login" />} />
+        <Route path="/subtype" element={isLoggedIn ? <SubType onLogout={handleLogout} /> : <Navigate to="/login" />} />
 
-        {/* ✅ SubType Page */}
-        <Route
-          path="/subtype"
-          element={isLoggedIn ? <SubType onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
+        {/* Tools & Category */}
+        <Route path="/tools" element={isLoggedIn ? <Tools onLogout={handleLogout} /> : <Navigate to="/login" />} />
+        <Route path="/category" element={isLoggedIn ? <Category onLogout={handleLogout} /> : <Navigate to="/login" />} />
 
-        {/* Tools Page */}
-        <Route
-          path="/tools"
-          element={isLoggedIn ? <Tools onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
-
-        {/* Category Page */}
-        <Route
-          path="/category"
-          element={isLoggedIn ? <Category onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
-
-        {/* Stock Report */}
-        <Route
-          path="/stock-report"
-          element={isLoggedIn ? <StockReport onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
-
-        {/* Stock Detail Page */}
-        <Route
-          path="/stock/:sub_code"
-          element={isLoggedIn ? <StockDetail onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
+        {/* Stock */}
+        <Route path="/stock-report" element={isLoggedIn ? <StockReport onLogout={handleLogout} /> : <Navigate to="/login" />} />
+        <Route path="/stock/:sub_code" element={isLoggedIn ? <StockDetail onLogout={handleLogout} /> : <Navigate to="/login" />} />
 
         {/* Invoice */}
-        <Route
-          path="/invoices"
-          element={isLoggedIn ? <InvoicePage onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
+        <Route path="/invoices" element={isLoggedIn ? <InvoicePage onLogout={handleLogout} /> : <Navigate to="/login" />} />
 
-        {/* ✅ Orders Page */}
-        <Route
-          path="/orders"
-          element={isLoggedIn ? <Orders onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
+        {/* Orders */}
+        <Route path="/orders" element={isLoggedIn ? <Orders onLogout={handleLogout} /> : <Navigate to="/login" />} />
+        <Route path="/order-details/:delivery_id" element={isLoggedIn ? <OrderDetails onLogout={handleLogout} /> : <Navigate to="/login" />} />
 
-        {/* ✅ Order Details Page (using delivery_id) */}
-        <Route
-          path="/order-details/:delivery_id"
-          element={isLoggedIn ? <OrderDetails onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
+        {/* Transactions */}
+        <Route path="/transaction" element={isLoggedIn ? <Transactions onLogout={handleLogout} /> : <Navigate to="/login" />} />
+        <Route path="/transaction-details" element={isLoggedIn ? <TransactionDetails onLogout={handleLogout} /> : <Navigate to="/login" />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to={isLoggedIn ? "/" : "/login"} />} />

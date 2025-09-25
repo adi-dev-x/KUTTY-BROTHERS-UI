@@ -104,7 +104,7 @@ const Orders = ({ onLogout }) => {
       "Advance Amount",
       "Placed At",
       "Returned At",
-      "Transaction Id",
+      "Transactions",
       "Status",
     ];
 
@@ -121,7 +121,7 @@ const Orders = ({ onLogout }) => {
       o.advance_amount || "-",
       o.placed_at || "-",
       o.declined_at || "-",
-      o.transaction_id || "-",
+      "View Transaction", // In PDF just show text
       o.status || "-",
     ]);
 
@@ -191,7 +191,7 @@ const Orders = ({ onLogout }) => {
                     <th>Advance Amount</th>
                     <th>Placed At</th>
                     <th>Returned At</th>
-                    <th>Transaction Id</th>
+                    <th>Transactions</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -215,7 +215,19 @@ const Orders = ({ onLogout }) => {
                       <td>{o.advance_amount || "-"}</td>
                       <td>{o.placed_at || "-"}</td>
                       <td>{o.declined_at || "-"}</td>
-                      <td>{o.transaction_id || "-"}</td>
+                      <td>
+                        <button
+                          className="view-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate("/transaction", {
+                              state: { order_id: o.delivery_id },
+                            });
+                          }}
+                        >
+                          View Transaction
+                        </button>
+                      </td>
                       <td>
                         <select
                           value={o.status}
