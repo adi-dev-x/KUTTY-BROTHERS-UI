@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Header from "../header/Header";
-import "./Subtype.css"; // Reuse same CSS
+import "./SubType.css"; // Reuse same CSS
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 
 const SubTypeDashboard = ({ onLogout }) => {
