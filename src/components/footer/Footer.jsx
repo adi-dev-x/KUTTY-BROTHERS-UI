@@ -20,7 +20,7 @@ const Footer = () => {
       {/* Right side */}
       <div className="footer-right">
         
-        <p>© 2025 Adithya Technologies, Inc.</p>
+        <p>© 2025 Hevinka.</p>
         <a href="#">Terms & Conditions</a>
       </div>
     </footer>
