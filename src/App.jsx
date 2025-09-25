@@ -29,7 +29,7 @@ import TransactionDetails from "./components/transactions/TransactionDetails";
 import IRLDashboard from "./components/irldashboard/IrlDashboard";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const handleLoginSuccess = () => setIsLoggedIn(true);
   const handleLogout = () => setIsLoggedIn(false);
