@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FiDownload } from "react-icons/fi";
+import { FiDownload, FiFilter } from "react-icons/fi";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import axios from "axios";
@@ -11,6 +11,9 @@ const ListOrders = ({ onLogout }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [filterActive, setFilterActive] = useState(false);
+  const [filteredOrders, setFilteredOrders] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 8;
 
@@ -18,9 +21,10 @@ const ListOrders = ({ onLogout }) => {
     const fetchOrders = async () => {
       try {
         const res = await axios.get(
-          "http://192.168.0.202:8080/irrl/genericApiJoin/listAllOrders"
+          "http://192.168.29.125:8080/irrl/genericApiJoin/listAllOrders"
         );
         setOrders(res.data?.data || []);
+        setFilteredOrders(res.data?.data || []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -53,7 +57,7 @@ const ListOrders = ({ onLogout }) => {
       "Status",
     ];
 
-    const tableRows = orders.map((o, i) => [
+    const tableRows = filteredOrders.map((o, i) => [
       i + 1,
       o.customer_name || "-",
       o.customer_id || "-",
@@ -75,16 +79,17 @@ const ListOrders = ({ onLogout }) => {
     doc.save("list_orders.pdf");
   };
 
-  // Filter and paginate
-  const filteredOrders = orders.filter(
-    (o) =>
-      (o.customer_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (o.customer_id || "").toLowerCase().includes(search.toLowerCase()) ||
-      (o.contact_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (o.contact_number || "").toLowerCase().includes(search.toLowerCase()) ||
-      (o.inventory_id || "").toLowerCase().includes(search.toLowerCase()) ||
-      (o.status || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const handleFilterSubmit = (e) => {
+    e.preventDefault();
+    const filtered = orders.filter(
+      (o) =>
+        (o.customer_name || "").toLowerCase().includes(search.toLowerCase()) &&
+        (statusFilter === "" || (o.status || "").toLowerCase() === statusFilter.toLowerCase())
+    );
+    setFilteredOrders(filtered);
+    setFilterActive(true);
+    setCurrentPage(1);
+  };
 
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
@@ -121,6 +126,43 @@ const ListOrders = ({ onLogout }) => {
             </button>
           </div>
 
+          {/* Filter Form */}
+          <div className="filter-bar">
+            <button
+              className="filter-toggle-btn"
+              onClick={() => setFilterActive((prev) => !prev)}
+            >
+              <FiFilter /> Filter
+            </button>
+
+            {filterActive && (
+              <form className="filter-form" onSubmit={handleFilterSubmit}>
+                <input
+                  type="text"
+                  placeholder="Customer Name"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">All Status</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="RENTED">Rented</option>
+                  <option value="AVAILABLE">Available</option>
+                  <option value="DAMAGED">Damaged</option>
+                  <option value="REPAIRING">Repairing</option>
+                  <option value="BLOCKED">Blocked</option>
+                  <option value="RESERVED">Reserved</option>
+                  <option value="EXPIRED">Expired</option>
+                </select>
+                <button type="submit">Apply Filter</button>
+              </form>
+            )}
+          </div>
+
           {loading ? (
             <p>Loading orders...</p>
           ) : (
@@ -149,7 +191,7 @@ const ListOrders = ({ onLogout }) => {
                   </thead>
                   <tbody>
                     {currentRows.map((o, i) => (
-                      <tr key={o.order_id}>
+                      <tr key={o.order_id} className={filterActive ? "highlight-row" : ""}>
                         <td>{indexOfFirstRow + i + 1}</td>
                         <td>{o.customer_name || "-"}</td>
                         <td>{o.customer_id || "-"}</td>
@@ -180,7 +222,6 @@ const ListOrders = ({ onLogout }) => {
                   >
                     Prev
                   </button>
-
                   {getPageNumbers().map((page) => (
                     <button
                       key={page}
@@ -190,7 +231,6 @@ const ListOrders = ({ onLogout }) => {
                       {page}
                     </button>
                   ))}
-
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                     disabled={currentPage === totalPages}

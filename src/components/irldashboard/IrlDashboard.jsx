@@ -27,12 +27,13 @@ const IrlDashboard = ({ onLogout }) => {
   const [topProducts, setTopProducts] = useState([]);
 
   useEffect(() => {
+    // Fetch status totals
     const fetchTotals = async () => {
       try {
         const totalsData = {};
         for (let status of statuses) {
           const response = await axios.get(
-            `http://192.168.0.202:8080/irrl/genericApiUnjoin/listProductCount?category='${status}'`
+            `http://192.168.29.125:8080/irrl/genericApiUnjoin/listProductCount?category='${status}'`
           );
           totalsData[status] = response.data?.data[0]?.count || 0;
         }
@@ -44,27 +45,30 @@ const IrlDashboard = ({ onLogout }) => {
       }
     };
 
+    // Fetch completed and pending transactions
     const fetchTransactions = async () => {
       try {
         const completedRes = await axios.get(
-          "http://192.168.0.202:8080/irrl/genericApiUnjoin/listTransactionCount?status='COMPLETED'"
+          "http://192.168.29.125:8080/irrl/genericApiUnjoin/listTransactionCount?status='COMPLETED'"
         );
         const pendingRes = await axios.get(
-          "http://192.168.0.202:8080/irrl/genericApiUnjoin/listTransactionCount?status='PENDING'"
+          "http://192.168.29.125:8080/irrl/genericApiUnjoin/listTransactionCount?status='PENDING'"
         );
+
         setTransactions({
           completed: completedRes.data?.data[0]?.count || 0,
           pending: pendingRes.data?.data[0]?.count || 0,
         });
       } catch (err) {
-        console.error("Error fetching transactions:", err);
+        console.error("Error fetching transaction counts:", err);
       }
     };
 
+    // Fetch top rented products
     const fetchTopProducts = async () => {
       try {
         const res = await axios.get(
-          "http://192.168.0.202:8080/irrl/genericApiUnjoin/topRentedProducts"
+          "http://192.168.29.125:8080/irrl/genericApiUnjoin/topRentedProducts"
         );
         setTopProducts(res.data?.data || []);
       } catch (err) {

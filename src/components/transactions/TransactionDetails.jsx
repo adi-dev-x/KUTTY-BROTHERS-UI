@@ -9,6 +9,7 @@ const TransactionDetails = ({ onLogout }) => {
   const [subTransactions, setSubTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddPopup, setShowAddPopup] = useState(false);
+  const [uploading, setUploading] = useState(false); // 👈 for upload loading
   const [newTransaction, setNewTransaction] = useState({
     amount: "",
     status: "PENDING",
@@ -27,7 +28,7 @@ const TransactionDetails = ({ onLogout }) => {
     setLoading(true);
     try {
       const res = await axios.get(
-        `http://192.168.0.202:8080/irrl/genericApiUnjoin/subTransaction?main_transaction_id=${mainTransactionId}`
+        `http://192.168.29.125:8080/irrl/genericApiUnjoin/subTransaction?main_transaction_id=${mainTransactionId}`
       );
       setSubTransactions(res.data?.data || []);
     } catch (err) {
@@ -45,7 +46,7 @@ const TransactionDetails = ({ onLogout }) => {
   const handleStatusChange = async (transactionId, newStatus) => {
     try {
       await axios.get(
-        `http://192.168.0.202:8080/irrl/editTransaction/${transactionId}?status=${newStatus}&table=transac`
+        `http://192.168.29.125:8080/irrl/editTransaction/${transactionId}?status=${newStatus}&table=transac`
       );
       setSubTransactions((prev) =>
         prev.map((t) =>
@@ -63,7 +64,7 @@ const TransactionDetails = ({ onLogout }) => {
     try {
       const { id, amount, status, type } = editingTransaction;
       await axios.get(
-        `http://192.168.0.202:8080/irrl/editTransaction/${id}?status=${status}&amount=${parseInt(
+        `http://192.168.29.125:8080/irrl/editTransaction/${id}?status=${status}&amount=${parseInt(
           amount,
           10
         )}&type=${type}&table=transac`
@@ -90,7 +91,7 @@ const TransactionDetails = ({ onLogout }) => {
       };
 
       await axios.post(
-        "http://192.168.0.202:8080/irrl/addSubTransaction",
+        "http://192.168.29.125:8080/irrl/addSubTransaction",
         payload
       );
 
@@ -111,20 +112,34 @@ const TransactionDetails = ({ onLogout }) => {
 
   // Handle Image Upload
   const handleImageUpload = async () => {
-    if (!newTransaction.imageFile) return;
+    if (!newTransaction.imageFile) {
+      alert("Please select a file first!");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", newTransaction.imageFile);
+
+    setUploading(true); // 👈 start loading
     try {
       const res = await axios.post(
-        "http://192.168.0.202:8080/irrl/uploadImage",
-        formData
+        "http://192.168.29.125:8080/irrl/upload", // 👈 updated API
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
       );
-      // Assuming API returns the uploaded file path or name
-      setNewTransaction({ ...newTransaction, uploadedImage: res.data.filePath });
+
+      setNewTransaction({
+        ...newTransaction,
+        uploadedImage: res.data.filePath || res.data.url || "", // adjust based on API response
+      });
       alert("Image uploaded successfully!");
     } catch (err) {
       console.error("Failed to upload image", err);
       alert("Failed to upload image");
+    } finally {
+      setUploading(false); // 👈 stop loading
     }
   };
 
@@ -188,7 +203,7 @@ const TransactionDetails = ({ onLogout }) => {
                             href={
                               t.image.startsWith("http")
                                 ? t.image
-                                : `http://192.168.0.202:8080/${t.image}`
+                                : `http://192.168.29.125:8080/${t.image}`
                             }
                             target="_blank"
                             rel="noopener noreferrer"
@@ -280,18 +295,24 @@ const TransactionDetails = ({ onLogout }) => {
                       type="button"
                       onClick={handleImageUpload}
                       style={{ marginTop: "5px" }}
+                      disabled={uploading}
                     >
-                      Upload Image
+                      {uploading ? "Uploading..." : "Upload Image"}
                     </button>
                   </div>
                 </div>
                 <div className="modal-actions">
-                  <button className="save-btn" onClick={handleAddTransaction}>
+                  <button
+                    className="save-btn"
+                    onClick={handleAddTransaction}
+                    disabled={uploading}
+                  >
                     Add
                   </button>
                   <button
                     className="cancel-btn"
                     onClick={() => setShowAddPopup(false)}
+                    disabled={uploading}
                   >
                     Cancel
                   </button>

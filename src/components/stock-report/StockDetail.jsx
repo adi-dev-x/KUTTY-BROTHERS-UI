@@ -14,9 +14,9 @@ const StockDetail = ({ onLogout }) => {
 
   useEffect(() => {
     // ✅ updated API call to use sub_code
-   console.log( `http://192.168.0.202:8080/irrl/genericApiUnjoin/productSingle?sub_code='${sub_code}'`)
+   console.log( `http://192.168.29.125:8080/irrl/genericApiUnjoin/productSingle?sub_code='${sub_code}'`)
     fetch(
-      `http://192.168.0.202:8080/irrl/genericApiUnjoin/productSingle?sub_code='${sub_code}'`
+      `http://192.168.29.125:8080/irrl/genericApiUnjoin/productSingle?sub_code='${sub_code}'`
     )
       .then((res) => res.json())
       .then((data) => {

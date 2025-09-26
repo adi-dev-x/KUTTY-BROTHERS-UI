@@ -1,26 +1,17 @@
 import React, { useState, useEffect } from "react";
 import Header from "../header/Header";
-import Footer from "../footer/Footer";
-import "./Customer.css";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
-import { FiEdit, FiTrash2, FiDownload } from "react-icons/fi";
+import { FiDownload } from "react-icons/fi";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import "./Customer.css";
 
 const RentalDashboard = ({ onLogout }) => {
-  // ✅ State
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // ✅ Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const customersPerPage = 10;
-
-  // ✅ Search + Highlight
   const [search, setSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-  // ✅ Form state
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [formData, setFormData] = useState({
@@ -32,18 +23,14 @@ const RentalDashboard = ({ onLogout }) => {
     address: "",
     email: "",
     customer_flag: "",
-    status: "",
+    status: "Active", // default to Active
   });
 
-  // ✅ Menu state (track which row’s menu is open)
-  const [menuOpen, setMenuOpen] = useState(null);
-
-  // ✅ Fetch customers from API
+  // Fetch customers
   useEffect(() => {
-    fetch("http://192.168.0.202:8080/irrl/genericApiUnjoin/customerlist")
+    fetch("http://192.168.29.125:8080/irrl/genericApiUnjoin/customerlist")
       .then((res) => res.json())
       .then((data) => {
-        console.log("API Response:", data);
         setCustomers(Array.isArray(data.data) ? data.data : []);
         setLoading(false);
       })
@@ -53,33 +40,30 @@ const RentalDashboard = ({ onLogout }) => {
       });
   }, []);
 
-  // ✅ Suggestions (search by name or ID)
+  // Search suggestions
   const suggestions = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.customer_id.toString().includes(search)
   );
 
-  // ✅ Pagination slice
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const customersPerPage = 10;
   const indexOfLast = currentPage * customersPerPage;
   const indexOfFirst = indexOfLast - customersPerPage;
   const currentCustomers = customers.slice(indexOfFirst, indexOfLast);
   const totalPages = Math.ceil(customers.length / customersPerPage);
 
-  // ✅ Select suggestion
   const handleSelectCustomer = (customer) => {
     setSelectedCustomer(customer.customer_id);
-
-    // Move searched customer to the top
     setCustomers((prev) => {
       const filtered = prev.filter((c) => c.customer_id !== customer.customer_id);
       return [customer, ...filtered];
     });
-
     setSearch("");
   };
 
-  // ✅ Handle Add / Edit toggle
   const handleAddClick = () => {
     setEditingCustomer(null);
     setFormData({
@@ -91,60 +75,77 @@ const RentalDashboard = ({ onLogout }) => {
       address: "",
       email: "",
       customer_flag: "",
-      status: "",
+      status: "Active",
     });
     setShowForm(true);
   };
 
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
-    setFormData(customer);
-    setShowForm(true);
-    setMenuOpen(null);
-  };
-
-  // ✅ Handle form submit
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (editingCustomer) {
-      // Update existing
-      setCustomers(
-        customers.map((c) =>
-          c.customer_id === editingCustomer.customer_id
-            ? { ...formData, customer_id: editingCustomer.customer_id }
-            : c
-        )
-      );
-    } else {
-      // Add new
-      const newCustomer = {
-        ...formData,
-        customer_id: Date.now().toString(),
-      };
-      setCustomers([...customers, newCustomer]);
-    }
-    setShowForm(false);
-    setEditingCustomer(null);
     setFormData({
-      name: "",
-      short_name: "",
-      phone: "",
-      type: "",
-      gst: "",
-      address: "",
-      email: "",
-      customer_flag: "",
-      status: "",
+      name: customer.name || "",
+      short_name: customer.short_name || "",
+      phone: customer.phone || "",
+      type: customer.type || "",
+      gst: customer.gst || "",
+      address: customer.address || "",
+      email: customer.email || "",
+      customer_flag: customer.customer_flag || "",
+      status: customer.status || "Active",
     });
+    setShowForm(true);
   };
 
-  // ✅ Handle delete
-  const handleDelete = (id) => {
-    setCustomers(customers.filter((c) => c.customer_id !== id));
-    setMenuOpen(null);
+  // Submit handler with API POST
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      Name: formData.name,
+      ShortName: formData.short_name,
+      Phone: formData.phone,
+      Type: formData.type,
+      GST: formData.gst,
+      Address: formData.address,
+      Email: formData.email || undefined,
+      CustomerFlag: formData.customer_flag || undefined,
+      Status: formData.status || "Active",
+    };
+
+    try {
+      const res = await fetch("http://192.168.29.125:8080/irrl/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`API Error: ${errText}`);
+      }
+
+      const newCustomer = await res.json();
+      setCustomers((prev) => [...prev, newCustomer]);
+      alert("Customer added successfully!");
+      setShowForm(false);
+      setFormData({
+        name: "",
+        short_name: "",
+        phone: "",
+        type: "",
+        gst: "",
+        address: "",
+        email: "",
+        customer_flag: "",
+        status: "Active",
+      });
+    } catch (err) {
+      console.error("Error adding customer:", err);
+      alert("Failed to add customer. Check console.");
+    }
   };
 
-  // ✅ PDF Download Function
+  // PDF Download
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(16);
@@ -179,24 +180,18 @@ const RentalDashboard = ({ onLogout }) => {
       ]);
     });
 
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 30,
-    });
-
+    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30 });
     doc.save("customers.pdf");
   };
 
   return (
     <div className="dashboard-wrapper">
       <Header onLogout={onLogout} />
-
       <div className="dashboard-body">
         <Rentalsidebar />
 
         <div className="main-content">
-          {/* Search + Add + Download */}
+          {/* Top bar */}
           <div className="top-bar">
             <div className="search-container">
               <input
@@ -221,12 +216,12 @@ const RentalDashboard = ({ onLogout }) => {
                 + Add Customer
               </button>
               <button className="download-btn" onClick={handleDownloadPDF}>
-                <FiDownload className="menu-icons" /> Download PDF
+                <FiDownload /> Download PDF
               </button>
             </div>
           </div>
 
-          {/* ✅ Add/Edit Form */}
+          {/* Add/Edit Form */}
           {showForm && (
             <form className="add-customer-form" onSubmit={handleSubmit}>
               <input
@@ -282,12 +277,13 @@ const RentalDashboard = ({ onLogout }) => {
                   setFormData({ ...formData, customer_flag: e.target.value })
                 }
               />
-              <input
-                type="text"
-                placeholder="Status (Active/Inactive)"
+              <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              />
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
               <button type="submit">{editingCustomer ? "Update" : "Add"}</button>
             </form>
           )}
@@ -311,7 +307,6 @@ const RentalDashboard = ({ onLogout }) => {
                     <th>Email</th>
                     <th>Customer Flag</th>
                     <th>Status</th>
-                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -330,34 +325,12 @@ const RentalDashboard = ({ onLogout }) => {
                       <td>{c.email}</td>
                       <td>{c.customer_flag}</td>
                       <td>{c.status}</td>
-                      <td className="actions-cell">
-                        <div className="menu-wrapper">
-                          <button
-                            className="menu-btn"
-                            onClick={() =>
-                              setMenuOpen(menuOpen === c.customer_id ? null : c.customer_id)
-                            }
-                          >
-                            ⋮
-                          </button>
-                          {menuOpen === c.customer_id && (
-                            <div className="menu">
-                              <div onClick={() => handleEdit(c)}>
-                                <FiEdit className="menu-icon" /> Edit
-                              </div>
-                              <div onClick={() => handleDelete(c.customer_id)}>
-                                <FiTrash2 className="menu-icon" /> Delete
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              {/* ✅ Pagination */}
+              {/* Pagination */}
               <div className="pagination">
                 {Array.from({ length: totalPages }, (_, i) => (
                   <button

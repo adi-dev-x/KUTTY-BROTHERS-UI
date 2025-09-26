@@ -19,7 +19,7 @@ const Transactions = ({ onLogout }) => {
     setLoading(true);
     try {
       const res = await axios.get(
-        `http://192.168.0.202:8080/irrl/genericApiUnjoin/mainTransaction?order_id='${orderIdFromNav}'`
+        `http://192.168.29.125:8080/irrl/genericApiUnjoin/mainTransaction?order_id='${orderIdFromNav}'`
       );
       setTransactions(res.data?.data || []);
     } catch (err) {
@@ -39,7 +39,7 @@ const Transactions = ({ onLogout }) => {
     const intAmount = parseInt(amount, 10) || 0; // convert to integer
 
     await axios.get(
-      `http://192.168.0.202:8080/irrl/editTransaction/${transaction_id}?status=${status}&amount=${intAmount}`
+      `http://192.168.29.125:8080/irrl/editTransaction/${transaction_id}?status=${status}&amount=${intAmount}`
     );
     setEditingTransaction(null);
     fetchTransactions();

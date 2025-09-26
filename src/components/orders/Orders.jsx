@@ -14,7 +14,7 @@ const Orders = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [statuses, setStatuses] = useState(["COMPLETED", "BLOCKED", "INITIATED"]);
+  const [statuses, setStatuses] = useState(["COMPLETED", "BLOCKED", "INITIATED","RESERVED"]);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 8;
   const navigate = useNavigate();
@@ -24,7 +24,7 @@ const Orders = ({ onLogout }) => {
     const fetchOrders = async () => {
       try {
         const response = await axios.get(
-          "http://192.168.0.202:8080/irrl/genericApiUnjoin/listOrders"
+          "http://192.168.29.125:8080/irrl/genericApiUnjoin/listOrders"
         );
         setOrders(response.data?.data || []);
       } catch (err) {
@@ -37,7 +37,7 @@ const Orders = ({ onLogout }) => {
     const fetchStatuses = async () => {
       try {
         const res = await axios.get(
-          "http://192.168.0.202:8080/irrl/genericApiUnjoin/statusOptions"
+          "http://192.168.29.125:8080/irrl/genericApiUnjoin/statusOptions"
         );
         const apiStatuses = res.data?.data || [];
         setStatuses(apiStatuses.filter((s) => ["COMPLETED", "BLOCKED", "INITIATED"].includes(s)));
@@ -60,7 +60,7 @@ const Orders = ({ onLogout }) => {
   const handleStatusChange = async (delivery_id, newStatus) => {
     try {
       await axios.get(
-        `http://192.168.0.202:8080/irrl/updateOrder/${delivery_id}?status=${newStatus}`
+        `http://192.168.29.125:8080/irrl/updateOrder/${delivery_id}?status=${newStatus}`
       );
       setOrders(
         orders.map((o) =>
@@ -77,7 +77,7 @@ const Orders = ({ onLogout }) => {
   const handleDelete = async (delivery_id) => {
     try {
       await axios.get(
-        `http://192.168.0.202:8080/irrl/updateOrder/${delivery_id}?status=DELETED`
+        `http://192.168.29.125:8080/irrl/updateOrder/${delivery_id}?status=DELETED`
       );
       setOrders(orders.filter((o) => o.delivery_id !== delivery_id));
     } catch (err) {

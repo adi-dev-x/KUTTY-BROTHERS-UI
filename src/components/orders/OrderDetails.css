@@ -1,10 +1,206 @@
+/* Main content wrapper */
 .main-content {
-  flex: 1;
   padding: 20px;
-  background: #f9fafb;
+  background: #fdfcf6;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  flex: 1;
 }
 
+/* Title */
+.main-content h2 {
+  color: #ca8a03;
+  margin-bottom: 10px;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+/* Back Button */
 .back-btn {
-  background: #d9941a;
-  color:
+  background: #ca8a03;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.3s;
+}
+.back-btn:hover {
+  background: #b37a02;
+}
+
+/* Table */
+.order-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.order-items-table th {
+  background: #ca8a03;
+  color: white;
+  padding: 12px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.order-items-table td {
+  border: 1px solid #f1e5b9;
+  padding: 10px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.order-items-table tr:nth-child(even) {
+  background: #fef9e6;
+}
+
+/* Eye button */
+.eye-btn {
+  background: #ca8a03;
+  border: none;
+  color: white;
+  font-size: 16px;
+  padding: 6px 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.eye-btn:hover {
+  background: #b37a02;
+}
+
+/* Links */
+.order-items-table a {
+  color: #ca8a03;
+  font-weight: 600;
+  text-decoration: none;
+}
+.order-items-table a:hover {
+  text-decoration: underline;
+}
+
+/* Popup overlay */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(30, 30, 30, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+/* Popup card */
+.popup-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.3s ease;
+}
+
+.popup-card h3 {
+  margin-bottom: 15px;
+  color: #ca8a03;
+  text-align: center;
+  font-size: 18px;
+}
+
+/* Popup image */
+.popup-img {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border: 2px solid #f5e8b3;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+/* Popup controls */
+.popup-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.popup-controls label {
+  font-weight: 600;
+  color: #333;
+}
+
+.popup-controls select,
+.popup-controls input[type="file"] {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+
+/* Buttons */
+button {
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  transition: 0.3s;
+}
+
+.save-btn {
+  background: #ca8a03;
+  color: white;
+  font-weight: bold;
+}
+.save-btn:hover {
+  background: #b37a02;
+}
+
+/* Close button on popup */
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #ca8a03;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.3s;
+}
+.close-btn:hover {
+  background: #b37a02;
+}
+
+/* Upload button */
+.popup-controls button {
+  background: #ca8a03;
+  color: white;
+  font-weight: 500;
+}
+.popup-controls button:hover {
+  background: #b37a02;
+}
+
+/* Animation */
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }

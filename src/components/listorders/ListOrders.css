@@ -227,3 +227,82 @@ select {
   color: #fff;
   border-color: #d99419;
 }
+/* Filter Bar Container */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+/* Filter Toggle Button */
+.filter-toggle-btn {
+  background-color: #fbbf24; /* yellow */
+  color: #111827; /* dark text */
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.filter-toggle-btn:hover {
+  background-color: #f59e0b; /* darker yellow on hover */
+}
+
+/* Filter Form */
+.filter-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background-color: #f9fafb; /* light gray background */
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Filter Inputs */
+.filter-form input[type="text"],
+.filter-form select {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  outline: none;
+  min-width: 180px;
+  transition: border-color 0.3s;
+}
+
+.filter-form input[type="text"]:focus,
+.filter-form select:focus {
+  border-color: #fbbf24; /* yellow focus */
+}
+
+/* Filter Submit Button */
+.filter-form button[type="submit"] {
+  background-color: #fbbf24;
+  color: #111827;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.filter-form button[type="submit"]:hover {
+  background-color: #f59e0b;
+}
+
+/* Responsive for small screens */
+@media (max-width: 768px) {
+  .filter-form {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

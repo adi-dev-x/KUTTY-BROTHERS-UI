@@ -5,6 +5,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
   const [customers, setCustomers] = useState([]);
   const [itemOptions, setItemOptions] = useState([]);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const [uploading, setUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     customer_id: "",
@@ -32,12 +33,12 @@ const OrderForm = ({ onAddOrder, onClose }) => {
 
   useEffect(() => {
     axios
-      .get("http://192.168.0.202:8080/irrl/genericApiUnjoin/customer")
+      .get("http://192.168.29.125:8080/irrl/genericApiUnjoin/customer")
       .then((res) => setCustomers(res.data.data || []))
       .catch((err) => console.error(err));
 
     axios
-      .get("http://192.168.0.202:8080/irrl/genericApiUnjoin/itemRetrive")
+      .get("http://192.168.29.125:8080/irrl/genericApiUnjoin/itemRetrive")
       .then((res) => setItemOptions(res.data.data || []))
       .catch((err) => console.error(err));
   }, []);
@@ -75,13 +76,14 @@ const OrderForm = ({ onAddOrder, onClose }) => {
     itemData.tempImages.forEach((file) => form.append("images", file));
 
     try {
-      const res = await axios.post("http://192.168.0.202:8080/irrl/upload", form, {
+      setUploading(true); // start loading
+      const res = await axios.post("http://192.168.29.125:8080/irrl/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const uploadedFiles = (res.data.filenames || []).map((filename) => ({
-        name: filename,
-        url: `http://192.168.0.202:8080/resources/${filename}`,
+      const uploadedFiles = (res.data.urls || []).map((url, index) => ({
+        url,
+        name: `image_${Date.now()}_${index}`, // fallback name
       }));
 
       setItemData((prev) => ({
@@ -94,6 +96,8 @@ const OrderForm = ({ onAddOrder, onClose }) => {
     } catch (err) {
       console.error("Upload failed", err.response?.data || err.message);
       showMessage("error", "Upload failed! Check console.");
+    } finally {
+      setUploading(false); // stop loading
     }
   };
 
@@ -110,7 +114,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
         {
           ...itemData,
           status: "INITIATED",
-          amount: parseInt(itemData.amount) || 0, // ensure integer
+          amount: parseInt(itemData.amount) || 0,
         },
       ],
     });
@@ -133,8 +137,8 @@ const OrderForm = ({ onAddOrder, onClose }) => {
       if (formData.customer_id && formData.items.length > 0) {
         const itemsPayload = formData.items.map((it) => ({
           item_newid: it.item_id,
-          rent_amount: parseInt(it.amount) || 0, // ensure integer
-          before_images: (it.images || []).map((img) => img.name),
+          rent_amount: parseInt(it.amount) || 0,
+          before_images: (it.images || []).map((img) => img.url), // ✅ pass URL, not name
           returned_str: it.expired_at,
           status: "INITIATED",
         }));
@@ -142,7 +146,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
         const orderPayload = {
           customer_id: formData.customer_id,
           inventory_id: formData.inventory_id,
-          advance_amount: parseInt(formData.advance_amount) || 0, // ensure integer
+          advance_amount: parseInt(formData.advance_amount) || 0,
           status: formData.status,
           contact_name: formData.contact_person,
           contact_number: formData.contact_number,
@@ -150,7 +154,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
           items: itemsPayload,
         };
 
-        await axios.post("http://192.168.0.202:8080/irrl/addOrder", orderPayload, {
+        await axios.post("http://192.168.29.125:8080/irrl/addOrder", orderPayload, {
           headers: { "Content-Type": "application/json" },
         });
 
@@ -160,7 +164,6 @@ const OrderForm = ({ onAddOrder, onClose }) => {
       console.error("Save order failed", err.response?.data || err.message);
     } finally {
       if (onClose) onClose();
-      window.location.reload();
     }
   };
 
@@ -169,10 +172,14 @@ const OrderForm = ({ onAddOrder, onClose }) => {
   return (
     <div className="form-overlay">
       <div className="order-form">
-        <button className="close-btn" onClick={() =>  window.location.reload() }>×</button>
+        <button className="close-btn" onClick={() => window.location.reload()}>
+          ×
+        </button>
         <h2>Create New Order</h2>
 
-        {message.text && <div className={`message ${message.type}`}>{message.text}</div>}
+        {message.text && (
+          <div className={`message ${message.type}`}>{message.text}</div>
+        )}
 
         <div className="form-grid">
           <input
@@ -192,21 +199,32 @@ const OrderForm = ({ onAddOrder, onClose }) => {
             type="text"
             placeholder="Contact Person"
             value={formData.contact_person}
-            onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, contact_person: e.target.value })
+            }
           />
           <input
             type="text"
             placeholder="Contact Number"
             value={formData.contact_number}
-            onChange={(e) => setFormData({ ...formData, contact_number: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, contact_number: e.target.value })
+            }
           />
           <input
             type="text"
             placeholder="Contact Address"
             value={formData.contact_address}
-            onChange={(e) => setFormData({ ...formData, contact_address: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, contact_address: e.target.value })
+            }
           />
-          <input type="text" placeholder="Inventory ID" value={formData.inventory_id} readOnly />
+          <input
+            type="text"
+            placeholder="Inventory ID"
+            value={formData.inventory_id}
+            readOnly
+          />
           <input
             type="number"
             placeholder="Advance Amount"
@@ -218,11 +236,15 @@ const OrderForm = ({ onAddOrder, onClose }) => {
           <input
             type="date"
             value={formData.returned_at}
-            onChange={(e) => setFormData({ ...formData, returned_at: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, returned_at: e.target.value })
+            }
           />
           <select
             value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, status: e.target.value })
+            }
           >
             <option value="INITIATED">INITIATED</option>
             <option value="RESERVED">RESERVED</option>
@@ -253,33 +275,53 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                 <input
                   type="date"
                   value={itemData.expired_at}
-                  onChange={(e) => setItemData({ ...itemData, expired_at: e.target.value })}
+                  onChange={(e) =>
+                    setItemData({ ...itemData, expired_at: e.target.value })
+                  }
                 />
                 <input
                   type="number"
                   placeholder="Amount"
                   value={itemData.amount}
-                  onChange={(e) => setItemData({ ...itemData, amount: e.target.value })}
+                  onChange={(e) =>
+                    setItemData({ ...itemData, amount: e.target.value })
+                  }
                 />
                 <input
                   type="file"
                   multiple
-                  onChange={(e) => setItemData({ ...itemData, tempImages: Array.from(e.target.files) })}
+                  onChange={(e) =>
+                    setItemData({
+                      ...itemData,
+                      tempImages: Array.from(e.target.files),
+                    })
+                  }
                 />
-                {itemData.tempImages.length > 0 && (
-                  <button className="btn" onClick={handleUploadImages}>Upload Images</button>
-                )}
+                {itemData.tempImages.length > 0 &&
+                  (uploading ? (
+                    <p className="loading-text">Uploading...</p>
+                  ) : (
+                    <button className="btn" onClick={handleUploadImages}>
+                      Upload Images
+                    </button>
+                  ))}
               </div>
 
               {itemData.images.length > 0 && (
                 <div className="images-preview">
                   {itemData.images.map((img, idx) => (
-                    <img key={`${img.name}-${idx}`} src={img.url} alt={img.name} />
+                    <img
+                      key={`${img.name}-${idx}`}
+                      src={img.url}
+                      alt={img.name}
+                    />
                   ))}
                 </div>
               )}
 
-              <button className="btn save-btn" onClick={handleAddItem}>Save Item</button>
+              <button className="btn save-btn" onClick={handleAddItem}>
+                Save Item
+              </button>
             </div>
           )}
         </div>
@@ -294,7 +336,11 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                 {it.images.length > 0 && (
                   <div className="thumbs">
                     {it.images.map((img, jdx) => (
-                      <img key={`${img.name}-${jdx}`} src={img.url} alt={img.name} />
+                      <img
+                        key={`${img.name}-${jdx}`}
+                        src={img.url}
+                        alt={img.name}
+                      />
                     ))}
                   </div>
                 )}
@@ -303,7 +349,9 @@ const OrderForm = ({ onAddOrder, onClose }) => {
           </div>
         )}
 
-        <button className="btn save-btn" onClick={handleSaveOrder}>Save Order</button>
+        <button className="btn save-btn" onClick={handleSaveOrder}>
+          Save Order
+        </button>
       </div>
     </div>
   );

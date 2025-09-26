@@ -27,7 +27,9 @@
   font-family: Arial, sans-serif;
   position: relative;
 }
-
+.order-form p{
+  color: #000;
+}
 .order-form h2 {
   text-align: center;
   margin-bottom: 25px;
@@ -283,4 +285,9 @@
 
 .icon-btn.delete-btn {
   color: #dc3545;
+}
+.loading-text {
+  color: #007bff;
+  font-weight: bold;
+  margin-top: 5px;
 }

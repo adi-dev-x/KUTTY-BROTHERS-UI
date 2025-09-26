@@ -12,7 +12,7 @@ const BrandDashboard = ({ onLogout }) => {
 
   // ✅ Fetch brands from API
   useEffect(() => {
-    fetch("http://192.168.0.202:8080/irrl/attribute/brand")
+    fetch("http://192.168.29.125:8080/irrl/attribute/brand")
       .then((res) => res.json())
       .then((data) => {
         console.log("API Response:", data);
