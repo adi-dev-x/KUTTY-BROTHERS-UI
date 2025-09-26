@@ -12,7 +12,7 @@ const MainTypeDashboard = ({ onLogout }) => {
 
   // ✅ Fetch main types from new API
   useEffect(() => {
-    fetch("http://192.168.29.125:8080/irrl/attribute/ItemMainType")
+    fetch("https://ems.binlaundry.com/irrl/attribute/ItemMainType")
       .then((res) => res.json())
       .then((data) => {
         console.log("API Response:", data);

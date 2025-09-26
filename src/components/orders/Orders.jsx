@@ -24,7 +24,7 @@ const Orders = ({ onLogout }) => {
     const fetchOrders = async () => {
       try {
         const response = await axios.get(
-          "http://192.168.29.125:8080/irrl/genericApiUnjoin/listOrders"
+          "https://ems.binlaundry.com/irrl/genericApiUnjoin/listOrders"
         );
         setOrders(response.data?.data || []);
       } catch (err) {
@@ -37,7 +37,7 @@ const Orders = ({ onLogout }) => {
     const fetchStatuses = async () => {
       try {
         const res = await axios.get(
-          "http://192.168.29.125:8080/irrl/genericApiUnjoin/statusOptions"
+          "https://ems.binlaundry.com/irrl/genericApiUnjoin/statusOptions"
         );
         const apiStatuses = res.data?.data || [];
         setStatuses(apiStatuses.filter((s) => ["COMPLETED", "BLOCKED", "INITIATED"].includes(s)));
@@ -60,7 +60,7 @@ const Orders = ({ onLogout }) => {
   const handleStatusChange = async (delivery_id, newStatus) => {
     try {
       await axios.get(
-        `http://192.168.29.125:8080/irrl/updateOrder/${delivery_id}?status=${newStatus}`
+        `https://ems.binlaundry.com/irrl/updateOrder/${delivery_id}?status=${newStatus}`
       );
       setOrders(
         orders.map((o) =>
@@ -77,7 +77,7 @@ const Orders = ({ onLogout }) => {
   const handleDelete = async (delivery_id) => {
     try {
       await axios.get(
-        `http://192.168.29.125:8080/irrl/updateOrder/${delivery_id}?status=DELETED`
+        `https://ems.binlaundry.com/irrl/updateOrder/${delivery_id}?status=DELETED`
       );
       setOrders(orders.filter((o) => o.delivery_id !== delivery_id));
     } catch (err) {

@@ -12,7 +12,7 @@ const SubTypeDashboard = ({ onLogout }) => {
 
   // ✅ Fetch sub types from API
   useEffect(() => {
-    fetch("http://192.168.29.125:8080/irrl/attribute/ItemSubType")
+    fetch("https://ems.binlaundry.com/irrl/attribute/ItemSubType")
       .then((res) => res.json())
       .then((data) => {
         console.log("API Response:", data);

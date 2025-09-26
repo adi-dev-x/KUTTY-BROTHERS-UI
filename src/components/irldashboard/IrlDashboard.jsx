@@ -33,7 +33,7 @@ const IrlDashboard = ({ onLogout }) => {
         const totalsData = {};
         for (let status of statuses) {
           const response = await axios.get(
-            `http://192.168.29.125:8080/irrl/genericApiUnjoin/listProductCount?category='${status}'`
+            `https://ems.binlaundry.com/irrl/genericApiUnjoin/listProductCount?category='${status}'`
           );
           totalsData[status] = response.data?.data[0]?.count || 0;
         }
@@ -49,10 +49,10 @@ const IrlDashboard = ({ onLogout }) => {
     const fetchTransactions = async () => {
       try {
         const completedRes = await axios.get(
-          "http://192.168.29.125:8080/irrl/genericApiUnjoin/listTransactionCount?status='COMPLETED'"
+          "https://ems.binlaundry.com/irrl/genericApiUnjoin/listTransactionCount?status='COMPLETED'"
         );
         const pendingRes = await axios.get(
-          "http://192.168.29.125:8080/irrl/genericApiUnjoin/listTransactionCount?status='PENDING'"
+          "https://ems.binlaundry.com/irrl/genericApiUnjoin/listTransactionCount?status='PENDING'"
         );
 
         setTransactions({
@@ -68,7 +68,7 @@ const IrlDashboard = ({ onLogout }) => {
     const fetchTopProducts = async () => {
       try {
         const res = await axios.get(
-          "http://192.168.29.125:8080/irrl/genericApiUnjoin/topRentedProducts"
+          "https://ems.binlaundry.com/irrl/genericApiUnjoin/topRentedProducts"
         );
         setTopProducts(res.data?.data || []);
       } catch (err) {

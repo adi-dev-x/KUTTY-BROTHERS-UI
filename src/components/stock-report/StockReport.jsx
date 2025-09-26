@@ -40,7 +40,7 @@ const StockReport = ({ onLogout }) => {
 
   // Fetch stock data
   useEffect(() => {
-    fetch("http://192.168.29.125:8080/irrl/genericApiUnjoin/productMain")
+    fetch("https://ems.binlaundry.com/irrl/genericApiUnjoin/productMain")
       .then((res) => res.json())
       .then((data) => {
         const raw = Array.isArray(data?.data) ? data.data : [];
@@ -56,7 +56,7 @@ const StockReport = ({ onLogout }) => {
 
   // Fetch brands
   useEffect(() => {
-    fetch("http://192.168.29.125:8080/irrl/attribute/brand")
+    fetch("https://ems.binlaundry.com/irrl/attribute/brand")
       .then((res) => res.json())
       .then((data) => setBrands(Array.isArray(data?.data) ? data.data : []))
       .catch((err) => console.error("Error fetching brands:", err));
@@ -64,7 +64,7 @@ const StockReport = ({ onLogout }) => {
 
   // Fetch main types
   useEffect(() => {
-    fetch("http://192.168.29.125:8080/irrl/attribute/ItemMainType")
+    fetch("https://ems.binlaundry.com/irrl/attribute/ItemMainType")
       .then((res) => res.json())
       .then((data) => setMainTypes(Array.isArray(data?.data) ? data.data : []))
       .catch((err) => console.error("Error fetching main types:", err));
@@ -72,7 +72,7 @@ const StockReport = ({ onLogout }) => {
 
   // Fetch sub types
   useEffect(() => {
-    fetch("http://192.168.29.125:8080/irrl/attribute/ItemSubType")
+    fetch("https://ems.binlaundry.com/irrl/attribute/ItemSubType")
       .then((res) => res.json())
       .then((data) => setSubTypes(Array.isArray(data?.data) ? data.data : []))
       .catch((err) => console.error("Error fetching sub types:", err));
@@ -97,7 +97,7 @@ const StockReport = ({ onLogout }) => {
         category: formData.status,
       };
 
-      const response = await fetch("http://192.168.29.125:8080/irrl/addProduct", {
+      const response = await fetch("https://ems.binlaundry.com/irrl/addProduct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

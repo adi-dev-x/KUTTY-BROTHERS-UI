@@ -28,7 +28,7 @@ const TransactionDetails = ({ onLogout }) => {
     setLoading(true);
     try {
       const res = await axios.get(
-        `http://192.168.29.125:8080/irrl/genericApiUnjoin/subTransaction?main_transaction_id=${mainTransactionId}`
+        `https://ems.binlaundry.com/irrl/genericApiUnjoin/subTransaction?main_transaction_id=${mainTransactionId}`
       );
       setSubTransactions(res.data?.data || []);
     } catch (err) {
@@ -46,7 +46,7 @@ const TransactionDetails = ({ onLogout }) => {
   const handleStatusChange = async (transactionId, newStatus) => {
     try {
       await axios.get(
-        `http://192.168.29.125:8080/irrl/editTransaction/${transactionId}?status=${newStatus}&table=transac`
+        `https://ems.binlaundry.com/irrl/editTransaction/${transactionId}?status=${newStatus}&table=transac`
       );
       setSubTransactions((prev) =>
         prev.map((t) =>
@@ -64,7 +64,7 @@ const TransactionDetails = ({ onLogout }) => {
     try {
       const { id, amount, status, type } = editingTransaction;
       await axios.get(
-        `http://192.168.29.125:8080/irrl/editTransaction/${id}?status=${status}&amount=${parseInt(
+        `https://ems.binlaundry.com/irrl/editTransaction/${id}?status=${status}&amount=${parseInt(
           amount,
           10
         )}&type=${type}&table=transac`
@@ -91,7 +91,7 @@ const TransactionDetails = ({ onLogout }) => {
       };
 
       await axios.post(
-        "http://192.168.29.125:8080/irrl/addSubTransaction",
+        "https://ems.binlaundry.com/irrl/addSubTransaction",
         payload
       );
 
@@ -123,7 +123,7 @@ const TransactionDetails = ({ onLogout }) => {
     setUploading(true); // 👈 start loading
     try {
       const res = await axios.post(
-        "http://192.168.29.125:8080/irrl/upload", // 👈 updated API
+        "https://ems.binlaundry.com/irrl/upload", // 👈 updated API
         formData,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -203,7 +203,7 @@ const TransactionDetails = ({ onLogout }) => {
                             href={
                               t.image.startsWith("http")
                                 ? t.image
-                                : `http://192.168.29.125:8080/${t.image}`
+                                : `https://ems.binlaundry.com/${t.image}`
                             }
                             target="_blank"
                             rel="noopener noreferrer"

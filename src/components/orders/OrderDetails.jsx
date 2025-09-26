@@ -27,7 +27,7 @@ const OrderDetails = ({ onLogout }) => {
     const fetchOrderDetails = async () => {
       try {
         const res = await axios.get(
-          `http://192.168.29.125:8080/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+          `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
         );
         setOrderItems(res.data?.data || []);
       } catch (err) {
@@ -65,7 +65,7 @@ const OrderDetails = ({ onLogout }) => {
 
     try {
       setUploading(true);
-      const res = await axios.post("http://192.168.29.125:8080/irrl/upload", form, {
+      const res = await axios.post("https://ems.binlaundry.com/irrl/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -93,7 +93,7 @@ const OrderDetails = ({ onLogout }) => {
         after_images: selectedItem.after_images,
       };
 
-      await axios.post("http://192.168.29.125:8080/irrl/updateOrderItem", payload, {
+      await axios.post("https://ems.binlaundry.com/irrl/updateOrderItem", payload, {
         headers: { "Content-Type": "application/json" },
       });
 

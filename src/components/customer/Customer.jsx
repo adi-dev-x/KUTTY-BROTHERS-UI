@@ -28,7 +28,7 @@ const RentalDashboard = ({ onLogout }) => {
 
   // Fetch customers
   useEffect(() => {
-    fetch("http://192.168.29.125:8080/irrl/genericApiUnjoin/customerlist")
+    fetch("https://ems.binlaundry.com/irrl/genericApiUnjoin/customerlist")
       .then((res) => res.json())
       .then((data) => {
         setCustomers(Array.isArray(data.data) ? data.data : []);
@@ -113,7 +113,7 @@ const RentalDashboard = ({ onLogout }) => {
     };
 
     try {
-      const res = await fetch("http://192.168.29.125:8080/irrl/customers", {
+      const res = await fetch("https://ems.binlaundry.com/irrl/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

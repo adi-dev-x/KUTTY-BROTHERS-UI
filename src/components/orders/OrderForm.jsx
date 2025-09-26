@@ -33,12 +33,12 @@ const OrderForm = ({ onAddOrder, onClose }) => {
 
   useEffect(() => {
     axios
-      .get("http://192.168.29.125:8080/irrl/genericApiUnjoin/customer")
+      .get("https://ems.binlaundry.com/irrl/genericApiUnjoin/customer")
       .then((res) => setCustomers(res.data.data || []))
       .catch((err) => console.error(err));
 
     axios
-      .get("http://192.168.29.125:8080/irrl/genericApiUnjoin/itemRetrive")
+      .get("https://ems.binlaundry.com/irrl/genericApiUnjoin/itemRetrive")
       .then((res) => setItemOptions(res.data.data || []))
       .catch((err) => console.error(err));
   }, []);
@@ -77,7 +77,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
 
     try {
       setUploading(true); // start loading
-      const res = await axios.post("http://192.168.29.125:8080/irrl/upload", form, {
+      const res = await axios.post("https://ems.binlaundry.com/irrl/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -154,7 +154,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
           items: itemsPayload,
         };
 
-        await axios.post("http://192.168.29.125:8080/irrl/addOrder", orderPayload, {
+        await axios.post("https://ems.binlaundry.com/irrl/addOrder", orderPayload, {
           headers: { "Content-Type": "application/json" },
         });
 
