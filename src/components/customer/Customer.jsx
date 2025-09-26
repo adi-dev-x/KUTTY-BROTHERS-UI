@@ -102,13 +102,13 @@ const RentalDashboard = ({ onLogout }) => {
 
     const payload = {
       Name: formData.name,
-      ShortName: formData.short_name,
+      Short_Name: formData.short_name,
       Phone: formData.phone,
       Type: formData.type,
       GST: formData.gst,
       Address: formData.address,
       Email: formData.email || undefined,
-      CustomerFlag: formData.customer_flag || undefined,
+      Customer_Flag: formData.customer_flag || undefined,
       Status: formData.status || "Active",
     };
 
