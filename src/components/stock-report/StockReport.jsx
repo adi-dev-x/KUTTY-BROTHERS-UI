@@ -7,13 +7,13 @@ import { FiDownload, FiPlus } from "react-icons/fi";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// AutocompleteInput Component
-const AutocompleteInput = ({ list = [], value, setValue, setId, keyName, idName }) => {
+// ===================== AutocompleteInput =====================
+const AutocompleteInput = ({ list = [], value = "", setValue, keyName }) => {
   const [showList, setShowList] = useState(false);
 
   const filtered = Array.isArray(list)
     ? list.filter((item) =>
-        (item[keyName] || "").toLowerCase().includes(value.toLowerCase())
+        (item[keyName] || "").toLowerCase().includes((value || "").toLowerCase())
       )
     : [];
 
@@ -21,7 +21,7 @@ const AutocompleteInput = ({ list = [], value, setValue, setId, keyName, idName 
     <div style={{ position: "relative" }}>
       <input
         type="text"
-        value={value}
+        value={value || ""}
         onChange={(e) => {
           setValue(e.target.value);
           setShowList(true);
@@ -30,14 +30,14 @@ const AutocompleteInput = ({ list = [], value, setValue, setId, keyName, idName 
         onFocus={() => setShowList(true)}
         placeholder={`Search ${keyName}`}
       />
+
       {showList && filtered.length > 0 && (
         <ul className="autocomplete-list">
-          {filtered.map((item) => (
+          {filtered.map((item, index) => (
             <li
-              key={item[idName]}
+              key={index}
               onClick={() => {
                 setValue(item[keyName]);
-                setId(item[idName]);
                 setShowList(false);
               }}
             >
@@ -50,6 +50,7 @@ const AutocompleteInput = ({ list = [], value, setValue, setId, keyName, idName 
   );
 };
 
+// ===================== StockReport Component =====================
 const StockReport = ({ onLogout }) => {
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +62,7 @@ const StockReport = ({ onLogout }) => {
   const [subTypes, setSubTypes] = useState([]);
 
   const [formData, setFormData] = useState({
-    item_name: "",
+    name: "",
     brand: "",
     item_main_type: "",
     item_sub_type: "",
@@ -72,13 +73,9 @@ const StockReport = ({ onLogout }) => {
     status: "AVAILABLE",
   });
 
-  const [brandId, setBrandId] = useState("");
-  const [mainTypeId, setMainTypeId] = useState("");
-  const [subTypeId, setSubTypeId] = useState("");
-
   const navigate = useNavigate();
 
-  // Normalize stock (sub_code fallback)
+  // Normalize stock
   const normalizeStock = (s) => {
     const maybeSub =
       s?.sub_code ??
@@ -91,7 +88,7 @@ const StockReport = ({ onLogout }) => {
     return { ...s, sub_code: maybeSub };
   };
 
-  // Calculate total sum for an item
+  // Total sum for an item
   const calculateTotalSum = (item) => {
     const counts = [
       item.available_count || 0,
@@ -101,12 +98,12 @@ const StockReport = ({ onLogout }) => {
       item.worn_out_count || 0,
       item.blocked_count || 0,
       item.reserved_count || 0,
-      item.pending_count || 0
+      item.pending_count || 0,
     ];
     return counts.reduce((sum, count) => sum + (Number(count) || 0), 0);
   };
 
-  // Fetch stock list
+  // Fetch stocks
   useEffect(() => {
     fetch("https://ems.binlaundry.com/irrl/genericApiUnjoin/productMain")
       .then((res) => res.json())
@@ -155,9 +152,9 @@ const StockReport = ({ onLogout }) => {
     try {
       const payload = {
         name: formData.item_name,
-        brand_id: brandId,
-        item_main_type_id: mainTypeId,
-        item_sub_type_id: subTypeId,
+        brand: formData.brand, // send actual brand string
+        item_main_type: formData.item_main_type, // send main type string
+        new_sub_code: formData.item_sub_type, // send sub type string
         description: formData.description,
         main_code: formData.main_code,
         sub_code: formData.sub_code,
@@ -176,12 +173,12 @@ const StockReport = ({ onLogout }) => {
         throw new Error(`Failed to add stock: ${errorText}`);
       }
 
-      window.location.reload();
+      setShowForm(false);
     } catch (error) {
       console.error("Error adding stock:", error);
       alert("Failed to add stock. Check console for details.");
     }
-  };
+  };  
 
   // Download PDF
   const handleDownloadPDF = () => {
@@ -206,7 +203,7 @@ const StockReport = ({ onLogout }) => {
       "Blocked",
       "Reserved",
       "Pending",
-      "Total Sum"
+      "Total Sum",
     ];
 
     const tableRows = stocks.map((s, i) => [
@@ -226,7 +223,7 @@ const StockReport = ({ onLogout }) => {
       s.blocked_count || 0,
       s.reserved_count || 0,
       s.pending_count || 0,
-      calculateTotalSum(s)
+      calculateTotalSum(s),
     ]);
 
     autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30 });
@@ -238,7 +235,7 @@ const StockReport = ({ onLogout }) => {
     const name = (s.item_name || "").toLowerCase();
     const brand = (s.brand || "").toLowerCase();
     const code = (s.sub_code || "").toLowerCase();
-    const q = search.toLowerCase();
+    const q = (search || "").toLowerCase();
     return name.includes(q) || brand.includes(q) || code.includes(q);
   });
 
@@ -294,42 +291,40 @@ const StockReport = ({ onLogout }) => {
                   />
                 </div>
 
-                {/* Brand autocomplete */}
+                {/* Brand */}
                 <div className="form-group">
                   <label>Brand</label>
                   <AutocompleteInput
                     list={brands}
                     value={formData.brand}
                     setValue={(val) => setFormData({ ...formData, brand: val })}
-                    setId={setBrandId}
-                    keyName="name"
-                    idName="attributes_id"
+                    keyName="brand"
                   />
                 </div>
 
-                {/* Main Type autocomplete */}
+                {/* Main Type */}
                 <div className="form-group">
                   <label>Main Type</label>
                   <AutocompleteInput
                     list={mainTypes}
                     value={formData.item_main_type}
-                    setValue={(val) => setFormData({ ...formData, item_main_type: val })}
-                    setId={setMainTypeId}
-                    keyName="name"
-                    idName="attributes_id"
+                    setValue={(val) =>
+                      setFormData({ ...formData, item_main_type: val })
+                    }
+                    keyName="item_main_type"
                   />
                 </div>
 
-                {/* Sub Type autocomplete */}
+                {/* Sub Type */}
                 <div className="form-group">
                   <label>Sub Type</label>
                   <AutocompleteInput
                     list={subTypes}
                     value={formData.item_sub_type}
-                    setValue={(val) => setFormData({ ...formData, item_sub_type: val })}
-                    setId={setSubTypeId}
-                    keyName="name"
-                    idName="attributes_id"
+                    setValue={(val) =>
+                      setFormData({ ...formData, item_sub_type: val })
+                    }
+                    keyName="new_sub_code"
                   />
                 </div>
 
@@ -456,7 +451,9 @@ const StockReport = ({ onLogout }) => {
                       <td>{item.blocked_count}</td>
                       <td>{item.reserved_count}</td>
                       <td>{item.pending_count}</td>
-                      <td><strong>{calculateTotalSum(item)}</strong></td>
+                      <td>
+                        <strong>{calculateTotalSum(item)}</strong>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
