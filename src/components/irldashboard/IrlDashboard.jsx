@@ -83,7 +83,7 @@ const IrlDashboard = ({ onLogout }) => {
       <div className="dashboard-body">
         <Rentalsidebar />
         <div className="main-content">
-          <h2 className="dashboard-title">IRL Dashboard</h2>
+          <h2 className="dashboard-title">IRRL Dashboard</h2>
 
           {/* Top Bar Cards */}
           <div className="top-bar-cards">
