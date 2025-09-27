@@ -7,6 +7,49 @@ import { FiDownload, FiPlus } from "react-icons/fi";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+// AutocompleteInput Component
+const AutocompleteInput = ({ list = [], value, setValue, setId, keyName, idName }) => {
+  const [showList, setShowList] = useState(false);
+
+  const filtered = Array.isArray(list)
+    ? list.filter((item) =>
+        (item[keyName] || "").toLowerCase().includes(value.toLowerCase())
+      )
+    : [];
+
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => {
+          setValue(e.target.value);
+          setShowList(true);
+        }}
+        onBlur={() => setTimeout(() => setShowList(false), 150)}
+        onFocus={() => setShowList(true)}
+        placeholder={`Search ${keyName}`}
+      />
+      {showList && filtered.length > 0 && (
+        <ul className="autocomplete-list">
+          {filtered.map((item) => (
+            <li
+              key={item[idName]}
+              onClick={() => {
+                setValue(item[keyName]);
+                setId(item[idName]);
+                setShowList(false);
+              }}
+            >
+              {item[keyName]}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 const StockReport = ({ onLogout }) => {
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +72,10 @@ const StockReport = ({ onLogout }) => {
     status: "AVAILABLE",
   });
 
+  const [brandId, setBrandId] = useState("");
+  const [mainTypeId, setMainTypeId] = useState("");
+  const [subTypeId, setSubTypeId] = useState("");
+
   const navigate = useNavigate();
 
   // Normalize stock (sub_code fallback)
@@ -42,6 +89,21 @@ const StockReport = ({ onLogout }) => {
       s?.main_code ??
       "";
     return { ...s, sub_code: maybeSub };
+  };
+
+  // Calculate total sum for an item
+  const calculateTotalSum = (item) => {
+    const counts = [
+      item.available_count || 0,
+      item.rented_count || 0,
+      item.damaged_count || 0,
+      item.not_initiated_count || 0,
+      item.worn_out_count || 0,
+      item.blocked_count || 0,
+      item.reserved_count || 0,
+      item.pending_count || 0
+    ];
+    return counts.reduce((sum, count) => sum + (Number(count) || 0), 0);
   };
 
   // Fetch stock list
@@ -93,9 +155,9 @@ const StockReport = ({ onLogout }) => {
     try {
       const payload = {
         name: formData.item_name,
-        brand_id: formData.brand, // send brand ID
-        item_main_type_id: formData.item_main_type, // send main type ID
-        item_sub_type_id: formData.item_sub_type, // send sub type ID
+        brand_id: brandId,
+        item_main_type_id: mainTypeId,
+        item_sub_type_id: subTypeId,
         description: formData.description,
         main_code: formData.main_code,
         sub_code: formData.sub_code,
@@ -136,7 +198,15 @@ const StockReport = ({ onLogout }) => {
       "Description",
       "Main Code",
       "Sub Code",
-      "Category",
+      "Available",
+      "Rented",
+      "Damaged",
+      "Repairing",
+      "Expired",
+      "Blocked",
+      "Reserved",
+      "Pending",
+      "Total Sum"
     ];
 
     const tableRows = stocks.map((s, i) => [
@@ -148,7 +218,15 @@ const StockReport = ({ onLogout }) => {
       s.description,
       s.main_code,
       s.sub_code,
-      s.status || s.category,
+      s.available_count || 0,
+      s.rented_count || 0,
+      s.damaged_count || 0,
+      s.not_initiated_count || 0,
+      s.worn_out_count || 0,
+      s.blocked_count || 0,
+      s.reserved_count || 0,
+      s.pending_count || 0,
+      calculateTotalSum(s)
     ]);
 
     autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30 });
@@ -216,58 +294,43 @@ const StockReport = ({ onLogout }) => {
                   />
                 </div>
 
-                {/* Brand dropdown */}
+                {/* Brand autocomplete */}
                 <div className="form-group">
                   <label>Brand</label>
-                  <select
+                  <AutocompleteInput
+                    list={brands}
                     value={formData.brand}
-                    onChange={(e) =>
-                      setFormData({ ...formData, brand: e.target.value })
-                    }
-                  >
-                    <option value="">Select Brand</option>
-                    {brands.map((b) => (
-                      <option key={b.brand_id} value={b.brand_id}>
-                        {b.brand}
-                      </option>
-                    ))}
-                  </select>
+                    setValue={(val) => setFormData({ ...formData, brand: val })}
+                    setId={setBrandId}
+                    keyName="name"
+                    idName="attributes_id"
+                  />
                 </div>
 
-                {/* Main type dropdown */}
+                {/* Main Type autocomplete */}
                 <div className="form-group">
                   <label>Main Type</label>
-                  <select
+                  <AutocompleteInput
+                    list={mainTypes}
                     value={formData.item_main_type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, item_main_type: e.target.value })
-                    }
-                  >
-                    <option value="">Select Main Type</option>
-                    {mainTypes.map((m) => (
-                      <option key={m.item_main_type_id} value={m.item_main_type_id}>
-                        {m.item_main_type}
-                      </option>
-                    ))}
-                  </select>
+                    setValue={(val) => setFormData({ ...formData, item_main_type: val })}
+                    setId={setMainTypeId}
+                    keyName="name"
+                    idName="attributes_id"
+                  />
                 </div>
 
-                {/* Sub type dropdown */}
+                {/* Sub Type autocomplete */}
                 <div className="form-group">
                   <label>Sub Type</label>
-                  <select
+                  <AutocompleteInput
+                    list={subTypes}
                     value={formData.item_sub_type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, item_sub_type: e.target.value })
-                    }
-                  >
-                    <option value="">Select Sub Type</option>
-                    {subTypes.map((s) => (
-                      <option key={s.item_sub_type_id} value={s.item_sub_type_id}>
-                        {s.item_sub_type}
-                      </option>
-                    ))}
-                  </select>
+                    setValue={(val) => setFormData({ ...formData, item_sub_type: val })}
+                    setId={setSubTypeId}
+                    keyName="name"
+                    idName="attributes_id"
+                  />
                 </div>
 
                 {/* Main/Sub Code */}
@@ -367,6 +430,7 @@ const StockReport = ({ onLogout }) => {
                     <th>Blocked</th>
                     <th>Reserved</th>
                     <th>Pending</th>
+                    <th>Total Sum</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -392,6 +456,7 @@ const StockReport = ({ onLogout }) => {
                       <td>{item.blocked_count}</td>
                       <td>{item.reserved_count}</td>
                       <td>{item.pending_count}</td>
+                      <td><strong>{calculateTotalSum(item)}</strong></td>
                     </tr>
                   ))}
                 </tbody>

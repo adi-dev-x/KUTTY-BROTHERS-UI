@@ -29,7 +29,7 @@ import TransactionDetails from "./components/transactions/TransactionDetails";
 
 // IRL Dashboard
 import IRLDashboard from "./components/irldashboard/IrlDashboard";
-import DashboardDetails from "./components/irldashboard/dashboardDetails";
+import DashboardDetails from "./components/irldashboard/irlDashboardDetails";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(true);

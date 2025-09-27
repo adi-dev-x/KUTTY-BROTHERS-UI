@@ -62,7 +62,7 @@ const IrlDashboard = ({ onLogout }) => {
     const fetchTopProducts = async () => {
       try {
         const res = await axios.get(
-          "https://ems.binlaundry.com/irrl/genericApiUnjoin/topRentedProducts"
+          "https://ems.binlaundry.com/irrl/genericApiUnjoin/topRentedProduct"
         );
         setTopProducts(res.data?.data || []);
       } catch (err) {
@@ -91,7 +91,7 @@ const IrlDashboard = ({ onLogout }) => {
               <div
                 className="status-card"
                 key={status}
-                onClick={() => navigate(`/dashboard-details/${status}`)} // 👈 Navigate with status
+                onClick={() => navigate(`/dashboard-details/${status}`)}
                 style={{ cursor: "pointer" }}
               >
                 <h3>Total {status.charAt(0) + status.slice(1).toLowerCase()}</h3>
@@ -128,8 +128,8 @@ const IrlDashboard = ({ onLogout }) => {
                 <tbody>
                   {topProducts.map((p, i) => (
                     <tr key={i}>
-                      <td>{p.name}</td>
-                      <td>{p.rented}</td>
+                      <td>{p.item_name}</td>
+                      <td>{p.rented_count}</td>
                     </tr>
                   ))}
                 </tbody>

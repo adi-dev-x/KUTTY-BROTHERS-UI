@@ -402,3 +402,19 @@ tbody tr.zero-stock {
 .table-card table tbody tr:hover {
   background-color: #f2f2f2;
 }
+.table-card thead {
+  background-color: #CA8A03;
+  color: white;
+}
+
+.table-card th {
+  background-color: #CA8A03;
+  color: white;
+  padding: 12px;
+  font-weight: bold;
+}
+
+/* Optional: Add hover effect for better UX */
+.table-card th:hover {
+  background-color: #b8790a;
+}

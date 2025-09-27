@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { FiDownload, FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import axios from "axios";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
@@ -16,6 +14,11 @@ const ListOrders = ({ onLogout }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 8;
   const tableRef = useRef(null);
+
+  // Popup state
+  const [showExcelPopup, setShowExcelPopup] = useState(false);
+  const [excelStatus, setExcelStatus] = useState(""); // default empty
+  const [excelDays, setExcelDays] = useState(""); // default empty
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -34,69 +37,34 @@ const ListOrders = ({ onLogout }) => {
     fetchOrders();
   }, []);
 
-  const handleDownloadPDF = () => {
-  const doc = new jsPDF("l", "pt", "a4"); // Landscape mode for wide table
-  doc.setFontSize(12);
-  doc.text("List of All Orders", 40, 40);
+  // Excel download
+  const handleDownloadExcel = async () => {
+  try {
+    const response = await axios.get(
+      "https://ems.binlaundry.com/irrl/reports/delivery",
+      {
+        params: { 
+          date_range: excelDays || "", // Days dropdown value
+          remark: excelStatus || ""    // Status dropdown value
+        },
+        responseType: "blob", // Important for file download
+      }
+    );
 
-  const tableColumn = [
-    "S.No",
-    "Customer Name",
-    "Customer ID",
-    "Contact Person",
-    "Contact Number",
-    "Shipping Address",
-    "Inventory ID",
-    "Item ID",
-    "Order ID",
-    "Generated Amount",
-    "Current Amount",
-    "Rent Amount",
-    "Placed At",
-    "Returned At",
-    "Status",
-  ];
-
-  const tableRows = filteredOrders.map((o, i) => [
-    i + 1,
-    o.customer_name || "-",
-    o.customer_id || "-",
-    o.contact_name || "-",
-    o.contact_number || "-",
-    o.shipping_address || "-",
-    o.inventory_id || "-",
-    o.item_id || "-",
-    o.order_id || "-",
-    o.generated_amount || "-",
-    o.current_amount || "-",
-    o.rent_amount || "-",
-    o.placed_at ? new Date(o.placed_at).toLocaleDateString() : "-",
-    o.returned_at ? new Date(o.returned_at).toLocaleDateString() : "-",
-    o.status || "-",
-  ]);
-
-  autoTable(doc, {
-    head: [tableColumn],
-    body: tableRows,
-    startY: 60,
-    theme: "grid",
-    headStyles: { fillColor: [217, 148, 25], halign: "center" },
-    bodyStyles: { halign: "center" },
-    columnStyles: {
-      1: { cellWidth: 100 }, // Customer Name
-      3: { cellWidth: 100 }, // Contact Person
-      5: { cellWidth: 150 }, // Shipping Address
-    },
-    styles: {
-      fontSize: 10,
-      overflow: "linebreak",
-      cellPadding: 3,
-    },
-    tableWidth: "auto",
-  });
-
-  doc.save("list_orders.pdf");
+    // Create a blob link to download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "delivery_report.xlsx");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setShowExcelPopup(false);
+  } catch (err) {
+    console.error("Error downloading Excel:", err);
+  }
 };
+
 
   const handleFilter = () => {
     const filtered = orders.filter(
@@ -138,23 +106,19 @@ const ListOrders = ({ onLogout }) => {
         <Rentalsidebar />
         <div className="main-content">
           <div className="stock-top-bar">
-            <button className="download-btn" onClick={handleDownloadPDF}>
-              <FiDownload /> Download PDF
+            <button className="download-btn" onClick={() => setShowExcelPopup(true)}>
+              <FiDownload /> Download Excel
             </button>
 
             <div className="styled-filter">
-              {/* Contact Person Filter */}
               <input
                 type="text"
                 placeholder="Filter by Contact Person"
                 value={searchContact}
                 onChange={(e) => setSearchContact(e.target.value)}
               />
-              <button className="apply-btn" onClick={handleFilter}>
-                Apply
-              </button>
+              <button className="apply-btn" onClick={handleFilter}>Apply</button>
 
-              {/* Status Filter */}
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -163,18 +127,58 @@ const ListOrders = ({ onLogout }) => {
                 <option value="PENDING">Pending</option>
                 <option value="COMPLETED">Completed</option>
                 <option value="RENTED">Rented</option>
-                <option value="AVAILABLE">Available</option>
-                <option value="DAMAGED">Damaged</option>
-                <option value="REPAIRING">Repairing</option>
                 <option value="BLOCKED">Blocked</option>
+                <option value="INITIATED">Initiated</option>
                 <option value="RESERVED">Reserved</option>
-                <option value="EXPIRED">Expired</option>
               </select>
-              <button className="apply-btn" onClick={handleFilter}>
-                Apply
-              </button>
+              <button className="apply-btn" onClick={handleFilter}>Apply</button>
             </div>
           </div>
+
+          {/* Excel Popup */}
+          {showExcelPopup && (
+            <div className="popup-overlay">
+              <div className="popup-content">
+                <h3>Download Delivery Report</h3>
+
+                <label>
+                  Select Days:
+                  <select
+                    value={excelDays}
+                    onChange={(e) => setExcelDays(e.target.value)}
+                  >
+                    <option value="">-- Select Days --</option>
+                    <option value="7 days">7 Days</option>
+                    <option value="14 days">14 Days</option>
+                    <option value="21 days">21 Days</option>
+                    <option value="30 days">1 Month</option>
+                    <option value="180 days">6 Month</option>
+                    <option value="365 days">1 Year</option>
+                  </select>
+                </label>
+
+                <label>
+                  Select Status:
+                  <select
+                    value={excelStatus}
+                    onChange={(e) => setExcelStatus(e.target.value)}
+                  >
+                    <option value="">-- Select Status --</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="BLOCKED">Blocked</option>
+                    <option value="INITIATED">Initiated</option>
+                    <option value="RESERVED">Reserved</option>
+                  </select>
+                </label>
+
+                <div className="popup-buttons">
+                  <button className="apply-btn" onClick={handleDownloadExcel}>Download</button>
+                  <button className="cancel-btn" onClick={() => setShowExcelPopup(false)}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <p>Loading orders...</p>
@@ -235,7 +239,6 @@ const ListOrders = ({ onLogout }) => {
                 </button>
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="pagination">
                   <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>
