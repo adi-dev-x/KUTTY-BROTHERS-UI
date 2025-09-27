@@ -11,9 +11,18 @@ import autoTable from "jspdf-autotable";
 const AutocompleteInput = ({ list = [], value = "", setValue, keyName }) => {
   const [showList, setShowList] = useState(false);
 
+  // figure out the usable key
+  const getDisplay = (item) => {
+    if (!item) return "";
+    if (item[keyName]) return item[keyName];
+    if (item.name) return item.name;
+    if (item.value) return item.value;
+    return "";
+  };
+
   const filtered = Array.isArray(list)
     ? list.filter((item) =>
-        (item[keyName] || "").toLowerCase().includes((value || "").toLowerCase())
+        getDisplay(item).toLowerCase().includes((value || "").toLowerCase())
       )
     : [];
 
@@ -33,15 +42,15 @@ const AutocompleteInput = ({ list = [], value = "", setValue, keyName }) => {
 
       {showList && filtered.length > 0 && (
         <ul className="autocomplete-list">
-          {filtered.map((item, index) => (
+          {filtered.map((item, idx) => (
             <li
-              key={index}
+              key={idx}
               onClick={() => {
-                setValue(item[keyName]);
+                setValue(getDisplay(item));
                 setShowList(false);
               }}
             >
-              {item[keyName]}
+              {getDisplay(item)}
             </li>
           ))}
         </ul>
@@ -62,7 +71,7 @@ const StockReport = ({ onLogout }) => {
   const [subTypes, setSubTypes] = useState([]);
 
   const [formData, setFormData] = useState({
-    name: "",
+    item_name: "",
     brand: "",
     item_main_type: "",
     item_sub_type: "",
@@ -123,7 +132,10 @@ const StockReport = ({ onLogout }) => {
   useEffect(() => {
     fetch("https://ems.binlaundry.com/irrl/attribute/brand")
       .then((res) => res.json())
-      .then((data) => setBrands(Array.isArray(data?.data) ? data.data : []))
+      .then((data) => {
+        console.log("Brand API:", data);
+        setBrands(Array.isArray(data?.data) ? data.data : []);
+      })
       .catch((err) => console.error("Error fetching brands:", err));
   }, []);
 
@@ -131,7 +143,10 @@ const StockReport = ({ onLogout }) => {
   useEffect(() => {
     fetch("https://ems.binlaundry.com/irrl/attribute/ItemMainType")
       .then((res) => res.json())
-      .then((data) => setMainTypes(Array.isArray(data?.data) ? data.data : []))
+      .then((data) => {
+        console.log("Main Type API:", data);
+        setMainTypes(Array.isArray(data?.data) ? data.data : []);
+      })
       .catch((err) => console.error("Error fetching main types:", err));
   }, []);
 
@@ -139,7 +154,10 @@ const StockReport = ({ onLogout }) => {
   useEffect(() => {
     fetch("https://ems.binlaundry.com/irrl/attribute/ItemSubType")
       .then((res) => res.json())
-      .then((data) => setSubTypes(Array.isArray(data?.data) ? data.data : []))
+      .then((data) => {
+        console.log("Sub Type API:", data);
+        setSubTypes(Array.isArray(data?.data) ? data.data : []);
+      })
       .catch((err) => console.error("Error fetching sub types:", err));
   }, []);
 
@@ -173,12 +191,13 @@ const StockReport = ({ onLogout }) => {
         throw new Error(`Failed to add stock: ${errorText}`);
       }
 
-      setShowForm(false);
+      // reload page on success
+      window.location.reload();
     } catch (error) {
       console.error("Error adding stock:", error);
       alert("Failed to add stock. Check console for details.");
     }
-  };  
+  };
 
   // Download PDF
   const handleDownloadPDF = () => {
