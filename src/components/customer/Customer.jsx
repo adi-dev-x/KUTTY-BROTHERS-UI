@@ -126,7 +126,7 @@ const RentalDashboard = ({ onLogout }) => {
 
       const newCustomer = await res.json();
       setCustomers((prev) => [...prev, newCustomer]);
-      alert("Customer added successfully!");
+       window.location.reload();
       setShowForm(false);
       setFormData({
         name: "",
