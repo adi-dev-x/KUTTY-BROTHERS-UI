@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import "./StockReport.css";
-import { FiDownload, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiDownload, FiPlus } from "react-icons/fi";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -31,14 +31,20 @@ const StockReport = ({ onLogout }) => {
 
   const navigate = useNavigate();
 
-  // Normalize stock to ensure sub_code exists
+  // Normalize stock (sub_code fallback)
   const normalizeStock = (s) => {
     const maybeSub =
-      s?.sub_code ?? s?.subCode ?? s?.subcode ?? s?.new_sub_code ?? s?.inventory_id ?? s?.main_code ?? "";
+      s?.sub_code ??
+      s?.subCode ??
+      s?.subcode ??
+      s?.new_sub_code ??
+      s?.inventory_id ??
+      s?.main_code ??
+      "";
     return { ...s, sub_code: maybeSub };
   };
 
-  // Fetch stock data
+  // Fetch stock list
   useEffect(() => {
     fetch("https://ems.binlaundry.com/irrl/genericApiUnjoin/productMain")
       .then((res) => res.json())
@@ -87,9 +93,9 @@ const StockReport = ({ onLogout }) => {
     try {
       const payload = {
         name: formData.item_name,
-        brand: formData.brand,
-        item_main_type: formData.item_main_type,
-        new_sub_code: formData.item_sub_type,
+        brand_id: formData.brand, // send brand ID
+        item_main_type_id: formData.item_main_type, // send main type ID
+        item_sub_type_id: formData.item_sub_type, // send sub type ID
         description: formData.description,
         main_code: formData.main_code,
         sub_code: formData.sub_code,
@@ -108,17 +114,11 @@ const StockReport = ({ onLogout }) => {
         throw new Error(`Failed to add stock: ${errorText}`);
       }
 
-      
       window.location.reload();
     } catch (error) {
       console.error("Error adding stock:", error);
       alert("Failed to add stock. Check console for details.");
     }
-  };
-
-  // Delete stock
-  const handleDelete = (sub_code) => {
-    setStocks((prev) => prev.filter((s) => s.sub_code !== sub_code));
   };
 
   // Download PDF
@@ -200,54 +200,86 @@ const StockReport = ({ onLogout }) => {
           {showForm && (
             <div className="popup-form">
               <div className="popup-content">
-                <button className="close-popup" onClick={() => setShowForm(false)}>×</button>
+                <button className="close-popup" onClick={() => setShowForm(false)}>
+                  ×
+                </button>
 
-                {/* 2 inputs per row */}
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Item Name</label>
-                    <input
-                      type="text"
-                      value={formData.item_name}
-                      onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Brand</label>
-                    <input
-                      type="text"
-                      value={formData.brand}
-                      onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    />
-                  </div>
+                {/* Item Name */}
+                <div className="form-group">
+                  <label>Item Name</label>
+                  <input
+                    type="text"
+                    value={formData.item_name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, item_name: e.target.value })
+                    }
+                  />
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Main Type</label>
-                    <input
-                      type="text"
-                      value={formData.item_main_type}
-                      onChange={(e) => setFormData({ ...formData, item_main_type: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Sub Type</label>
-                    <input
-                      type="text"
-                      value={formData.item_sub_type}
-                      onChange={(e) => setFormData({ ...formData, item_sub_type: e.target.value })}
-                    />
-                  </div>
+                {/* Brand dropdown */}
+                <div className="form-group">
+                  <label>Brand</label>
+                  <select
+                    value={formData.brand}
+                    onChange={(e) =>
+                      setFormData({ ...formData, brand: e.target.value })
+                    }
+                  >
+                    <option value="">Select Brand</option>
+                    {brands.map((b) => (
+                      <option key={b.brand_id} value={b.brand_id}>
+                        {b.brand}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
+                {/* Main type dropdown */}
+                <div className="form-group">
+                  <label>Main Type</label>
+                  <select
+                    value={formData.item_main_type}
+                    onChange={(e) =>
+                      setFormData({ ...formData, item_main_type: e.target.value })
+                    }
+                  >
+                    <option value="">Select Main Type</option>
+                    {mainTypes.map((m) => (
+                      <option key={m.item_main_type_id} value={m.item_main_type_id}>
+                        {m.item_main_type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Sub type dropdown */}
+                <div className="form-group">
+                  <label>Sub Type</label>
+                  <select
+                    value={formData.item_sub_type}
+                    onChange={(e) =>
+                      setFormData({ ...formData, item_sub_type: e.target.value })
+                    }
+                  >
+                    <option value="">Select Sub Type</option>
+                    {subTypes.map((s) => (
+                      <option key={s.item_sub_type_id} value={s.item_sub_type_id}>
+                        {s.item_sub_type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Main/Sub Code */}
                 <div className="form-row">
                   <div className="form-group">
                     <label>Main Code</label>
                     <input
                       type="text"
                       value={formData.main_code}
-                      onChange={(e) => setFormData({ ...formData, main_code: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, main_code: e.target.value })
+                      }
                     />
                   </div>
                   <div className="form-group">
@@ -255,44 +287,52 @@ const StockReport = ({ onLogout }) => {
                     <input
                       type="text"
                       value={formData.sub_code}
-                      onChange={(e) => setFormData({ ...formData, sub_code: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, sub_code: e.target.value })
+                      }
                     />
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Description</label>
-                    <input
-                      type="text"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Add Count</label>
-                    <input
-                      type="number"
-                      value={formData.add_count}
-                      onChange={(e) => setFormData({ ...formData, add_count: e.target.value })}
-                    />
-                  </div>
+                {/* Description */}
+                <div className="form-group">
+                  <label>Description</label>
+                  <input
+                    type="text"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                  />
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Status</label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value.toUpperCase() })}
-                    >
-                      <option value="RENTED">Rented</option>
-                      <option value="DAMAGED">Damaged</option>
-                      <option value="REPAIRING">Repairing</option>
-                       <option value="EXPIRED">Expired</option>
-                       <option value="AVAILABLE">Available</option>
-                    </select>
-                  </div>
+                {/* Add count */}
+                <div className="form-group">
+                  <label>Add Count</label>
+                  <input
+                    type="number"
+                    value={formData.add_count}
+                    onChange={(e) =>
+                      setFormData({ ...formData, add_count: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* Status */}
+                <div className="form-group">
+                  <label>Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) =>
+                      setFormData({ ...formData, status: e.target.value.toUpperCase() })
+                    }
+                  >
+                    <option value="AVAILABLE">Available</option>
+                    <option value="RENTED">Rented</option>
+                    <option value="DAMAGED">Damaged</option>
+                    <option value="REPAIRING">Repairing</option>
+                    <option value="EXPIRED">Expired</option>
+                  </select>
                 </div>
 
                 <button className="add-btn-floating" onClick={handleAddStock}>
@@ -321,7 +361,7 @@ const StockReport = ({ onLogout }) => {
                     <th>Sub Code</th>
                     <th>Available</th>
                     <th>Rented</th>
-                     <th>Damaged</th>
+                    <th>Damaged</th>
                     <th>Repairing</th>
                     <th>Expired</th>
                     <th>Blocked</th>

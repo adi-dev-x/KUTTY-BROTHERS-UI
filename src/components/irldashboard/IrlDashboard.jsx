@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import "./irlDashboard.css";
@@ -18,16 +19,11 @@ const statuses = [
 const IrlDashboard = ({ onLogout }) => {
   const [totals, setTotals] = useState({});
   const [loading, setLoading] = useState(true);
-
-  const [transactions, setTransactions] = useState({
-    completed: 0,
-    pending: 0,
-  });
-
+  const [transactions, setTransactions] = useState({ completed: 0, pending: 0 });
   const [topProducts, setTopProducts] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch status totals
     const fetchTotals = async () => {
       try {
         const totalsData = {};
@@ -45,7 +41,6 @@ const IrlDashboard = ({ onLogout }) => {
       }
     };
 
-    // Fetch completed and pending transactions
     const fetchTransactions = async () => {
       try {
         const completedRes = await axios.get(
@@ -64,7 +59,6 @@ const IrlDashboard = ({ onLogout }) => {
       }
     };
 
-    // Fetch top rented products
     const fetchTopProducts = async () => {
       try {
         const res = await axios.get(
@@ -94,7 +88,12 @@ const IrlDashboard = ({ onLogout }) => {
           {/* Top Bar Cards */}
           <div className="top-bar-cards">
             {statuses.map((status) => (
-              <div className="status-card" key={status}>
+              <div
+                className="status-card"
+                key={status}
+                onClick={() => navigate(`/dashboard-details/${status}`)} // 👈 Navigate with status
+                style={{ cursor: "pointer" }}
+              >
                 <h3>Total {status.charAt(0) + status.slice(1).toLowerCase()}</h3>
                 <p className="status-count">{totals[status]}</p>
               </div>
@@ -103,7 +102,6 @@ const IrlDashboard = ({ onLogout }) => {
 
           {/* Bottom Row */}
           <div className="bottom-row">
-            {/* Left Card - Transaction Details */}
             <div className="left-card">
               <h3>Transaction Details</h3>
               <div className="sub-cards-vertical">
@@ -118,7 +116,6 @@ const IrlDashboard = ({ onLogout }) => {
               </div>
             </div>
 
-            {/* Right Card - Top Rented Products */}
             <div className="right-card">
               <h3>Top Rented Products</h3>
               <table>
