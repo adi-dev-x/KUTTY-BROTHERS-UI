@@ -124,7 +124,7 @@ const IrlDashboard = ({ onLogout }) => {
               <table>
                 <thead>
                   <tr>
-                    <th>Products</th>
+                    <th>Product</th>
                     <th>Times Rented</th>
                   </tr>
                 </thead>
