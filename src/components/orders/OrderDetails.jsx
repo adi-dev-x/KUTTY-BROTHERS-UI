@@ -44,14 +44,23 @@ const OrderDetails = ({ onLogout }) => {
         const data = res.data?.data || [];
         setOrderItems(data);
         
+        // Calculate total using generated amounts (with markup)
+        const calculateGeneratedTotal = (items) => {
+          return items.reduce((sum, item) => {
+            const currentAmount = parseInt(item.current_amount || 0);
+            const generatedAmount =parseInt(item.generated_amount || 0); // 10% markup
+            return sum + generatedAmount;
+          }, 0);
+        };
+        
         // Extract order info from first item (assuming all items share same order details)
         if (data.length > 0) {
           const orderDetails = {
-            customer_name: data[0].customer_name || "",
-            customer_phone: data[0].customer_phone || " ",
-            delivery_address: data[0].delivery_address || " ",
+            customer_name: data[0].customer_name || "N/A",
+            customer_phone: data[0].customer_phone || "N/A",
+            delivery_address: data[0].delivery_address || "N/A",
             order_date: data[0].placed_at ? new Date(data[0].placed_at).toLocaleDateString() : new Date().toLocaleDateString(),
-            total_value: data.reduce((sum, item) => sum + parseInt(item.rent_amount || 0), 0)
+            total_value: calculateGeneratedTotal(data) // Use generated amounts for total
           };
           setOrderInfo(orderDetails);
           
@@ -90,18 +99,23 @@ const OrderDetails = ({ onLogout }) => {
       orderId: delivery_id,
       date: new Date().toISOString().split('T')[0],
       customer: {
-        name: dcFormData.customerName || ' ',
-        phone: dcFormData.customerPhone || ' ',
-        address: dcFormData.customerAddress || ' '
+        name: dcFormData.customerName || 'N/A',
+        phone: dcFormData.customerPhone || 'N/A',
+        address: dcFormData.customerAddress || 'N/A'
       },
-      items: orderItems.map((item, index) => ({
-        sl: index + 1,
-        itemId: item.item_id,
-        amount: parseInt(item.rent_amount) || 0,
-        status: item.status || 'INITIATED'
-      })),
-      total: orderInfo?.total_value || 0,
-      vehicleNo: dcFormData.vehicleNumber || ' ',
+      items: orderItems.map((item, index) => {
+        const currentAmount = parseInt(item.current_amount) || 0;
+        const generatedAmount =  parseInt(item.generated_amount) || 0; // 10% markup
+        return {
+          sl: index + 1,
+          itemId: item.item_id,
+          currentAmount: currentAmount,
+          billAmount: generatedAmount, // Use generated amount for billing
+          status: item.status || 'INITIATED'
+        };
+      }),
+      total: orderInfo?.total_value || 0, // This now contains the generated total
+      vehicleNo: dcFormData.vehicleNumber || 'N/A',
       verification: `IRR${delivery_id}${Date.now().toString().slice(-4)}`
     };
     return JSON.stringify(qrData);
@@ -290,9 +304,9 @@ const OrderDetails = ({ onLogout }) => {
               
               <div class="customer-details">
                 <strong>M/S.</strong>
-                <div class="customer-line">${dcFormData.customerName || ' '}</div>
-                <div class="customer-line">📞 ${dcFormData.customerPhone || ' '}</div>
-                <div class="customer-line">📍 ${dcFormData.customerAddress || ' '}</div>
+                <div class="customer-line">${dcFormData.customerName || 'N/A'}</div>
+                <div class="customer-line">📞 ${dcFormData.customerPhone || 'N/A'}</div>
+                <div class="customer-line">📍 ${dcFormData.customerAddress || 'N/A'}</div>
                 ${dcFormData.remarks ? `<div class="customer-line"><em>Remarks: ${dcFormData.remarks}</em></div>` : ''}
               </div>
             </div>
@@ -311,17 +325,21 @@ const OrderDetails = ({ onLogout }) => {
                 </tr>
               </thead>
               <tbody>
-                ${orderItems.map((item, index) => `
-                  <tr>
-                    <td style="text-align: center; font-weight: bold;">${index + 1}</td>
-                    <td>
-                      <strong>Item ID:</strong> ${item.item_id}<br>
-                      <em>Equipment Rental - ${item.status || 'INITIATED'}</em>
-                    </td>
-                    <td style="text-align: center;">1 Unit</td>
-                    <td style="text-align: right; font-weight: bold;">₹${parseInt(item.rent_amount || 0)}</td>
-                  </tr>
-                `).join('')}
+                ${orderItems.map((item, index) => {
+                  const currentAmount = parseInt(item.current_amount || 0);
+                  const generatedAmount = Math.round(item.generated_amount); // 10% markup
+                  return `
+                    <tr>
+                      <td style="text-align: center; font-weight: bold;">${index + 1}</td>
+                      <td>
+                        <strong>Item ID:</strong> ${item.item_id}<br>
+                        <em>Equipment Rental - ${item.status || 'INITIATED'}</em>
+                      </td>
+                      <td style="text-align: center;">1 Unit</td>
+                      <td style="text-align: right; font-weight: bold;">₹${generatedAmount}</td>
+                    </tr>
+                  `;
+                }).join('')}
                 ${Array.from({ length: Math.max(0, 8 - orderItems.length) }, (_, i) => `
                   <tr>
                     <td>&nbsp;</td>
@@ -364,7 +382,6 @@ const OrderDetails = ({ onLogout }) => {
                 <div class="signature-area">
                   <strong>Customer's Signature</strong><br>
                   <div style="margin-top: 40px; border-bottom: 1px solid #666; width: 200px;"></div>
-                  <div style="font-size: 10px; margin-top: 5px;">Date: ___________</div>
                 </div>
               </div>
             </div>
@@ -551,6 +568,8 @@ const OrderDetails = ({ onLogout }) => {
                 <th>S.No</th>
                 <th>Item ID</th>
                 <th>Rent Amount</th>
+                <th>Current Amount</th>
+                <th>Generated Amount</th>
                 <th>Status</th>
                 <th>Placed At</th>
                 <th>Returned At</th>
@@ -563,12 +582,17 @@ const OrderDetails = ({ onLogout }) => {
                 const cleanAfterUrl = item.after_images
                   ? item.after_images.replace(/[{}]/g, "").trim()
                   : null;
+                
+                const currentAmount = parseInt(item.current_amount) || 0;
+                const generatedAmount = Math.round(item.generated_amount); // 10% markup as example
 
                 return (
                   <tr key={`${item.delivery_item_id}-${idx}`}>
                     <td>{idx + 1}</td>
                     <td>{item.item_id}</td>
-                    <td>{parseInt(item.rent_amount)}</td>
+                    <td>₹{item.rent_amount}</td>
+                    <td>₹{currentAmount}</td>
+                    <td style={{ fontWeight: 'bold', color: '#007bff' }}>₹{generatedAmount}</td>
                     <td>{item.status}</td>
                     <td>{item.placed_at}</td>
                     <td>{item.returned_at}</td>
