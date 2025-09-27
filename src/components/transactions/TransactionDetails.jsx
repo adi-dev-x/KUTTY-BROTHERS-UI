@@ -118,7 +118,7 @@ const TransactionDetails = ({ onLogout }) => {
     }
 
     const formData = new FormData();
-    formData.append("file", newTransaction.imageFile);
+    formData.append("images", newTransaction.imageFile);
 
     setUploading(true); // 👈 start loading
     try {
@@ -134,7 +134,7 @@ const TransactionDetails = ({ onLogout }) => {
         ...newTransaction,
         uploadedImage: res.data.filePath || res.data.url || "", // adjust based on API response
       });
-      alert("Image uploaded successfully!");
+
     } catch (err) {
       console.error("Failed to upload image", err);
       alert("Failed to upload image");
