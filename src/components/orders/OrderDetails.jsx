@@ -30,9 +30,8 @@ const OrderDetails = ({ onLogout }) => {
     vehicleNumber: '',
     partyGSTIN: '',
     customerName: '',
-    customerPhone: '',
-    customerAddress: '',
-    remarks: ''
+    remarks: '',
+    deliveryChallanNumber: ''
   });
 
   useEffect(() => {
@@ -47,8 +46,7 @@ const OrderDetails = ({ onLogout }) => {
         // Calculate total using generated amounts (with markup)
         const calculateGeneratedTotal = (items) => {
           return items.reduce((sum, item) => {
-            const currentAmount = parseInt(item.current_amount || 0);
-            const generatedAmount =parseInt(item.generated_amount || 0); // 10% markup
+            const generatedAmount = parseInt(item.generated_amount || 0);
             return sum + generatedAmount;
           }, 0);
         };
@@ -57,21 +55,20 @@ const OrderDetails = ({ onLogout }) => {
         if (data.length > 0) {
           const orderDetails = {
             customer_name: data[0].customer_name || "N/A",
-            customer_phone: data[0].customer_phone || "N/A",
-            delivery_address: data[0].delivery_address || "N/A",
+            customer_gst: data[0].customer_gst || "",
+            delivery_chelan_number: data[0].delivery_chelan_number|| "",
             order_date: data[0].placed_at ? new Date(data[0].placed_at).toLocaleDateString() : new Date().toLocaleDateString(),
-            total_value: calculateGeneratedTotal(data) // Use generated amounts for total
+            total_value: calculateGeneratedTotal(data)
           };
           setOrderInfo(orderDetails);
           
           // Pre-populate DC form with API data
           setDCFormData({
             vehicleNumber: '',
-            partyGSTIN: '',
+            partyGSTIN: orderDetails.customer_gst,
             customerName: orderDetails.customer_name,
-            customerPhone: orderDetails.customer_phone,
-            customerAddress: orderDetails.delivery_address,
-            remarks: ''
+            remarks: '',
+            deliveryChallanNumber: orderDetails.delivery_chelan_number
           });
         }
       } catch (err) {
@@ -82,14 +79,23 @@ const OrderDetails = ({ onLogout }) => {
     };
     fetchOrderDetails();
   }, [delivery_id]);
-
-  const generateDCNumber = () => {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `DC${year}${month}${day}${delivery_id}`;
-  };
+const generateDCNumber = () => {
+  // Use the delivery challan number from API if available
+  if (dcFormData.deliveryChallanNumber) {
+    // Ensure it's 7 digits - pad with leading zeros if shorter, truncate if longer
+    const dcNumber = dcFormData.deliveryChallanNumber.toString().replace(/\D/g, ''); // Remove non-digits
+    return "DC"+dcNumber.padStart(10, '0').slice(0, 10);
+  }
+  
+  // Generate a 7-digit DC number
+  const date = new Date();
+  const year = date.getFullYear().toString().slice(-2); // 2 digits
+  const month = (date.getMonth() + 1).toString().padStart(2, '0'); // 2 digits
+  const day = date.getDate().toString().padStart(2, '0'); // 2 digits
+  const random = Math.floor(Math.random() * 10); // 1 digit random
+  
+  return `${year}${month}${day}${random}`; // Total: 7 digits
+};
 
   const generateQRData = () => {
     const qrData = {
@@ -100,21 +106,12 @@ const OrderDetails = ({ onLogout }) => {
       date: new Date().toISOString().split('T')[0],
       customer: {
         name: dcFormData.customerName || 'N/A',
-        phone: dcFormData.customerPhone || 'N/A',
-        address: dcFormData.customerAddress || 'N/A'
+        gstin: dcFormData.partyGSTIN || 'N/A'
       },
-      items: orderItems.map((item, index) => {
-        const currentAmount = parseInt(item.current_amount) || 0;
-        const generatedAmount =  parseInt(item.generated_amount) || 0; // 10% markup
-        return {
-          sl: index + 1,
-          itemId: item.item_id,
-          currentAmount: currentAmount,
-          billAmount: generatedAmount, // Use generated amount for billing
-          status: item.status || 'INITIATED'
-        };
-      }),
-      total: orderInfo?.total_value || 0, // This now contains the generated total
+      items: orderItems.map((item, index) => ({
+        sl: index + 1,
+        itemName: item.item_name || 'N/A'
+      })),
       vehicleNo: dcFormData.vehicleNumber || 'N/A',
       verification: `IRR${delivery_id}${Date.now().toString().slice(-4)}`
     };
@@ -130,11 +127,10 @@ const OrderDetails = ({ onLogout }) => {
     setDownloadingDC(true);
     
     try {
-      // Create a new window with the delivery challan content
       const dcWindow = window.open('', '_blank');
       
       const qrCodeData = encodeURIComponent(generateQRData());
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrCodeData}&format=png&ecc=M&margin=1`;
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${qrCodeData}&format=png&ecc=M&margin=1`;
       
       const dcHTML = `
         <!DOCTYPE html>
@@ -151,7 +147,7 @@ const OrderDetails = ({ onLogout }) => {
             .challan-container { 
               border: 2px solid black; 
               padding: 0;
-              max-width: 800px;
+              max-width: 750px;
               margin: 0 auto;
               background: white;
             }
@@ -186,14 +182,14 @@ const OrderDetails = ({ onLogout }) => {
             }
             .contact-info {
               position: absolute;
-              top: 20px;
-              right: 20px;
+              top: 30px;
+              right: 30px;
               font-size: 12px;
             }
             .gstin-info {
               position: absolute;
               top: 20px;
-              left: 20px;
+              left: 30px;
               font-size: 12px;
             }
             .signature-section {
@@ -204,7 +200,7 @@ const OrderDetails = ({ onLogout }) => {
               padding: 15px;
               border-bottom: 1px solid black;
               position: relative;
-              padding-right: 150px; /* Make space for QR code */
+              padding-right: 150px;
             }
             .dc-info {
               position: absolute;
@@ -239,8 +235,8 @@ const OrderDetails = ({ onLogout }) => {
             }
             .qr-section {
               position: absolute;
-              top: 100px;
-              right: 15px;
+              top: 90px;
+              right: 25px;
               text-align: center;
               border: 1px solid #ddd;
               padding: 10px;
@@ -267,7 +263,7 @@ const OrderDetails = ({ onLogout }) => {
             <div class="header">
               <div class="contact-info">
                 ☎ : 2652 1027<br>
-                7966 5310
+                ☎ : 7966 5310
               </div>
               
               <div class="gstin-info">
@@ -296,17 +292,16 @@ const OrderDetails = ({ onLogout }) => {
             <div class="customer-info">
               <div class="dc-info">
                 <strong>D.C. NO.</strong>
-                ${generateDCNumber()}<br><br>
+                ${generateDCNumber()}<br>
                 <strong>Date:</strong>
-                ${new Date().toLocaleDateString('en-GB')}<br>
+                ${new Date().toLocaleDateString('en-GB')}  <strong>  Time: </strong>
                 ${new Date().toLocaleTimeString()}
               </div>
               
               <div class="customer-details">
                 <strong>M/S.</strong>
                 <div class="customer-line">${dcFormData.customerName || 'N/A'}</div>
-                <div class="customer-line">📞 ${dcFormData.customerPhone || 'N/A'}</div>
-                <div class="customer-line">📍 ${dcFormData.customerAddress || 'N/A'}</div>
+                ${dcFormData.partyGSTIN ? `<div class="customer-line"><strong>GSTIN:</strong> ${dcFormData.partyGSTIN}</div>` : ''}
                 ${dcFormData.remarks ? `<div class="customer-line"><em>Remarks: ${dcFormData.remarks}</em></div>` : ''}
               </div>
             </div>
@@ -318,51 +313,32 @@ const OrderDetails = ({ onLogout }) => {
             <table class="items-table">
               <thead>
                 <tr>
-                  <th style="width: 8%">SL NO</th>
-                  <th style="width: 62%">DESCRIPTION</th>
-                  <th style="width: 10%">QTY.</th>
-                  <th style="width: 20%">RENT AMOUNT</th>
+                  <th style="width: 15%">SL NO</th>
+                  <th style="width: 70%">DESCRIPTION</th>
+                  <th style="width: 15%">QTY.</th>
                 </tr>
               </thead>
               <tbody>
-                ${orderItems.map((item, index) => {
-                  const currentAmount = parseInt(item.current_amount || 0);
-                  const generatedAmount = Math.round(item.generated_amount); // 10% markup
-                  return `
-                    <tr>
-                      <td style="text-align: center; font-weight: bold;">${index + 1}</td>
-                      <td>
-                        <strong>Item ID:</strong> ${item.item_id}<br>
-                        <em>Equipment Rental - ${item.status || 'INITIATED'}</em>
-                      </td>
-                      <td style="text-align: center;">1 Unit</td>
-                      <td style="text-align: right; font-weight: bold;">₹${generatedAmount}</td>
-                    </tr>
-                  `;
-                }).join('')}
-                ${Array.from({ length: Math.max(0, 8 - orderItems.length) }, (_, i) => `
+                ${orderItems.map((item, index) => `
                   <tr>
-                    <td>&nbsp;</td>
+                    <td style="text-align: center; font-weight: bold;">${index + 1}</td>
+                    <td>${item.item_name || 'Equipment Rental'}</td>
+                    <td style="text-align: center;">1 Unit</td>
+                  </tr>
+                `).join('')}
+                ${Array.from({ length: Math.max(0, 12 - orderItems.length) }, () => `
+                  <tr>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                     <td>&nbsp;</td>
                   </tr>
                 `).join('')}
-                <tr style="background: #f0f8ff; border-top: 2px solid #007bff;">
-                  <td colspan="3" style="text-align: right; font-weight: bold; font-size: 14px;">
-                    TOTAL RENT AMOUNT:
-                  </td>
-                  <td style="text-align: right; font-weight: bold; font-size: 14px; color: #007bff;">
-                    ₹${orderInfo?.total_value || 0}/-
-                  </td>
-                </tr>
               </tbody>
             </table>
 
             <div class="footer-info">
               <div class="footer-left">
-                <strong>Party's GSTIN No.:</strong><br>
-                <span style="font-size: 14px; color: #007bff;">${dcFormData.partyGSTIN || '.....................................................'}</span><br><br>
+                ${dcFormData.partyGSTIN ? `<strong>Party's GSTIN No.:</strong><br><span style="font-size: 14px; color: #007bff;">${dcFormData.partyGSTIN}</span><br><br>` : ''}
                 <strong>Vehicle No.:</strong><br>
                 <span style="font-size: 14px; color: #007bff;">${dcFormData.vehicleNumber || '.....................................................'}</span><br><br>
                 <strong>NOT FOR SALE</strong><br><br>
@@ -370,18 +346,13 @@ const OrderDetails = ({ onLogout }) => {
               </div>
               
               <div class="footer-right">
-                <div class="value-box">
-                  <strong>Total Value of Equipment</strong><br>
-                  ₹${orderInfo?.total_value || 0}/-
-                </div>
-                
                 <div style="margin: 15px 0;">
                   <strong>Received in good condition.</strong>
                 </div>
                 
                 <div class="signature-area">
                   <strong>Customer's Signature</strong><br>
-                  <div style="margin-top: 40px; border-bottom: 1px solid #666; width: 200px;"></div>
+                  <div style="margin-top: 60px; border-bottom: 1px solid #666; width: 200px;"></div>
                 </div>
               </div>
             </div>
@@ -402,7 +373,6 @@ const OrderDetails = ({ onLogout }) => {
       dcWindow.document.write(dcHTML);
       dcWindow.document.close();
       
-      // Optional: Auto-print after a short delay
       setTimeout(() => {
         dcWindow.print();
       }, 1000);
@@ -476,9 +446,8 @@ const OrderDetails = ({ onLogout }) => {
       setSelectedItem(null);
       setAfterImageFile(null);
       
-      // Refresh the data
       const res = await axios.get(
-        `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+        `https://ems.binlaundry.com/irrl/genericApiJoin/orderDetails?order_id='${delivery_id}'`
       );
       setOrderItems(res.data?.data || []);
     } catch (err) {
@@ -542,17 +511,21 @@ const OrderDetails = ({ onLogout }) => {
                   <span>{orderInfo.customer_name}</span>
                 </div>
                 <div>
-                  <strong style={{ color: '#555' }}>Phone:</strong><br />
-                  <span>{orderInfo.customer_phone}</span>
-                </div>
-                <div>
                   <strong style={{ color: '#555' }}>Order Date:</strong><br />
                   <span>{orderInfo.order_date}</span>
                 </div>
-                <div>
-                  <strong style={{ color: '#555' }}>Address:</strong><br />
-                  <span>{orderInfo.delivery_address}</span>
-                </div>
+                {orderInfo.customer_gst && (
+                  <div>
+                    <strong style={{ color: '#555' }}>Customer GST:</strong><br />
+                    <span>{orderInfo.customer_gst}</span>
+                  </div>
+                )}
+                {orderInfo.delivery_challan_number && (
+                  <div>
+                    <strong style={{ color: '#555' }}>DC Number:</strong><br />
+                    <span>{orderInfo.delivery_challan_number}</span>
+                  </div>
+                )}
                 <div>
                   <strong style={{ color: '#555' }}>Total Value:</strong><br />
                   <span style={{ color: '#007bff', fontWeight: 'bold' }}>₹{orderInfo.total_value}</span>
@@ -567,6 +540,7 @@ const OrderDetails = ({ onLogout }) => {
               <tr>
                 <th>S.No</th>
                 <th>Item ID</th>
+                <th>Item Name</th>
                 <th>Rent Amount</th>
                 <th>Current Amount</th>
                 <th>Generated Amount</th>
@@ -584,12 +558,13 @@ const OrderDetails = ({ onLogout }) => {
                   : null;
                 
                 const currentAmount = parseInt(item.current_amount) || 0;
-                const generatedAmount = Math.round(item.generated_amount); // 10% markup as example
+                const generatedAmount = Math.round(item.generated_amount);
 
                 return (
                   <tr key={`${item.delivery_item_id}-${idx}`}>
                     <td>{idx + 1}</td>
                     <td>{item.item_id}</td>
+                    <td>{item.item_name || 'N/A'}</td>
                     <td>₹{item.rent_amount}</td>
                     <td>₹{currentAmount}</td>
                     <td style={{ fontWeight: 'bold', color: '#007bff' }}>₹{generatedAmount}</td>
@@ -633,61 +608,20 @@ const OrderDetails = ({ onLogout }) => {
               onSubmit={(e) => { e.preventDefault(); handleDCFormSubmit(); }}
               style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
             >
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>
-                    Customer Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={dcFormData.customerName}
-                    onChange={(e) => setDCFormData(prev => ({ ...prev, customerName: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '2px solid #ddd',
-                      borderRadius: '5px',
-                      fontSize: '14px'
-                    }}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>
-                    Customer Phone *
-                  </label>
-                  <input
-                    type="text"
-                    value={dcFormData.customerPhone}
-                    onChange={(e) => setDCFormData(prev => ({ ...prev, customerPhone: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '2px solid #ddd',
-                      borderRadius: '5px',
-                      fontSize: '14px'
-                    }}
-                    required
-                  />
-                </div>
-              </div>
-
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>
-                  Customer Address *
+                  Customer Name *
                 </label>
-                <textarea
-                  value={dcFormData.customerAddress}
-                  onChange={(e) => setDCFormData(prev => ({ ...prev, customerAddress: e.target.value }))}
-                  rows="3"
+                <input
+                  type="text"
+                  value={dcFormData.customerName}
+                  onChange={(e) => setDCFormData(prev => ({ ...prev, customerName: e.target.value }))}
                   style={{
                     width: '100%',
                     padding: '8px 12px',
                     border: '2px solid #ddd',
                     borderRadius: '5px',
-                    fontSize: '14px',
-                    resize: 'vertical'
+                    fontSize: '14px'
                   }}
                   required
                 />
@@ -733,6 +667,26 @@ const OrderDetails = ({ onLogout }) => {
                 </div>
               </div>
 
+              {dcFormData.deliveryChallanNumber && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>
+                    Delivery Challan Number
+                  </label>
+                  <input
+                    type="text"
+                    value={dcFormData.deliveryChallanNumber}
+                    onChange={(e) => setDCFormData(prev => ({ ...prev, deliveryChallanNumber: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '2px solid #ddd',
+                      borderRadius: '5px',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+              )}
+
               <div>
                 <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>
                   Remarks (Optional)
@@ -766,7 +720,6 @@ const OrderDetails = ({ onLogout }) => {
                   <div><strong>Order ID:</strong> {delivery_id}</div>
                   <div><strong>DC Number:</strong> {generateDCNumber()}</div>
                   <div><strong>Total Items:</strong> {orderItems.length}</div>
-                  <div><strong>Total Amount:</strong> ₹{orderInfo?.total_value || 0}</div>
                 </div>
               </div>
 
