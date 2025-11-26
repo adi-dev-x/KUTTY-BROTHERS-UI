@@ -1,27 +1,20 @@
 // src/components/Footer.jsx
 import React from "react";
-import "./Footer.css"; // Separate CSS file
 
 const Footer = () => {
   return (
-    <footer className="footer">
-      {/* Left side */}
-      <div className="footer-left">
-        <h3 style={{ color: "#000000ff" }}>
-          <span className="green">KUTTY</span>BROTHERS
+    <footer className="flex h-16 flex-shrink-0 items-center justify-between border-t border-gray-200 bg-white px-8 py-3 text-xs">
+      <div className="flex items-center gap-2">
+        <h3 className="m-0 font-bold text-black">
+          <span className="text-yellow-600">KUTTY</span>BROTHERS
         </h3>
-        <p>
-          Empower Your Financial Insights with Our Intuitive Accounting System –
-          Simplifying Complexity, Maximizing Efficiency.
-        </p>
-        <a href="#">Privacy Policy</a>
+        <span className="text-gray-400">|</span>
+        <p className="text-gray-600">© 2025 Hevinka</p>
       </div>
 
-      {/* Right side */}
-      <div className="footer-right">
-        
-        <p>© 2025 Hevinka.</p>
-        <a href="#">Terms & Conditions</a>
+      <div className="flex items-center gap-4">
+        <a href="#" className="text-yellow-600 transition-colors hover:text-yellow-700 hover:underline">Privacy Policy</a>
+        <a href="#" className="text-yellow-600 transition-colors hover:text-yellow-700 hover:underline">Terms & Conditions</a>
       </div>
     </footer>
   );

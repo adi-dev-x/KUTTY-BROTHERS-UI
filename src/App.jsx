@@ -5,14 +5,15 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import LoginPage from "./components/LoginPage/LoginPage";
 import MainPage from "./components/MainPage/MainPage";
 import AttendancePage from "./components/attendance/AttendancePage";
-import Dashboard from "./components/dashboard/Dashboard"; 
-import RentalDashboard from "./components/customer/Customer"; 
-import InvoicePage from "./components/invoice/InvoicePage"; 
-import StockReport from "./components/stock-report/StockReport"; 
-import StockDetail from "./components/stock-report/StockDetail"; 
-import Brand from "./components/brand/brand"; 
-import Tools from "./components/tools/Tools"; 
-import Category from "./components/category/Category"; 
+import Dashboard from "./components/dashboard/Dashboard";
+import RentalDashboard from "./components/customer/Customer";
+import InvoicePage from "./components/invoice/InvoicePage";
+import StockReport from "./components/stock-report/StockReport";
+import StockDetail from "./components/stock-report/StockDetail";
+import Brand from "./components/brand/brand";
+import Tools from "./components/tools/Tools";
+import Category from "./components/category/Category";
+import Employees from "./components/employees/employees";
 
 // Orders
 import Orders from "./components/orders/Orders";
@@ -108,6 +109,12 @@ function App() {
         <Route
           path="/category"
           element={isLoggedIn ? <Category onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+
+        {/* Employees */}
+        <Route
+          path="/employees"
+          element={isLoggedIn ? <Employees onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
         {/* Stock */}

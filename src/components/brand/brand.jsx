@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import Header from "../header/Header";
-import "./brand.css";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 
 const BrandDashboard = ({ onLogout }) => {
@@ -37,57 +36,56 @@ const BrandDashboard = ({ onLogout }) => {
   const totalPages = Math.ceil(filteredBrands.length / brandsPerPage);
 
   return (
-    <div className="dashboard-wrapper">
+    <div className="flex min-h-screen flex-col">
       <Header onLogout={onLogout} />
 
-      <div className="dashboard-body">
+      <div className="flex flex-1 bg-gray-100">
         <Rentalsidebar />
 
-        <div className="main-content">
-          {/* Search */}
-          <div className="top-bar">
-            <div className="search-container">
-              <input
-                type="text"
-                placeholder="Search brands..."
-                className="search-input"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+        <div className="mx-auto w-full max-w-7xl flex-1 p-6">
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Search brands..."
+              className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none ring-yellow-600/20 transition focus:border-yellow-600 focus:ring-2"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          {/* Brands Table */}
           {loading ? (
-            <p>Loading brands...</p>
+            <p className="text-gray-600">Loading brands...</p>
           ) : (
-            <div className="table-card">
-              <h3>Brand List</h3>
-              <div className="table-wrapper">
-                <table className="brand-table">
-                  <thead>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">Brand List</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-gray-600">
                     <tr>
-                      <th>S.No</th>
-                      <th>Brand Name</th>
+                      <th className="px-4 py-2 text-left">S.No</th>
+                      <th className="px-4 py-2 text-left">Brand Name</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-100">
                     {currentBrands.map((b, index) => (
-                      <tr key={b.attributes_id}>
-                        <td>{indexOfFirst + index + 1}</td>
-                        <td>{b.name}</td>
+                      <tr key={b.attributes_id} className="hover:bg-yellow-50/40">
+                        <td className="px-4 py-2">{indexOfFirst + index + 1}</td>
+                        <td className="px-4 py-2">{b.name}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              {/* Pagination */}
-              <div className="pagination">
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
                 {Array.from({ length: totalPages }, (_, i) => (
                   <button
                     key={i + 1}
-                    className={currentPage === i + 1 ? "active" : ""}
+                    className={
+                      currentPage === i + 1
+                        ? "rounded-md bg-yellow-600 px-3 py-1.5 font-semibold text-white"
+                        : "rounded-md border border-gray-300 px-3 py-1.5 text-gray-700"
+                    }
                     onClick={() => setCurrentPage(i + 1)}
                   >
                     {i + 1}

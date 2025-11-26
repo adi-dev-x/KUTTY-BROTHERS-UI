@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
-import "./StockReport.css";
 import { FiDownload, FiPlus } from "react-icons/fi";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -22,8 +21,8 @@ const AutocompleteInput = ({ list = [], value = "", setValue, keyName }) => {
 
   const filtered = Array.isArray(list)
     ? list.filter((item) =>
-        getDisplay(item).toLowerCase().includes((value || "").toLowerCase())
-      )
+      getDisplay(item).toLowerCase().includes((value || "").toLowerCase())
+    )
     : [];
 
   return (
@@ -65,6 +64,8 @@ const StockReport = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [brands, setBrands] = useState([]);
   const [mainTypes, setMainTypes] = useState([]);
@@ -258,6 +259,12 @@ const StockReport = ({ onLogout }) => {
     return name.includes(q) || brand.includes(q) || code.includes(q);
   });
 
+  // Pagination
+  const indexOfLast = currentPage * itemsPerPage;
+  const indexOfFirst = indexOfLast - itemsPerPage;
+  const currentItems = filteredStock.slice(indexOfFirst, indexOfLast);
+  const totalPages = Math.ceil(filteredStock.length / itemsPerPage);
+
   const handleRowClick = (item) => {
     const sc = item.sub_code;
     if (!sc) {
@@ -268,215 +275,216 @@ const StockReport = ({ onLogout }) => {
   };
 
   return (
-    <div className="dashboard-wrapper">
+    <div className="flex h-screen flex-col overflow-hidden">
       <Header onLogout={onLogout} />
-      <div className="dashboard-body">
+      <div className="flex flex-1 overflow-hidden bg-gray-100">
         <Rentalsidebar />
 
-        <div className="main-content">
-          <div className="stock-top-bar">
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="mb-4 flex items-center gap-3">
             <input
               type="text"
               placeholder="Search..."
-              className="search-input small-search"
+              className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none ring-yellow-600/20 transition focus:border-yellow-600 focus:ring-2"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button className="add-btn" onClick={() => setShowForm(true)}>
+            <button className="inline-flex items-center gap-2 rounded-lg bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={() => setShowForm(true)}>
               <FiPlus /> Add Stock
             </button>
-            <button className="download-btn" onClick={handleDownloadPDF}>
+            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={handleDownloadPDF}>
               <FiDownload /> Download PDF
             </button>
           </div>
 
-          {/* Popup Form */}
           {showForm && (
-            <div className="popup-form">
-              <div className="popup-content">
-                <button className="close-popup" onClick={() => setShowForm(false)}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="relative w-full max-w-xl rounded-lg bg-white p-5 shadow-lg">
+                <button className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100" onClick={() => setShowForm(false)}>
                   ×
                 </button>
 
-                {/* Item Name */}
-                <div className="form-group">
-                  <label>Item Name</label>
-                  <input
-                    type="text"
-                    value={formData.item_name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, item_name: e.target.value })
-                    }
-                  />
-                </div>
+                <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block font-semibold text-gray-700">Item Name</label>
+                    <input
+                      type="text"
+                      value={formData.item_name}
+                      onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
+                      className="w-full rounded-md border-2 border-gray-200 px-3 py-2 focus:border-yellow-600 focus:outline-none"
+                    />
+                  </div>
 
-                {/* Brand */}
-                <div className="form-group">
-                  <label>Brand</label>
-                  <AutocompleteInput
-                    list={brands}
-                    value={formData.brand}
-                    setValue={(val) => setFormData({ ...formData, brand: val })}
-                    keyName="brand"
-                  />
-                </div>
+                  <div>
+                    <label className="mb-1 block font-semibold text-gray-700">Brand</label>
+                    <AutocompleteInput
+                      list={brands}
+                      value={formData.brand}
+                      setValue={(val) => setFormData({ ...formData, brand: val })}
+                      keyName="brand"
+                    />
+                  </div>
 
-                {/* Main Type */}
-                <div className="form-group">
-                  <label>Main Type</label>
-                  <AutocompleteInput
-                    list={mainTypes}
-                    value={formData.item_main_type}
-                    setValue={(val) =>
-                      setFormData({ ...formData, item_main_type: val })
-                    }
-                    keyName="item_main_type"
-                  />
-                </div>
+                  <div>
+                    <label className="mb-1 block font-semibold text-gray-700">Main Type</label>
+                    <AutocompleteInput
+                      list={mainTypes}
+                      value={formData.item_main_type}
+                      setValue={(val) => setFormData({ ...formData, item_main_type: val })}
+                      keyName="item_main_type"
+                    />
+                  </div>
 
-                {/* Sub Type */}
-                <div className="form-group">
-                  <label>Sub Type</label>
-                  <AutocompleteInput
-                    list={subTypes}
-                    value={formData.item_sub_type}
-                    setValue={(val) =>
-                      setFormData({ ...formData, item_sub_type: val })
-                    }
-                    keyName="new_sub_code"
-                  />
-                </div>
+                  <div>
+                    <label className="mb-1 block font-semibold text-gray-700">Sub Type</label>
+                    <AutocompleteInput
+                      list={subTypes}
+                      value={formData.item_sub_type}
+                      setValue={(val) => setFormData({ ...formData, item_sub_type: val })}
+                      keyName="new_sub_code"
+                    />
+                  </div>
 
-                {/* Main/Sub Code */}
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Main Code</label>
+                  <div>
+                    <label className="mb-1 block font-semibold text-gray-700">Main Code</label>
                     <input
                       type="text"
                       value={formData.main_code}
-                      onChange={(e) =>
-                        setFormData({ ...formData, main_code: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, main_code: e.target.value })}
+                      className="w-full rounded-md border-2 border-gray-200 px-3 py-2 focus:border-yellow-600 focus:outline-none"
                     />
                   </div>
-                  <div className="form-group">
-                    <label>Sub Code</label>
+                  <div>
+                    <label className="mb-1 block font-semibold text-gray-700">Sub Code</label>
                     <input
                       type="text"
                       value={formData.sub_code}
-                      onChange={(e) =>
-                        setFormData({ ...formData, sub_code: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, sub_code: e.target.value })}
+                      className="w-full rounded-md border-2 border-gray-200 px-3 py-2 focus:border-yellow-600 focus:outline-none"
                     />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block font-semibold text-gray-700">Description</label>
+                    <input
+                      type="text"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="w-full rounded-md border-2 border-gray-200 px-3 py-2 focus:border-yellow-600 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block font-semibold text-gray-700">Add Count</label>
+                    <input
+                      type="number"
+                      value={formData.add_count}
+                      onChange={(e) => setFormData({ ...formData, add_count: e.target.value })}
+                      className="w-full rounded-md border-2 border-gray-200 px-3 py-2 focus:border-yellow-600 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block font-semibold text-gray-700">Status</label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value.toUpperCase() })}
+                      className="w-full rounded-md border-2 border-gray-200 bg-white px-3 py-2 focus:border-yellow-600 focus:outline-none"
+                    >
+                      <option value="AVAILABLE">Available</option>
+                      <option value="RENTED">Rented</option>
+                      <option value="DAMAGED">Damaged</option>
+                      <option value="REPAIRING">Repairing</option>
+                      <option value="EXPIRED">Expired</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Description */}
-                <div className="form-group">
-                  <label>Description</label>
-                  <input
-                    type="text"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                  />
+                <div className="mt-4 flex justify-end">
+                  <button className="rounded-md bg-yellow-600 px-4 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={handleAddStock}>
+                    Add Stock
+                  </button>
                 </div>
-
-                {/* Add count */}
-                <div className="form-group">
-                  <label>Add Count</label>
-                  <input
-                    type="number"
-                    value={formData.add_count}
-                    onChange={(e) =>
-                      setFormData({ ...formData, add_count: e.target.value })
-                    }
-                  />
-                </div>
-
-                {/* Status */}
-                <div className="form-group">
-                  <label>Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) =>
-                      setFormData({ ...formData, status: e.target.value.toUpperCase() })
-                    }
-                  >
-                    <option value="AVAILABLE">Available</option>
-                    <option value="RENTED">Rented</option>
-                    <option value="DAMAGED">Damaged</option>
-                    <option value="REPAIRING">Repairing</option>
-                    <option value="EXPIRED">Expired</option>
-                  </select>
-                </div>
-
-                <button className="add-btn-floating" onClick={handleAddStock}>
-                  Add Stock
-                </button>
               </div>
             </div>
           )}
 
-          {/* Stock Table */}
           {loading ? (
-            <p>Loading stocks...</p>
+            <p className="text-gray-600">Loading stocks...</p>
           ) : (
-            <div className="table-card">
-              <h3>Stock Report</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>S.No</th>
-                    <th>Item Name</th>
-                    <th>Brand</th>
-                    <th>Main Type</th>
-                    <th>Sub Type</th>
-                    <th>Description</th>
-                    <th>Main Code</th>
-                    <th>Sub Code</th>
-                    <th>Available</th>
-                    <th>Rented</th>
-                    <th>Damaged</th>
-                    <th>Repairing</th>
-                    <th>Expired</th>
-                    <th>Blocked</th>
-                    <th>Reserved</th>
-                    <th>Pending</th>
-                    <th>Total Sum</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStock.map((item, index) => (
-                    <tr
-                      key={`${item.sub_code || "no-sub"}-${index}`}
-                      onClick={() => handleRowClick(item)}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <td>{index + 1}</td>
-                      <td>{item.item_name}</td>
-                      <td>{item.brand}</td>
-                      <td>{item.item_main_type}</td>
-                      <td>{item.item_sub_type}</td>
-                      <td>{item.description}</td>
-                      <td>{item.main_code}</td>
-                      <td>{item.sub_code}</td>
-                      <td>{item.available_count}</td>
-                      <td>{item.rented_count}</td>
-                      <td>{item.damaged_count}</td>
-                      <td>{item.not_initiated_count}</td>
-                      <td>{item.worn_out_count}</td>
-                      <td>{item.blocked_count}</td>
-                      <td>{item.reserved_count}</td>
-                      <td>{item.pending_count}</td>
-                      <td>
-                        <strong>{calculateTotalSum(item)}</strong>
-                      </td>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">Stock Report</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="px-4 py-2 text-left">S.No</th>
+                      <th className="px-4 py-2 text-left">Item Name</th>
+                      <th className="px-4 py-2 text-left">Brand</th>
+                      <th className="px-4 py-2 text-left">Main Type</th>
+                      <th className="px-4 py-2 text-left">Sub Type</th>
+                      <th className="px-4 py-2 text-left">Description</th>
+                      <th className="px-4 py-2 text-left">Main Code</th>
+                      <th className="px-4 py-2 text-left">Sub Code</th>
+                      <th className="px-4 py-2 text-left">Available</th>
+                      <th className="px-4 py-2 text-left">Rented</th>
+                      <th className="px-4 py-2 text-left">Damaged</th>
+                      <th className="px-4 py-2 text-left">Repairing</th>
+                      <th className="px-4 py-2 text-left">Expired</th>
+                      <th className="px-4 py-2 text-left">Blocked</th>
+                      <th className="px-4 py-2 text-left">Reserved</th>
+                      <th className="px-4 py-2 text-left">Pending</th>
+                      <th className="px-4 py-2 text-left">Total Sum</th>
                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {currentItems.map((item, index) => (
+                      <tr
+                        key={`${item.sub_code || "no-sub"}-${index}`}
+                        onClick={() => handleRowClick(item)}
+                        className="cursor-pointer hover:bg-yellow-50/40"
+                      >
+                        <td className="px-4 py-2">{indexOfFirst + index + 1}</td>
+                        <td className="px-4 py-2">{item.item_name}</td>
+                        <td className="px-4 py-2">{item.brand}</td>
+                        <td className="px-4 py-2">{item.item_main_type}</td>
+                        <td className="px-4 py-2">{item.item_sub_type}</td>
+                        <td className="px-4 py-2">{item.description}</td>
+                        <td className="px-4 py-2">{item.main_code}</td>
+                        <td className="px-4 py-2">{item.sub_code}</td>
+                        <td className="px-4 py-2">{item.available_count}</td>
+                        <td className="px-4 py-2">{item.rented_count}</td>
+                        <td className="px-4 py-2">{item.damaged_count}</td>
+                        <td className="px-4 py-2">{item.not_initiated_count}</td>
+                        <td className="px-4 py-2">{item.worn_out_count}</td>
+                        <td className="px-4 py-2">{item.blocked_count}</td>
+                        <td className="px-4 py-2">{item.reserved_count}</td>
+                        <td className="px-4 py-2">{item.pending_count}</td>
+                        <td className="px-4 py-2 font-semibold">{calculateTotalSum(item)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 border-t border-gray-200 px-6 py-4">
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                      key={i + 1}
+                      className={
+                        currentPage === i + 1
+                          ? "rounded-md bg-yellow-600 px-3 py-1.5 font-semibold text-white"
+                          : "rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50"
+                      }
+                      onClick={() => setCurrentPage(i + 1)}
+                    >
+                      {i + 1}
+                    </button>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import "./InvoicePage.css";
 import Header from "../header/Header";
 import Footer from "../footer/Footer";
 import { MdOutlineDelete } from "react-icons/md";
@@ -70,84 +69,99 @@ const InvoicePage = () => {
   };
 
   return (
-    <div className="invoice-page">
-        <Header/>
-      <h2><TbFileInvoice />
- Invoice Management</h2>
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <main className="mx-auto w-full max-w-6xl flex-1 bg-gray-100 px-6 py-8">
+        <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-gray-900">
+          <TbFileInvoice className="text-yellow-600" /> Invoice Management
+        </h2>
 
-      {/* ✅ Search + Import */}
-      <div className="invoice-actions">
-        <input
-          type="text"
-          placeholder="Search by customer..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <input type="file" />
-      </div>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            placeholder="Search by customer..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none ring-yellow-600/20 transition focus:border-yellow-600 focus:ring-2"
+          />
+          <input type="file" className="text-sm" />
+        </div>
 
-      {/* ✅ Create Invoice Form */}
-      <form className="invoice-form" onSubmit={handleAddInvoice}>
-        <input
-          type="text"
-          placeholder="Customer Name"
-          value={newInvoice.customer}
-          onChange={(e) => setNewInvoice({ ...newInvoice, customer: e.target.value })}
-        />
-        <input
-          type="number"
-          placeholder="Amount"
-          value={newInvoice.amount}
-          onChange={(e) => setNewInvoice({ ...newInvoice, amount: e.target.value })}
-        />
-        <input
-          type="date"
-          value={newInvoice.date}
-          onChange={(e) => setNewInvoice({ ...newInvoice, date: e.target.value })}
-        />
-        <button type="submit"><IoMdAddCircleOutline />
- Add Invoice</button>
-      </form>
+        <form className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-4" onSubmit={handleAddInvoice}>
+          <input
+            type="text"
+            placeholder="Customer Name"
+            value={newInvoice.customer}
+            onChange={(e) => setNewInvoice({ ...newInvoice, customer: e.target.value })}
+            className="rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+          />
+          <input
+            type="number"
+            placeholder="Amount"
+            value={newInvoice.amount}
+            onChange={(e) => setNewInvoice({ ...newInvoice, amount: e.target.value })}
+            className="rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+          />
+          <input
+            type="date"
+            value={newInvoice.date}
+            onChange={(e) => setNewInvoice({ ...newInvoice, date: e.target.value })}
+            className="rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+          />
+          <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700">
+            <IoMdAddCircleOutline /> Add Invoice
+          </button>
+        </form>
 
-      {/* ✅ Invoice Table */}
-      <div className="invoice-table">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Customer</th>
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredInvoices.map((inv) => (
-              <tr key={inv.id}>
-                <td>{inv.id}</td>
-                <td>{inv.customer}</td>
-                <td>₹{inv.amount}</td>
-                <td>{inv.date}</td>
-                <td>
-                  <span
-                    className={`status ${inv.status.toLowerCase()}`}
-                    onClick={() => toggleStatus(inv.id)}
-                  >
-                    {inv.status}
-                  </span>
-                </td>
-                <td>
-                  <button onClick={() => handleDelete(inv.id)}><MdOutlineDelete /> Delete</button>
-                  <button onClick={() => alert("Downloading Invoice PDF...")}><IoDownloadOutline />
- Download</button>
-                </td>
+        <div className="overflow-x-auto rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50 text-gray-600">
+              <tr>
+                <th className="px-4 py-2 text-left">ID</th>
+                <th className="px-4 py-2 text-left">Customer</th>
+                <th className="px-4 py-2 text-left">Amount</th>
+                <th className="px-4 py-2 text-left">Date</th>
+                <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <Footer/>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredInvoices.map((inv) => (
+                <tr key={inv.id} className="hover:bg-yellow-50/40">
+                  <td className="px-4 py-2">{inv.id}</td>
+                  <td className="px-4 py-2">{inv.customer}</td>
+                  <td className="px-4 py-2">₹{inv.amount}</td>
+                  <td className="px-4 py-2">{inv.date}</td>
+                  <td className="px-4 py-2">
+                    <button
+                      onClick={() => toggleStatus(inv.id)}
+                      className={
+                        "rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset " +
+                        (inv.status === "Paid"
+                          ? "bg-green-100 text-green-700 ring-green-600/20"
+                          : "bg-gray-100 text-gray-600 ring-gray-400/20")
+                      }
+                    >
+                      {inv.status}
+                    </button>
+                  </td>
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <button className="inline-flex items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700" onClick={() => handleDelete(inv.id)}>
+                        <MdOutlineDelete /> Delete
+                      </button>
+                      <button className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" onClick={() => alert("Downloading Invoice PDF...")}>
+                        <IoDownloadOutline /> Download
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </main>
+      <Footer />
     </div>
   );
 };

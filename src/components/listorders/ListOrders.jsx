@@ -3,7 +3,7 @@ import { FiDownload, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import axios from "axios";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
-import "./ListOrders.css";
+
 
 const ListOrders = ({ onLogout }) => {
   const [orders, setOrders] = useState([]);
@@ -39,31 +39,31 @@ const ListOrders = ({ onLogout }) => {
 
   // Excel download
   const handleDownloadExcel = async () => {
-  try {
-    const response = await axios.get(
-      "https://ems.binlaundry.com/irrl/reports/delivery",
-      {
-        params: { 
-          date_range: excelDays || "", // Days dropdown value
-          remark: excelStatus || ""    // Status dropdown value
-        },
-        responseType: "blob", // Important for file download
-      }
-    );
+    try {
+      const response = await axios.get(
+        "https://ems.binlaundry.com/irrl/reports/delivery",
+        {
+          params: {
+            date_range: excelDays || "", // Days dropdown value
+            remark: excelStatus || ""    // Status dropdown value
+          },
+          responseType: "blob", // Important for file download
+        }
+      );
 
-    // Create a blob link to download
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "delivery_report.xlsx");
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setShowExcelPopup(false);
-  } catch (err) {
-    console.error("Error downloading Excel:", err);
-  }
-};
+      // Create a blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "delivery_report.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setShowExcelPopup(false);
+    } catch (err) {
+      console.error("Error downloading Excel:", err);
+    }
+  };
 
 
   const handleFilter = () => {
@@ -100,28 +100,30 @@ const ListOrders = ({ onLogout }) => {
   };
 
   return (
-    <div className="dashboard-wrapper">
+    <div className="flex h-screen flex-col overflow-hidden">
       <Header onLogout={onLogout} />
-      <div className="dashboard-body">
+      <div className="flex flex-1 overflow-hidden bg-gray-100">
         <Rentalsidebar />
-        <div className="main-content">
-          <div className="stock-top-bar">
-            <button className="download-btn" onClick={() => setShowExcelPopup(true)}>
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={() => setShowExcelPopup(true)}>
               <FiDownload /> Download Excel
             </button>
 
-            <div className="styled-filter">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="text"
                 placeholder="Filter by Contact Person"
                 value={searchContact}
                 onChange={(e) => setSearchContact(e.target.value)}
+                className="w-56 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
               />
-              <button className="apply-btn" onClick={handleFilter}>Apply</button>
+              <button className="rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={handleFilter}>Apply</button>
 
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
               >
                 <option value="">All Status</option>
                 <option value="PENDING">Pending</option>
@@ -131,21 +133,21 @@ const ListOrders = ({ onLogout }) => {
                 <option value="INITIATED">Initiated</option>
                 <option value="RESERVED">Reserved</option>
               </select>
-              <button className="apply-btn" onClick={handleFilter}>Apply</button>
+              <button className="rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={handleFilter}>Apply</button>
             </div>
           </div>
 
-          {/* Excel Popup */}
           {showExcelPopup && (
-            <div className="popup-overlay">
-              <div className="popup-content">
-                <h3>Download Delivery Report</h3>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+              <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-lg">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900">Download Delivery Report</h3>
 
-                <label>
-                  Select Days:
+                <label className="mb-3 block text-sm">
+                  <span className="mb-1 block font-medium text-gray-700">Select Days</span>
                   <select
                     value={excelDays}
                     onChange={(e) => setExcelDays(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
                   >
                     <option value="">-- Select Days --</option>
                     <option value="7 days">7 Days</option>
@@ -157,11 +159,12 @@ const ListOrders = ({ onLogout }) => {
                   </select>
                 </label>
 
-                <label>
-                  Select Status:
+                <label className="mb-4 block text-sm">
+                  <span className="mb-1 block font-medium text-gray-700">Select Status</span>
                   <select
                     value={excelStatus}
                     onChange={(e) => setExcelStatus(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
                   >
                     <option value="">-- Select Status --</option>
                     <option value="PENDING">Pending</option>
@@ -172,88 +175,89 @@ const ListOrders = ({ onLogout }) => {
                   </select>
                 </label>
 
-                <div className="popup-buttons">
-                  <button className="apply-btn" onClick={handleDownloadExcel}>Download</button>
-                  <button className="cancel-btn" onClick={() => setShowExcelPopup(false)}>Cancel</button>
+                <div className="flex justify-end gap-2">
+                  <button className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700" onClick={() => setShowExcelPopup(false)}>Cancel</button>
+                  <button className="rounded-md bg-yellow-600 px-4 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={handleDownloadExcel}>Download</button>
                 </div>
               </div>
             </div>
           )}
 
           {loading ? (
-            <p>Loading orders...</p>
+            <p className="text-gray-600">Loading orders...</p>
           ) : (
-            <div className="table-card">
-              <h3>List of All Orders</h3>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">List of All Orders</h3>
 
-              <div className="table-scroll-wrapper">
-                <button className="scroll-btn left" onClick={() => scrollTable("left")}>
+              <div className="relative">
+                <button className="absolute left-0 top-1/2 -translate-y-1/2 rounded-md border border-gray-300 bg-white p-2 text-gray-700 hover:bg-gray-50" onClick={() => scrollTable("left")}>
                   <FiChevronLeft />
                 </button>
-                <div className="table-scroll" ref={tableRef}>
-                  <table>
-                    <thead>
+                <div className="mx-10 overflow-x-auto" ref={tableRef}>
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50 text-gray-600">
                       <tr>
-                        <th>S.No</th>
-                        <th>Customer Name</th>
-                        <th>Customer ID</th>
-                        <th>Contact Person</th>
-                        <th>Contact Number</th>
-                        <th>Shipping Address</th>
-                        <th>Inventory ID</th>
-                        <th>Item ID</th>
-                        <th>Order ID</th>
-                        <th>Generated Amount</th>
-                        <th>Current Amount</th>
-                        <th>Rent Amount</th>
-                        <th>Placed At</th>
-                        <th>Returned At</th>
-                        <th>Status</th>
+                        <th className="px-4 py-2 text-left">S.No</th>
+                        <th className="px-4 py-2 text-left">Customer Name</th>
+                        <th className="px-4 py-2 text-left">Customer ID</th>
+                        <th className="px-4 py-2 text-left">Contact Person</th>
+                        <th className="px-4 py-2 text-left">Contact Number</th>
+                        <th className="px-4 py-2 text-left">Shipping Address</th>
+                        <th className="px-4 py-2 text-left">Inventory ID</th>
+                        <th className="px-4 py-2 text-left">Item ID</th>
+                        <th className="px-4 py-2 text-left">Order ID</th>
+                        <th className="px-4 py-2 text-left">Generated Amount</th>
+                        <th className="px-4 py-2 text-left">Current Amount</th>
+                        <th className="px-4 py-2 text-left">Rent Amount</th>
+                        <th className="px-4 py-2 text-left">Placed At</th>
+                        <th className="px-4 py-2 text-left">Returned At</th>
+                        <th className="px-4 py-2 text-left">Status</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100">
                       {currentRows.map((o, i) => (
-                        <tr key={o.order_id}>
-                          <td>{indexOfFirstRow + i + 1}</td>
-                          <td>{o.customer_name || "-"}</td>
-                          <td>{o.customer_id || "-"}</td>
-                          <td>{o.contact_name || "-"}</td>
-                          <td>{o.contact_number || "-"}</td>
-                          <td>{o.shipping_address || "-"}</td>
-                          <td>{o.inventory_id || "-"}</td>
-                          <td>{o.item_id || "-"}</td>
-                          <td>{o.order_id || "-"}</td>
-                          <td>{o.generated_amount || "-"}</td>
-                          <td>{o.current_amount || "-"}</td>
-                          <td>{o.rent_amount || "-"}</td>
-                          <td>{o.placed_at ? new Date(o.placed_at).toLocaleDateString() : "-"}</td>
-                          <td>{o.returned_at ? new Date(o.returned_at).toLocaleDateString() : "-"}</td>
-                          <td>{o.status || "-"}</td>
+                        <tr key={o.order_id} className="hover:bg-yellow-50/40">
+                          <td className="px-4 py-2">{indexOfFirstRow + i + 1}</td>
+                          <td className="px-4 py-2">{o.customer_name || "-"}</td>
+                          <td className="px-4 py-2">{o.customer_id || "-"}</td>
+                          <td className="px-4 py-2">{o.contact_name || "-"}</td>
+                          <td className="px-4 py-2">{o.contact_number || "-"}</td>
+                          <td className="px-4 py-2">{o.shipping_address || "-"}</td>
+                          <td className="px-4 py-2">{o.inventory_id || "-"}</td>
+                          <td className="px-4 py-2">{o.item_id || "-"}</td>
+                          <td className="px-4 py-2">{o.order_id || "-"}</td>
+                          <td className="px-4 py-2">{o.generated_amount || "-"}</td>
+                          <td className="px-4 py-2">{o.current_amount || "-"}</td>
+                          <td className="px-4 py-2">{o.rent_amount || "-"}</td>
+                          <td className="px-4 py-2">{o.placed_at ? new Date(o.placed_at).toLocaleDateString() : "-"}</td>
+                          <td className="px-4 py-2">{o.returned_at ? new Date(o.returned_at).toLocaleDateString() : "-"}</td>
+                          <td className="px-4 py-2">{o.status || "-"}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <button className="scroll-btn right" onClick={() => scrollTable("right")}>
+                <button className="absolute right-0 top-1/2 -translate-y-1/2 rounded-md border border-gray-300 bg-white p-2 text-gray-700 hover:bg-gray-50" onClick={() => scrollTable("right")}>
                   <FiChevronRight />
                 </button>
               </div>
 
               {totalPages > 1 && (
-                <div className="pagination">
-                  <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
+                  <button className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 disabled:opacity-50" onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>
                     Prev
                   </button>
                   {getPageNumbers().map((page) => (
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={page === currentPage ? "active-page" : ""}
+                      className={page === currentPage ? "rounded-md bg-yellow-600 px-3 py-1.5 font-semibold text-white" : "rounded-md border border-gray-300 px-3 py-1.5 text-gray-700"}
                     >
                       {page}
                     </button>
                   ))}
                   <button
+                    className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 disabled:opacity-50"
                     onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                     disabled={currentPage === totalPages}
                   >

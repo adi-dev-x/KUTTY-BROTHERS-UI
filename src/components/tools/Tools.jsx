@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Header from "../header/Header";
 import Footer from "../footer/Footer";
-import "./Tools.css";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import { FiEdit, FiTrash2, FiDownload } from "react-icons/fi";
 import jsPDF from "jspdf";
@@ -114,127 +113,137 @@ const ToolsDashboard = ({ onLogout }) => {
   };
 
   return (
-    <div className="dashboard-wrapper">
+    <div className="flex min-h-screen flex-col">
       <Header onLogout={onLogout} />
-      <div className="dashboard-body">
+      <div className="flex flex-1 bg-gray-100">
         <Rentalsidebar />
 
-        <div className="main-content">
-          <div className="top-bar">
-            <div className="search-container">
+        <div className="mx-auto w-full max-w-7xl flex-1 p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="relative">
               <input
                 type="text"
                 placeholder="Search tools..."
-                className="search-input"
+                className="w-64 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none ring-yellow-600/20 transition focus:border-yellow-600 focus:ring-2"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
               {search && (
-                <ul className="suggestions">
+                <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-md border border-gray-200 bg-white p-1 text-sm shadow-md">
                   {suggestions.map((s) => (
-                    <li key={s.tool_id} onClick={() => handleSelectTool(s)}>
+                    <li key={s.tool_id} onClick={() => handleSelectTool(s)} className="cursor-pointer rounded px-2 py-1 hover:bg-gray-50">
                       {s.tool_name}
                     </li>
                   ))}
                 </ul>
               )}
             </div>
-            <div className="top-bar-buttons">
-              <button className="add-btn" onClick={handleAddClick}>
+            <div className="flex items-center gap-2">
+              <button className="rounded-lg bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={handleAddClick}>
                 + Add Tool
               </button>
-              <button className="download-btn" onClick={handleDownloadPDF}>
-                <FiDownload className="menu-icons" /> Download PDF
+              <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={handleDownloadPDF}>
+                <FiDownload /> Download PDF
               </button>
             </div>
           </div>
 
           {showForm && (
-            <form className="add-customer-form" onSubmit={handleSubmit}>
+            <form className="mb-4 grid grid-cols-1 gap-3 rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-200 sm:grid-cols-5" onSubmit={handleSubmit}>
               <input
                 type="text"
                 placeholder="Tool Name"
                 value={formData.tool_name}
                 onChange={(e) => setFormData({ ...formData, tool_name: e.target.value })}
                 required
+                className="rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
               />
               <input
                 type="text"
                 placeholder="Tool Code"
                 value={formData.tool_code}
                 onChange={(e) => setFormData({ ...formData, tool_code: e.target.value })}
+                className="rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
               />
               <input
                 type="text"
                 placeholder="Description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
               />
               <input
                 type="text"
                 placeholder="Status (Active/Inactive)"
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                className="rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
               />
-              <button type="submit">{editingTool ? "Update" : "Add"}</button>
+              <button type="submit" className="rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700">{editingTool ? "Update" : "Add"}</button>
             </form>
           )}
 
           {loading ? (
-            <p>Loading tools...</p>
+            <p className="text-gray-600">Loading tools...</p>
           ) : (
-            <div className="table-card">
-              <h3>Tools List</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Tool Name</th>
-                    <th>Tool Code</th>
-                    <th>Description</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentTools.map((t) => (
-                    <tr
-                      key={t.tool_id}
-                      className={selectedTool === t.tool_id ? "highlight" : ""}
-                    >
-                      <td>{t.tool_name}</td>
-                      <td>{t.tool_code}</td>
-                      <td>{t.description}</td>
-                      <td>{t.status}</td>
-                      <td className="actions-cell">
-                        <div className="menu-wrapper">
-                          <button
-                            className="menu-btn"
-                            onClick={() => setMenuOpen(menuOpen === t.tool_id ? null : t.tool_id)}
-                          >
-                            ⋮
-                          </button>
-                          {menuOpen === t.tool_id && (
-                            <div className="menu">
-                              <div onClick={() => handleEdit(t)}>
-                                <FiEdit className="menu-icon" /> Edit
-                              </div>
-                              <div onClick={() => handleDelete(t.tool_id)}>
-                                <FiTrash2 className="menu-icon" /> Delete
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </td>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">Tools List</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Tool Name</th>
+                      <th className="px-4 py-2 text-left">Tool Code</th>
+                      <th className="px-4 py-2 text-left">Description</th>
+                      <th className="px-4 py-2 text-left">Status</th>
+                      <th className="px-4 py-2 text-left">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {currentTools.map((t) => (
+                      <tr
+                        key={t.tool_id}
+                        className={selectedTool === t.tool_id ? "bg-yellow-50" : "hover:bg-yellow-50/40"}
+                      >
+                        <td className="px-4 py-2">{t.tool_name}</td>
+                        <td className="px-4 py-2">{t.tool_code}</td>
+                        <td className="px-4 py-2">{t.description}</td>
+                        <td className="px-4 py-2">{t.status}</td>
+                        <td className="px-4 py-2">
+                          <div className="relative">
+                            <button
+                              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+                              onClick={() => setMenuOpen(menuOpen === t.tool_id ? null : t.tool_id)}
+                            >
+                              ⋮
+                            </button>
+                            {menuOpen === t.tool_id && (
+                              <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-gray-200 bg-white p-1 text-sm shadow-md">
+                                <div className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 hover:bg-gray-50" onClick={() => handleEdit(t)}>
+                                  <FiEdit /> Edit
+                                </div>
+                                <div className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-red-600 hover:bg-gray-50" onClick={() => handleDelete(t.tool_id)}>
+                                  <FiTrash2 /> Delete
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-              <div className="pagination">
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
                 {Array.from({ length: totalPages }, (_, i) => (
                   <button
                     key={i + 1}
-                    className={currentPage === i + 1 ? "active" : ""}
+                    className={
+                      currentPage === i + 1
+                        ? "rounded-md bg-yellow-600 px-3 py-1.5 font-semibold text-white"
+                        : "rounded-md border border-gray-300 px-3 py-1.5 text-gray-700"
+                    }
                     onClick={() => setCurrentPage(i + 1)}
                   >
                     {i + 1}
@@ -245,6 +254,7 @@ const ToolsDashboard = ({ onLogout }) => {
           )}
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

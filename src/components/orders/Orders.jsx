@@ -7,14 +7,13 @@ import { useNavigate } from "react-router-dom";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import OrderForm from "./OrderForm";
-import "./Orders.css";
 
 const Orders = ({ onLogout }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [statuses, setStatuses] = useState(["COMPLETED", "BLOCKED", "INITIATED","RESERVED"]);
+  const [statuses, setStatuses] = useState(["COMPLETED", "BLOCKED", "INITIATED", "RESERVED"]);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 8;
   const navigate = useNavigate();
@@ -143,23 +142,23 @@ const Orders = ({ onLogout }) => {
   const totalPages = Math.ceil(filteredOrders.length / rowsPerPage);
 
   return (
-    <div className="dashboard-wrapper">
+    <div className="flex h-screen flex-col overflow-hidden">
       <Header onLogout={onLogout} />
-      <div className="dashboard-body">
+      <div className="flex flex-1 overflow-hidden bg-gray-100">
         <Rentalsidebar />
-        <div className="main-content">
-          <div className="stock-top-bar">
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="mb-4 flex items-center gap-3">
             <input
               type="text"
               placeholder="Search orders..."
-              className="search-input small-search"
+              className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none ring-yellow-600/20 transition focus:border-yellow-600 focus:ring-2"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <button className="add-btn" onClick={() => setShowForm(!showForm)}>
+            <button className="inline-flex items-center gap-2 rounded-lg bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={() => setShowForm(!showForm)}>
               <FiPlus /> Add Order
             </button>
-            <button className="download-btn" onClick={handleDownloadPDF}>
+            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={handleDownloadPDF}>
               <FiDownload /> Download PDF
             </button>
           </div>
@@ -172,109 +171,109 @@ const Orders = ({ onLogout }) => {
           )}
 
           {loading ? (
-            <p>Loading orders...</p>
+            <p className="text-gray-600">Loading orders...</p>
           ) : (
-            <div className="table-card">
-              <h3>Orders Report</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>S.No</th>
-                    <th>Customer Name</th>
-                    <th>Customer ID</th>
-                    <th>Contact Person</th>
-                    <th>Contact Number</th>
-                    <th>Shipping Address</th>
-                    <th>Inventory ID</th>
-                    <th>Generated Amount</th>
-                    <th>Current Amount</th>
-                    <th>Advance Amount</th>
-                    <th>Placed At</th>
-                    <th>Returned At</th>
-                    <th>Transactions</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentRows.map((o, i) => (
-                    <tr
-                      key={o.delivery_id}
-                      onClick={() => navigate(`/order-details/${o.delivery_id}`)}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <td>{indexOfFirstRow + i + 1}</td>
-                      <td>{o.customer_name || "-"}</td>
-                      <td>{o.customer_id || "-"}</td>
-                      <td>{o.contact_name || "-"}</td>
-                      <td>{o.contact_number || "-"}</td>
-                      <td>{o.shipping_address || "-"}</td>
-                      <td>{o.inventory_id || "-"}</td>
-                      <td>{o.generated_amount || "-"}</td>
-                      <td>{o.current_amount || "-"}</td>
-                      <td>{o.advance_amount || "-"}</td>
-                      <td>{o.placed_at || "-"}</td>
-                      <td>{o.declined_at || "-"}</td>
-                      <td>
-                        <button
-                          className="view-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate("/transaction", {
-                              state: { order_id: o.delivery_id },
-                            });
-                          }}
-                        >
-                          View Transaction
-                        </button>
-                      </td>
-                      <td>
-                        <select
-                          value={o.status}
-                          onClick={(e) => e.stopPropagation()} // prevent row click
-                          onChange={(e) =>
-                            handleStatusChange(o.delivery_id, e.target.value)
-                          }
-                        >
-                          {statuses.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <button
-                          className="delete-btn"
-                          onClick={(e) => {
-                            e.stopPropagation(); // prevent row click
-                            handleDelete(o.delivery_id);
-                          }}
-                        >
-                          <FiTrash2 />
-                        </button>
-                      </td>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">Orders Report</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="px-4 py-2 text-left">S.No</th>
+                      <th className="px-4 py-2 text-left">Customer Name</th>
+                      <th className="px-4 py-2 text-left">Customer ID</th>
+                      <th className="px-4 py-2 text-left">Contact Person</th>
+                      <th className="px-4 py-2 text-left">Contact Number</th>
+                      <th className="px-4 py-2 text-left">Shipping Address</th>
+                      <th className="px-4 py-2 text-left">Inventory ID</th>
+                      <th className="px-4 py-2 text-left">Generated Amount</th>
+                      <th className="px-4 py-2 text-left">Current Amount</th>
+                      <th className="px-4 py-2 text-left">Advance Amount</th>
+                      <th className="px-4 py-2 text-left">Placed At</th>
+                      <th className="px-4 py-2 text-left">Returned At</th>
+                      <th className="px-4 py-2 text-left">Transactions</th>
+                      <th className="px-4 py-2 text-left">Status</th>
+                      <th className="px-4 py-2 text-left">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {currentRows.map((o, i) => (
+                      <tr
+                        key={o.delivery_id}
+                        onClick={() => navigate(`/order-details/${o.delivery_id}`)}
+                        className="cursor-pointer hover:bg-yellow-50/40"
+                      >
+                        <td className="px-4 py-2">{indexOfFirstRow + i + 1}</td>
+                        <td className="px-4 py-2">{o.customer_name || "-"}</td>
+                        <td className="px-4 py-2">{o.customer_id || "-"}</td>
+                        <td className="px-4 py-2">{o.contact_name || "-"}</td>
+                        <td className="px-4 py-2">{o.contact_number || "-"}</td>
+                        <td className="px-4 py-2">{o.shipping_address || "-"}</td>
+                        <td className="px-4 py-2">{o.inventory_id || "-"}</td>
+                        <td className="px-4 py-2">{o.generated_amount || "-"}</td>
+                        <td className="px-4 py-2">{o.current_amount || "-"}</td>
+                        <td className="px-4 py-2">{o.advance_amount || "-"}</td>
+                        <td className="px-4 py-2">{o.placed_at || "-"}</td>
+                        <td className="px-4 py-2">{o.declined_at || "-"}</td>
+                        <td className="px-4 py-2">
+                          <button
+                            className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 transition hover:bg-gray-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate("/transaction", {
+                                state: { order_id: o.delivery_id },
+                              });
+                            }}
+                          >
+                            View Transaction
+                          </button>
+                        </td>
+                        <td className="px-4 py-2">
+                          <select
+                            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
+                            value={o.status}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) =>
+                              handleStatusChange(o.delivery_id, e.target.value)
+                            }
+                          >
+                            {statuses.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-2">
+                          <button
+                            className="rounded-md bg-red-600 px-3 py-1.5 text-white transition hover:bg-red-700"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(o.delivery_id);
+                            }}
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-              {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="pagination">
+                <div className="mt-4 flex items-center justify-between text-sm">
                   <button
+                    className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 disabled:opacity-50"
                     onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                     disabled={currentPage === 1}
                   >
                     Prev
                   </button>
-                  <span>
-                    Page {currentPage} of {totalPages}
-                  </span>
+                  <span className="text-gray-600">Page {currentPage} of {totalPages}</span>
                   <button
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(p + 1, totalPages))
-                    }
+                    className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 disabled:opacity-50"
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                     disabled={currentPage === totalPages}
                   >
                     Next

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import Header from "../header/Header";
-import "./MainType.css"; // Reusing same CSS
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 
 const MainTypeDashboard = ({ onLogout }) => {
@@ -37,57 +36,56 @@ const MainTypeDashboard = ({ onLogout }) => {
   const totalPages = Math.ceil(filteredMainTypes.length / mainTypesPerPage);
 
   return (
-    <div className="dashboard-wrapper">
+    <div className="flex min-h-screen flex-col">
       <Header onLogout={onLogout} />
 
-      <div className="dashboard-body">
+      <div className="flex flex-1 bg-gray-100">
         <Rentalsidebar />
 
-        <div className="main-content">
-          {/* Search */}
-          <div className="top-bar">
-            <div className="search-container">
-              <input
-                type="text"
-                placeholder="Search main types..."
-                className="search-input"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+        <div className="mx-auto w-full max-w-7xl flex-1 p-6">
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Search main types..."
+              className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none ring-yellow-600/20 transition focus:border-yellow-600 focus:ring-2"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
 
-          {/* Main Type Table */}
           {loading ? (
-            <p>Loading main types...</p>
+            <p className="text-gray-600">Loading main types...</p>
           ) : (
-            <div className="table-card">
-              <h3>Main Type List</h3>
-              <div className="table-wrapper">
-                <table className="brand-table">
-                  <thead>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">Main Type List</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-gray-600">
                     <tr>
-                      <th>S.No</th>
-                      <th>Main Type Name</th>
+                      <th className="px-4 py-2 text-left">S.No</th>
+                      <th className="px-4 py-2 text-left">Main Type Name</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-100">
                     {currentMainTypes.map((m, index) => (
-                      <tr key={m.attributes_id || index}>
-                        <td>{indexOfFirst + index + 1}</td>
-                        <td>{m.name}</td>
+                      <tr key={m.attributes_id || index} className="hover:bg-yellow-50/40">
+                        <td className="px-4 py-2">{indexOfFirst + index + 1}</td>
+                        <td className="px-4 py-2">{m.name}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              {/* Pagination */}
-              <div className="pagination">
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm">
                 {Array.from({ length: totalPages }, (_, i) => (
                   <button
                     key={i + 1}
-                    className={currentPage === i + 1 ? "active" : ""}
+                    className={
+                      currentPage === i + 1
+                        ? "rounded-md bg-yellow-600 px-3 py-1.5 font-semibold text-white"
+                        : "rounded-md border border-gray-300 px-3 py-1.5 text-gray-700"
+                    }
                     onClick={() => setCurrentPage(i + 1)}
                   >
                     {i + 1}

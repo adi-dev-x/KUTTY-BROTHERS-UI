@@ -11,7 +11,7 @@ import {
   FaTimes,
   FaDownload,
 } from "react-icons/fa";
-import "./OrderDetails.css";
+ 
 
 const OrderDetails = ({ onLogout }) => {
   const { delivery_id } = useParams();
@@ -456,304 +456,218 @@ const generateDCNumber = () => {
     }
   };
 
-  if (loading) return <p>Loading order details...</p>;
-  if (!orderItems.length) return <p>No details found for this order.</p>;
+  if (loading) return <p className="p-6 text-gray-600">Loading order details...</p>;
+  if (!orderItems.length) return <p className="p-6 text-gray-600">No details found for this order.</p>;
 
   return (
-    <div className="dashboard-wrapper">
+    <div className="flex min-h-screen flex-col">
       <Header onLogout={onLogout} />
-      <div className="dashboard-body">
+      <div className="flex flex-1 bg-gray-100">
         <Rentalsidebar />
-        <div className="main-content">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>Order Details - #{delivery_id}</h2>
+        <div className="mx-auto w-full max-w-7xl flex-1 p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900">Order Details - #{delivery_id}</h2>
             <button 
               onClick={() => setShowDCPreview(true)} 
-              className="download-dc-btn"
               disabled={downloadingDC}
-              style={{
-                backgroundColor: '#007bff',
-                color: 'white',
-                border: 'none',
-                padding: '10px 15px',
-                borderRadius: '5px',
-                cursor: downloadingDC ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px'
-              }}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <FaDownload /> {downloadingDC ? 'Processing...' : 'Generate DC'}
             </button>
           </div>
           
-          <button onClick={() => navigate(-1)} className="back-btn">
+          <button onClick={() => navigate(-1)} className="mb-4 inline-flex items-center gap-2 text-sm text-gray-700 hover:underline">
             <FaArrowLeft /> Back
           </button>
 
           {orderInfo && (
-            <div style={{ 
-              marginBottom: '20px', 
-              padding: '15px', 
-              border: '1px solid #ddd', 
-              borderRadius: '5px',
-              background: '#f9f9f9'
-            }}>
-              <h4 style={{ marginBottom: '15px', color: '#2c3e50' }}>Order Information</h4>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(3, 1fr)', 
-                gap: '15px', 
-                fontSize: '14px' 
-              }}>
+            <div className="mb-5 rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h4 className="mb-3 text-base font-semibold text-gray-900">Order Information</h4>
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                 <div>
-                  <strong style={{ color: '#555' }}>Customer:</strong><br />
-                  <span>{orderInfo.customer_name}</span>
+                  <div className="text-gray-600">Customer</div>
+                  <div className="font-medium text-gray-900">{orderInfo.customer_name}</div>
                 </div>
                 <div>
-                  <strong style={{ color: '#555' }}>Order Date:</strong><br />
-                  <span>{orderInfo.order_date}</span>
+                  <div className="text-gray-600">Order Date</div>
+                  <div className="font-medium text-gray-900">{orderInfo.order_date}</div>
                 </div>
                 {orderInfo.customer_gst && (
                   <div>
-                    <strong style={{ color: '#555' }}>Customer GST:</strong><br />
-                    <span>{orderInfo.customer_gst}</span>
+                    <div className="text-gray-600">Customer GST</div>
+                    <div className="font-medium text-gray-900">{orderInfo.customer_gst}</div>
                   </div>
                 )}
                 {orderInfo.delivery_challan_number && (
                   <div>
-                    <strong style={{ color: '#555' }}>DC Number:</strong><br />
-                    <span>{orderInfo.delivery_challan_number}</span>
+                    <div className="text-gray-600">DC Number</div>
+                    <div className="font-medium text-gray-900">{orderInfo.delivery_challan_number}</div>
                   </div>
                 )}
                 <div>
-                  <strong style={{ color: '#555' }}>Total Value:</strong><br />
-                  <span style={{ color: '#007bff', fontWeight: 'bold' }}>₹{orderInfo.total_value}</span>
+                  <div className="text-gray-600">Total Value</div>
+                  <div className="font-semibold text-blue-600">₹{orderInfo.total_value}</div>
                 </div>
               </div>
             </div>
           )}
 
-          <h3>Items in Order</h3>
-          <table className="order-items-table">
-            <thead>
-              <tr>
-                <th>S.No</th>
-                <th>Item ID</th>
-                <th>Item Name</th>
-                <th>Rent Amount</th>
-                <th>Current Amount</th>
-                <th>Generated Amount</th>
-                <th>Status</th>
-                <th>Placed At</th>
-                <th>Returned At</th>
-                <th>Before Images</th>
-                <th>After Images</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orderItems.map((item, idx) => {
-                const cleanAfterUrl = item.after_images
-                  ? item.after_images.replace(/[{}]/g, "").trim()
-                  : null;
-                
-                const currentAmount = parseInt(item.current_amount) || 0;
-                const generatedAmount = Math.round(item.generated_amount);
+          <h3 className="mb-2 text-lg font-semibold text-gray-900">Items in Order</h3>
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-4 py-2 text-left">S.No</th>
+                  <th className="px-4 py-2 text-left">Item ID</th>
+                  <th className="px-4 py-2 text-left">Item Name</th>
+                  <th className="px-4 py-2 text-left">Rent Amount</th>
+                  <th className="px-4 py-2 text-left">Current Amount</th>
+                  <th className="px-4 py-2 text-left">Generated Amount</th>
+                  <th className="px-4 py-2 text-left">Status</th>
+                  <th className="px-4 py-2 text-left">Placed At</th>
+                  <th className="px-4 py-2 text-left">Returned At</th>
+                  <th className="px-4 py-2 text-left">Before Images</th>
+                  <th className="px-4 py-2 text-left">After Images</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {orderItems.map((item, idx) => {
+                  const cleanAfterUrl = item.after_images
+                    ? item.after_images.replace(/[{}]/g, "").trim()
+                    : null;
+                  
+                  const currentAmount = parseInt(item.current_amount) || 0;
+                  const generatedAmount = Math.round(item.generated_amount);
 
-                return (
-                  <tr key={`${item.delivery_item_id}-${idx}`}>
-                    <td>{idx + 1}</td>
-                    <td>{item.item_id}</td>
-                    <td>{item.item_name || 'N/A'}</td>
-                    <td>₹{item.rent_amount}</td>
-                    <td>₹{currentAmount}</td>
-                    <td style={{ fontWeight: 'bold', color: '#007bff' }}>₹{generatedAmount}</td>
-                    <td>{item.status}</td>
-                    <td>{item.placed_at}</td>
-                    <td>{item.returned_at}</td>
-                    <td>{renderBeforeImage(item.before_images, item)}</td>
-                    <td>
-                      {cleanAfterUrl ? (
-                        <a href={cleanAfterUrl} target="_blank" rel="noreferrer">
-                          View After Image
-                        </a>
-                      ) : (
-                        "Not Uploaded"
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr key={`${item.delivery_item_id}-${idx}`} className="hover:bg-yellow-50/40">
+                      <td className="px-4 py-2">{idx + 1}</td>
+                      <td className="px-4 py-2">{item.item_id}</td>
+                      <td className="px-4 py-2">{item.item_name || 'N/A'}</td>
+                      <td className="px-4 py-2">₹{item.rent_amount}</td>
+                      <td className="px-4 py-2">₹{currentAmount}</td>
+                      <td className="px-4 py-2 font-semibold text-blue-600">₹{generatedAmount}</td>
+                      <td className="px-4 py-2">{item.status}</td>
+                      <td className="px-4 py-2">{item.placed_at}</td>
+                      <td className="px-4 py-2">{item.returned_at}</td>
+                      <td className="px-4 py-2">{renderBeforeImage(item.before_images, item)}</td>
+                      <td className="px-4 py-2">
+                        {cleanAfterUrl ? (
+                          <a className="text-blue-600 hover:underline" href={cleanAfterUrl} target="_blank" rel="noreferrer">
+                            View After Image
+                          </a>
+                        ) : (
+                          "Not Uploaded"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {showDCPreview && (
-        <div className="popup-overlay" style={{ zIndex: 1000 }}>
-          <div className="popup-card" style={{ width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-lg overflow-y-auto rounded-lg bg-white p-5 shadow-lg">
             <button 
-              className="close-btn" 
+              className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100"
               onClick={() => setShowDCPreview(false)}
-              style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 1001 }}
             >
               <FaTimes />
             </button>
 
-            <h3 style={{ textAlign: 'center', marginBottom: '20px', color: '#2c3e50' }}>
-              📄 Delivery Challan Preview
+            <h3 className="mb-4 text-center text-lg font-semibold text-gray-900">
+              Delivery Challan Preview
             </h3>
 
             <form 
               onSubmit={(e) => { e.preventDefault(); handleDCFormSubmit(); }}
-              style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}
+              className="flex flex-col gap-4"
             >
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">
                   Customer Name *
                 </label>
                 <input
                   type="text"
                   value={dcFormData.customerName}
                   onChange={(e) => setDCFormData(prev => ({ ...prev, customerName: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '2px solid #ddd',
-                    borderRadius: '5px',
-                    fontSize: '14px'
-                  }}
+                  className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
                   required
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>
-                    Vehicle Number
-                  </label>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Vehicle Number</label>
                   <input
                     type="text"
                     value={dcFormData.vehicleNumber}
                     onChange={(e) => setDCFormData(prev => ({ ...prev, vehicleNumber: e.target.value.toUpperCase() }))}
                     placeholder="e.g., TN01AB1234"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '2px solid #ddd',
-                      borderRadius: '5px',
-                      fontSize: '14px'
-                    }}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>
-                    Party's GSTIN
-                  </label>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Party's GSTIN</label>
                   <input
                     type="text"
                     value={dcFormData.partyGSTIN}
                     onChange={(e) => setDCFormData(prev => ({ ...prev, partyGSTIN: e.target.value.toUpperCase() }))}
                     placeholder="e.g., 29ABCDE1234F1Z5"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '2px solid #ddd',
-                      borderRadius: '5px',
-                      fontSize: '14px'
-                    }}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
                   />
                 </div>
               </div>
 
               {dcFormData.deliveryChallanNumber && (
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>
-                    Delivery Challan Number
-                  </label>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Delivery Challan Number</label>
                   <input
                     type="text"
                     value={dcFormData.deliveryChallanNumber}
                     onChange={(e) => setDCFormData(prev => ({ ...prev, deliveryChallanNumber: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '2px solid #ddd',
-                      borderRadius: '5px',
-                      fontSize: '14px'
-                    }}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
                   />
                 </div>
               )}
 
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#555' }}>
-                  Remarks (Optional)
-                </label>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Remarks (Optional)</label>
                 <textarea
                   value={dcFormData.remarks}
                   onChange={(e) => setDCFormData(prev => ({ ...prev, remarks: e.target.value }))}
                   rows="2"
                   placeholder="Any special instructions or remarks"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '2px solid #ddd',
-                    borderRadius: '5px',
-                    fontSize: '14px',
-                    resize: 'vertical'
-                  }}
+                  className="w-full resize-y rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
                 />
               </div>
 
-              <div style={{ 
-                borderTop: '2px solid #eee', 
-                paddingTop: '15px', 
-                marginTop: '10px',
-                background: '#f8f9fa',
-                padding: '15px',
-                borderRadius: '8px'
-              }}>
-                <h4 style={{ margin: '0 0 10px 0', color: '#2c3e50' }}>Order Summary</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '14px' }}>
+              <div className="rounded-md bg-gray-50 p-4">
+                <h4 className="mb-2 text-base font-semibold text-gray-900">Order Summary</h4>
+                <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                   <div><strong>Order ID:</strong> {delivery_id}</div>
                   <div><strong>DC Number:</strong> {generateDCNumber()}</div>
                   <div><strong>Total Items:</strong> {orderItems.length}</div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <div className="mt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowDCPreview(false)}
-                  style={{
-                    padding: '10px 20px',
-                    border: '2px solid #6c757d',
-                    backgroundColor: 'transparent',
-                    color: '#6c757d',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
+                  className="rounded-md border-2 border-gray-400 px-4 py-2 text-sm text-gray-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={downloadingDC}
-                  style={{
-                    padding: '10px 20px',
-                    border: 'none',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    borderRadius: '5px',
-                    cursor: downloadingDC ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px'
-                  }}
+                  className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   🖨️ {downloadingDC ? 'Generating...' : 'Generate & Print DC'}
                 </button>
@@ -764,22 +678,22 @@ const generateDCNumber = () => {
       )}
 
       {selectedItem && (
-        <div className="popup-overlay">
-          <div className="popup-card">
-            <button className="close-btn" onClick={() => setSelectedItem(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-2xl rounded-lg bg-white p-5 shadow-lg">
+            <button className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100" onClick={() => setSelectedItem(null)}>
               <FaTimes />
             </button>
 
-            <h3>Before Image Preview</h3>
+            <h3 className="mb-3 text-lg font-semibold text-gray-900">Before Image Preview</h3>
             <img
               src={selectedItem.before_image_url}
               alt="before"
-              className="popup-img"
+              className="max-h-[60vh] w-full rounded-md object-contain"
             />
 
-            <div className="popup-controls">
-              <label>Status:</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <div className="mt-4 space-y-3">
+              <label className="block text-sm font-medium text-gray-700">Status</label>
+              <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
                 <option value="INITIATED">INITIATED</option>
                 <option value="RESERVED">RESERVED</option>
                 <option value="RETURNED">RETURNED</option>
@@ -792,25 +706,24 @@ const generateDCNumber = () => {
                     type="file"
                     onChange={(e) => setAfterImageFile(e.target.files[0])}
                   />
-                  <button onClick={handleUploadAfterImage} disabled={uploading}>
-                    <FaUpload />{" "}
-                    {uploading ? "Uploading..." : "Upload After Image"}
+                  <button className="inline-flex items-center gap-2 rounded-md bg-yellow-600 px-4 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={handleUploadAfterImage} disabled={uploading}>
+                    <FaUpload /> {uploading ? "Uploading..." : "Upload After Image"}
                   </button>
 
                   {selectedItem.after_images && (
                     <>
-                      <h4>After Image Preview</h4>
+                      <h4 className="text-base font-semibold text-gray-900">After Image Preview</h4>
                       <img
                         src={selectedItem.after_images.replace(/[{}]/g, "").trim()}
                         alt="after"
-                        className="popup-img"
+                        className="max-h-[60vh] w-full rounded-md object-contain"
                       />
                     </>
                   )}
                 </>
               )}
 
-              <button className="save-btn" onClick={handleSave}>
+              <button className="rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700" onClick={handleSave}>
                 <FaSave /> Save
               </button>
             </div>

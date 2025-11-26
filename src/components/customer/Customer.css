@@ -2,7 +2,8 @@
 .dashboard-wrapper {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* Body */
@@ -10,6 +11,7 @@
   display: flex;
   flex: 1;
   background: #f5f6f8;
+  overflow: hidden;
 }
 
 /* Main Content */
@@ -18,6 +20,8 @@
   padding: 30px;
   background: #f5f6f8;
   font-family: "Inter", sans-serif;
+  overflow-y: auto;
+  height: 100%;
 }
 
 /* ✅ Top Bar (Search + Button) */
@@ -56,7 +60,7 @@
   background: #fff;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .table-card h3 {
@@ -69,7 +73,7 @@
   border-collapse: collapse;
 }
 
-.table-card th, 
+.table-card th,
 .table-card td {
   padding: 12px;
   border-bottom: 1px solid #eee;
@@ -83,8 +87,9 @@
 }
 
 .table-card tr:hover {
-  background: rgba(217,148,26,0.05);
+  background: rgba(217, 148, 26, 0.05);
 }
+
 /* ✅ Pagination */
 .pagination {
   margin-top: 15px;
@@ -113,6 +118,7 @@
   color: #fff;
   font-weight: 600;
 }
+
 /* ✅ Suggestions Dropdown */
 .search-container {
   position: relative;
@@ -152,6 +158,7 @@
   background: rgba(217, 148, 26, 0.2) !important;
   font-weight: 600;
 }
+
 /* ✅ Add Customer Form */
 .add-customer-form {
   display: flex;
@@ -165,7 +172,8 @@
 }
 
 .add-customer-form input {
-  flex: 1 1 calc(20% - 10px); /* 5 fields per row */
+  flex: 1 1 calc(20% - 10px);
+  /* 5 fields per row */
   min-width: 150px;
   padding: 8px 10px;
   border: 1px solid #ccc;
@@ -176,7 +184,8 @@
 }
 
 .add-customer-form input:focus {
-  border-color: #ca8a04; /* golden highlight */
+  border-color: #ca8a04;
+  /* golden highlight */
 }
 
 .add-customer-form button {
@@ -191,7 +200,8 @@
 }
 
 .add-customer-form button:hover {
-  background: #a56a02; /* darker golden */
+  background: #a56a02;
+  /* darker golden */
 }
 
 /* Actions cell */
@@ -220,7 +230,7 @@
   background: white;
   border: 1px solid #ddd;
   border-radius: 6px;
-  box-shadow: 0px 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 100;
   min-width: 100px;
 }
@@ -234,6 +244,7 @@
 .menu div:hover {
   background: #f4f4f4;
 }
+
 .menu div {
   display: flex;
   align-items: center;
@@ -249,20 +260,25 @@
 
 .menu-icon {
   font-size: 16px;
-  color: #ffffff; /* golden theme */
+  color: #ffffff;
+  /* golden theme */
 }
+
 .top-bar-buttons {
   display: flex;
   gap: 10px;
 }
+
 .download-btn {
   display: flex;
   align-items: center;
-  gap: 6px; /* space between icon and text */
+  gap: 6px;
+  /* space between icon and text */
   background: white;
   color: #d9941a;
   padding: 8px 14px;
-  border: 2px solid #d9941a; /* yellow border */
+  border: 2px solid #d9941a;
+  /* yellow border */
   border-radius: 6px;
   font-size: 14px;
   font-weight: 600;
@@ -272,7 +288,8 @@
 
 .download-btn .download-icon {
   font-size: 16px;
-  color: #d9941a; /* match text color */
+  color: #d9941a;
+  /* match text color */
 }
 
 .download-btn:hover {
@@ -283,12 +300,15 @@
 .download-btn:hover .download-icon {
   color: white;
 }
+
 /* Add this to Customer.css */
 
 /* Form Container */
 .add-customer-form {
-  background-color: #ffffff; /* White background */
-  border: 2px solid #b8860b; /* Dark gold border */
+  background-color: #ffffff;
+  /* White background */
+  border: 2px solid #b8860b;
+  /* Dark gold border */
   padding: 20px;
   border-radius: 10px;
   max-width: 600px;
@@ -301,7 +321,8 @@
   width: 100%;
   padding: 10px 12px;
   margin-bottom: 15px;
-  border: 1px solid #b8860b; /* Dark gold border */
+  border: 1px solid #b8860b;
+  /* Dark gold border */
   border-radius: 5px;
   font-size: 14px;
   color: #333;
@@ -310,13 +331,15 @@
 /* Input Focus */
 .add-customer-form input:focus {
   outline: none;
-  border-color: #daa520; /* lighter gold on focus */
+  border-color: #daa520;
+  /* lighter gold on focus */
   box-shadow: 0 0 5px rgba(218, 165, 32, 0.5);
 }
 
 /* Submit Button */
 .add-customer-form button {
-  background-color: #b8860b; /* Dark gold */
+  background-color: #b8860b;
+  /* Dark gold */
   color: #ffffff;
   padding: 10px 20px;
   font-weight: bold;
@@ -328,7 +351,8 @@
 
 /* Submit Button Hover */
 .add-customer-form button:hover {
-  background-color: #daa520; /* lighter gold on hover */
+  background-color: #daa520;
+  /* lighter gold on hover */
 }
 
 /* Optional: Placeholder color */

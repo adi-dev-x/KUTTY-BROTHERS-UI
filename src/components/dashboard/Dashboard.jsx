@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import "./Dashboard.css";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -46,7 +45,7 @@ const Dashboard = ({ onLogout }) => {
     setTimeout(() => setData(mockData), 1000);
   }, []);
 
-  if (!data) return <div>Loading Dashboard...</div>;
+  if (!data) return <div className="p-6 text-gray-600">Loading Dashboard...</div>;
 
   // Chart.js config
   const chartData = {
@@ -68,124 +67,134 @@ const Dashboard = ({ onLogout }) => {
   };
 
   return (
-    <div className="dashboard-container">
+    <div className="flex min-h-screen flex-col">
       <Header onLogout={onLogout} />
 
-      <div className="dashboard-body">
+      <div className="flex flex-1 bg-gray-100">
         {/* Sidebar */}
-        <aside className="sidebar">
+        <aside className="hidden w-64 border-r border-gray-200 bg-white p-6 lg:block">
           <nav>
-            <h4 className="sidebar-section">General</h4>
-            <ul>
-              <li className="active">Dashboard</li>
-              <li>Attendance</li>
-              <ul className="sub-menu">
-                <li>Team Attendance</li>
-                <li>OT Approval</li>
-                <li>Reports</li>
+            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">General</h4>
+            <ul className="space-y-2 text-sm">
+              <li className="rounded-lg bg-yellow-50 px-3 py-2 font-semibold text-yellow-700">Dashboard</li>
+              <li className="rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-50">Attendance</li>
+              <ul className="ml-3 space-y-1 border-l border-gray-200 pl-3 text-gray-600">
+                <li className="px-2 py-1 hover:text-gray-800">Team Attendance</li>
+                <li className="px-2 py-1 hover:text-gray-800">OT Approval</li>
+                <li className="px-2 py-1 hover:text-gray-800">Reports</li>
               </ul>
             </ul>
           </nav>
-          <div className="sidebar-support">
-            <p>Help</p>
-            <p>Settings</p>
+          <div className="mt-6 space-y-2 text-sm text-gray-600">
+            <p className="cursor-pointer hover:text-gray-800">Help</p>
+            <p className="cursor-pointer hover:text-gray-800">Settings</p>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="dashboard-main">
+        <main className="mx-auto w-full max-w-7xl flex-1 p-6">
           {/* Top Cards */}
-          <div className="stats-cards">
-            <div className="card yellow">
-              Present Today <h2>{data.presentToday}%</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <div className="text-sm text-gray-600">Present Today</div>
+              <h2 className="mt-1 text-2xl font-bold text-yellow-700">{data.presentToday}%</h2>
             </div>
-            <div className="card yellow">
-              OT Approvals <h2>{data.otApprovals}</h2>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <div className="text-sm text-gray-600">OT Approvals</div>
+              <h2 className="mt-1 text-2xl font-bold text-yellow-700">{data.otApprovals}</h2>
             </div>
-            <div className="card yellow">
-              Outstanding Receivables <h2>₹{data.receivables.toLocaleString()}</h2>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <div className="text-sm text-gray-600">Outstanding Receivables</div>
+              <h2 className="mt-1 text-2xl font-bold text-yellow-700">₹{data.receivables.toLocaleString()}</h2>
             </div>
-            <div className="card yellow">
-              Approve Rentals <h2>{data.rentals}</h2>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <div className="text-sm text-gray-600">Approve Rentals</div>
+              <h2 className="mt-1 text-2xl font-bold text-yellow-700">{data.rentals}</h2>
             </div>
           </div>
 
           {/* Chart + Upcoming Rentals */}
-          <div className="chart-row">
-            <div className="chart-card">
-              <h3>Attendance Summary</h3>
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200 lg:col-span-3">
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">Attendance Summary</h3>
               <Bar data={chartData} options={chartOptions} />
             </div>
 
-            <div className="table-card">
-              <h3>Upcoming Rentals</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Invoice #</th>
-                    <th>Asset</th>
-                    <th>Tenant</th>
-                    <th>Due Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.upcomingRentals.map((r, i) => (
-                    <tr key={i}>
-                      <td>{r.invoice}</td>
-                      <td>{r.asset}</td>
-                      <td>{r.tenant}</td>
-                      <td>{r.due}</td>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200 lg:col-span-2">
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">Upcoming Rentals</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Invoice #</th>
+                      <th className="px-4 py-2 text-left">Asset</th>
+                      <th className="px-4 py-2 text-left">Tenant</th>
+                      <th className="px-4 py-2 text-left">Due Date</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {data.upcomingRentals.map((r, i) => (
+                      <tr key={i} className="hover:bg-yellow-50/40">
+                        <td className="px-4 py-2">{r.invoice}</td>
+                        <td className="px-4 py-2">{r.asset}</td>
+                        <td className="px-4 py-2">{r.tenant}</td>
+                        <td className="px-4 py-2">{r.due}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
           {/* Recent Transactions (Two tables side by side) */}
-          <div className="transactions-row">
-            <div className="table-card">
-              <h3>Recent Transactions 1</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Credit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.transactions.map((t, i) => (
-                    <tr key={i}>
-                      <td>{t.date}</td>
-                      <td>{t.desc}</td>
-                      <td>₹ {t.credit.toLocaleString()}</td>
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">Recent Transactions 1</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Date</th>
+                      <th className="px-4 py-2 text-left">Description</th>
+                      <th className="px-4 py-2 text-left">Credit</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {data.transactions.map((t, i) => (
+                      <tr key={i} className="hover:bg-yellow-50/40">
+                        <td className="px-4 py-2">{t.date}</td>
+                        <td className="px-4 py-2">{t.desc}</td>
+                        <td className="px-4 py-2">₹ {t.credit.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div className="table-card">
-              <h3>Recent Transactions 2</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Credit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.transactions.map((t, i) => (
-                    <tr key={i}>
-                      <td>{t.date}</td>
-                      <td>{t.desc}</td>
-                      <td>₹ {t.credit.toLocaleString()}</td>
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
+              <h3 className="mb-3 text-lg font-semibold text-gray-900">Recent Transactions 2</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="px-4 py-2 text-left">Date</th>
+                      <th className="px-4 py-2 text-left">Description</th>
+                      <th className="px-4 py-2 text-left">Credit</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {data.transactions.map((t, i) => (
+                      <tr key={i} className="hover:bg-yellow-50/40">
+                        <td className="px-4 py-2">{t.date}</td>
+                        <td className="px-4 py-2">{t.desc}</td>
+                        <td className="px-4 py-2">₹ {t.credit.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </main>
