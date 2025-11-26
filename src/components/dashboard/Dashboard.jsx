@@ -9,9 +9,19 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import {
+  Users,
+  CheckCircle,
+  IndianRupee,
+  ClipboardList,
+  Calendar,
+  ArrowUpRight,
+  TrendingUp,
+} from "lucide-react";
 
 import Header from "../header/Header";
 import Footer from "../footer/Footer";
+import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 
 // ✅ Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -45,161 +55,251 @@ const Dashboard = ({ onLogout }) => {
     setTimeout(() => setData(mockData), 1000);
   }, []);
 
-  if (!data) return <div className="p-6 text-gray-600">Loading Dashboard...</div>;
+  if (!data)
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-yellow-600 border-t-transparent"></div>
+          <p className="animate-pulse text-lg font-medium text-gray-600">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
 
   // Chart.js config
   const chartData = {
-    labels: ["M", "T", "W", "Th", "F", "S"],
+    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     datasets: [
       {
         label: "Attendance",
         data: data.attendance,
-        backgroundColor: "#ca8a04",
-        borderRadius: 6,
+        backgroundColor: "rgba(202, 138, 4, 0.8)", // yellow-600
+        hoverBackgroundColor: "#ca8a04",
+        borderRadius: 8,
+        barThickness: 30,
       },
     ],
   };
 
   const chartOptions = {
     responsive: true,
-    plugins: { legend: { display: false } },
-    scales: { y: { beginAtZero: true } },
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "#1f2937",
+        padding: 12,
+        titleFont: { size: 14 },
+        bodyFont: { size: 13 },
+        cornerRadius: 8,
+        displayColors: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: "#f3f4f6" },
+        ticks: { font: { size: 12 }, color: "#6b7280" },
+        border: { display: false },
+      },
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 12 }, color: "#6b7280" },
+        border: { display: false },
+      },
+    },
   };
 
+  const StatCard = ({ title, value, icon: Icon, colorClass, subText }) => (
+    <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+      <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-10 transition-transform group-hover:scale-150 ${colorClass}`}></div>
+      <div className="relative flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-500">{title}</p>
+          <h3 className="mt-2 text-3xl font-bold text-gray-900">{value}</h3>
+          {subText && (
+            <div className="mt-2 flex items-center gap-1 text-xs font-medium text-green-600">
+              <TrendingUp className="h-3 w-3" />
+              <span>{subText}</span>
+            </div>
+          )}
+        </div>
+        <div className={`rounded-xl p-3 ${colorClass} bg-opacity-10 text-white`}>
+          <Icon className={`h-6 w-6 ${colorClass.replace("bg-", "text-")}`} />
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen flex-col overflow-hidden bg-gray-50">
       <Header onLogout={onLogout} />
 
-      <div className="flex flex-1 bg-gray-100">
-        {/* Sidebar */}
-        <aside className="hidden w-64 border-r border-gray-200 bg-white p-6 lg:block">
-          <nav>
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">General</h4>
-            <ul className="space-y-2 text-sm">
-              <li className="rounded-lg bg-yellow-50 px-3 py-2 font-semibold text-yellow-700">Dashboard</li>
-              <li className="rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-50">Attendance</li>
-              <ul className="ml-3 space-y-1 border-l border-gray-200 pl-3 text-gray-600">
-                <li className="px-2 py-1 hover:text-gray-800">Team Attendance</li>
-                <li className="px-2 py-1 hover:text-gray-800">OT Approval</li>
-                <li className="px-2 py-1 hover:text-gray-800">Reports</li>
-              </ul>
-            </ul>
-          </nav>
-          <div className="mt-6 space-y-2 text-sm text-gray-600">
-            <p className="cursor-pointer hover:text-gray-800">Help</p>
-            <p className="cursor-pointer hover:text-gray-800">Settings</p>
-          </div>
-        </aside>
+      <div className="flex flex-1 overflow-hidden">
+        <Rentalsidebar />
 
-        {/* Main Content */}
-        <main className="mx-auto w-full max-w-7xl flex-1 p-6">
-          {/* Top Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-              <div className="text-sm text-gray-600">Present Today</div>
-              <h2 className="mt-1 text-2xl font-bold text-yellow-700">{data.presentToday}%</h2>
-            </div>
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-              <div className="text-sm text-gray-600">OT Approvals</div>
-              <h2 className="mt-1 text-2xl font-bold text-yellow-700">{data.otApprovals}</h2>
-            </div>
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-              <div className="text-sm text-gray-600">Outstanding Receivables</div>
-              <h2 className="mt-1 text-2xl font-bold text-yellow-700">₹{data.receivables.toLocaleString()}</h2>
-            </div>
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-              <div className="text-sm text-gray-600">Approve Rentals</div>
-              <h2 className="mt-1 text-2xl font-bold text-yellow-700">{data.rentals}</h2>
-            </div>
-          </div>
-
-          {/* Chart + Upcoming Rentals */}
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200 lg:col-span-3">
-              <h3 className="mb-3 text-lg font-semibold text-gray-900">Attendance Summary</h3>
-              <Bar data={chartData} options={chartOptions} />
-            </div>
-
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200 lg:col-span-2">
-              <h3 className="mb-3 text-lg font-semibold text-gray-900">Upcoming Rentals</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-gray-600">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Invoice #</th>
-                      <th className="px-4 py-2 text-left">Asset</th>
-                      <th className="px-4 py-2 text-left">Tenant</th>
-                      <th className="px-4 py-2 text-left">Due Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {data.upcomingRentals.map((r, i) => (
-                      <tr key={i} className="hover:bg-yellow-50/40">
-                        <td className="px-4 py-2">{r.invoice}</td>
-                        <td className="px-4 py-2">{r.asset}</td>
-                        <td className="px-4 py-2">{r.tenant}</td>
-                        <td className="px-4 py-2">{r.due}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto max-w-7xl space-y-8">
+            {/* Header Section */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
+                <p className="text-sm text-gray-500">Welcome back! Here's what's happening today.</p>
               </div>
-            </div>
-          </div>
-
-          {/* Recent Transactions (Two tables side by side) */}
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-              <h3 className="mb-3 text-lg font-semibold text-gray-900">Recent Transactions 1</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-gray-600">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Date</th>
-                      <th className="px-4 py-2 text-left">Description</th>
-                      <th className="px-4 py-2 text-left">Credit</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {data.transactions.map((t, i) => (
-                      <tr key={i} className="hover:bg-yellow-50/40">
-                        <td className="px-4 py-2">{t.date}</td>
-                        <td className="px-4 py-2">{t.desc}</td>
-                        <td className="px-4 py-2">₹ {t.credit.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-500">
+                  {new Date().toLocaleDateString("en-US", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </span>
               </div>
             </div>
 
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-              <h3 className="mb-3 text-lg font-semibold text-gray-900">Recent Transactions 2</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-gray-600">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Date</th>
-                      <th className="px-4 py-2 text-left">Description</th>
-                      <th className="px-4 py-2 text-left">Credit</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {data.transactions.map((t, i) => (
-                      <tr key={i} className="hover:bg-yellow-50/40">
-                        <td className="px-4 py-2">{t.date}</td>
-                        <td className="px-4 py-2">{t.desc}</td>
-                        <td className="px-4 py-2">₹ {t.credit.toLocaleString()}</td>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                title="Present Today"
+                value={`${data.presentToday}%`}
+                icon={Users}
+                colorClass="bg-blue-600"
+                subText="+2.5% from yesterday"
+              />
+              <StatCard
+                title="OT Approvals"
+                value={data.otApprovals}
+                icon={CheckCircle}
+                colorClass="bg-green-600"
+                subText="4 pending review"
+              />
+              <StatCard
+                title="Receivables"
+                value={`₹${data.receivables.toLocaleString()}`}
+                icon={IndianRupee}
+                colorClass="bg-yellow-600"
+                subText="+12% this month"
+              />
+              <StatCard
+                title="Active Rentals"
+                value={data.rentals}
+                icon={ClipboardList}
+                colorClass="bg-purple-600"
+                subText="3 due today"
+              />
+            </div>
+
+            {/* Charts & Tables Section */}
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              {/* Attendance Chart */}
+              <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100 lg:col-span-2">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-gray-900">Attendance Trends</h3>
+                  <select className="rounded-lg border-gray-200 bg-gray-50 px-3 py-1 text-sm font-medium text-gray-600 outline-none focus:ring-2 focus:ring-yellow-500/20">
+                    <option>This Week</option>
+                    <option>Last Week</option>
+                  </select>
+                </div>
+                <div className="h-[300px] w-full">
+                  <Bar data={chartData} options={chartOptions} />
+                </div>
+              </div>
+
+              {/* Upcoming Rentals */}
+              <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-gray-900">Upcoming Rentals</h3>
+                  <button className="text-sm font-medium text-yellow-600 hover:text-yellow-700">View All</button>
+                </div>
+                <div className="space-y-4">
+                  {data.upcomingRentals.map((r, i) => (
+                    <div key={i} className="flex items-center justify-between rounded-xl border border-gray-100 p-3 transition-colors hover:bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600">
+                          <Calendar className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{r.asset}</p>
+                          <p className="text-xs text-gray-500">{r.tenant}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">{r.due}</p>
+                        <p className="text-xs text-gray-500">{r.invoice}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Transactions */}
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+              <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-gray-900">Recent Transactions</h3>
+                  <button className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-900">
+                    Export <ArrowUpRight className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="overflow-hidden rounded-xl border border-gray-100">
+                  <table className="min-w-full divide-y divide-gray-100">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Description</th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Amount</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {data.transactions.map((t, i) => (
+                        <tr key={i} className="transition-colors hover:bg-gray-50/50">
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{t.date}</td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{t.desc}</td>
+                          <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-bold text-green-600">
+                            +₹{t.credit.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-gray-900">Expense Overview</h3>
+                  <button className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-900">
+                    Details <ArrowUpRight className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="overflow-hidden rounded-xl border border-gray-100">
+                  <table className="min-w-full divide-y divide-gray-100">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Description</th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {data.transactions.map((t, i) => (
+                        <tr key={i} className="transition-colors hover:bg-gray-50/50">
+                          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">{t.date}</td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">{t.desc}</td>
+                          <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-bold text-red-600">
+                            -₹{(t.credit * 0.4).toLocaleString()} {/* Mock expense */}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
         </main>
       </div>
-
       <Footer />
     </div>
   );
