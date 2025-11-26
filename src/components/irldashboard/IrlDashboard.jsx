@@ -12,7 +12,7 @@ import {
   ShoppingCart,
   TrendingUp,
   ArrowRight,
-  Activity,
+  Activity, Wrench,
 } from "lucide-react";
 
 import Header from "../header/Header";
@@ -34,7 +34,7 @@ const statusConfig = {
   AVAILABLE: { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50", ring: "ring-green-600/20" },
   RENTED: { icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-600/20" },
   DAMAGED: { icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50", ring: "ring-red-600/20" },
-  REPAIRING: { icon: Activity, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-600/20" },
+  REPAIRING: { icon: Wrench, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-600/20" },
   EXPIRED: { icon: XCircle, color: "text-gray-600", bg: "bg-gray-50", ring: "ring-gray-600/20" },
   BLOCKED: { icon: Ban, color: "text-rose-600", bg: "bg-rose-50", ring: "ring-rose-600/20" },
   RESERVED: { icon: Calendar, color: "text-purple-600", bg: "bg-purple-50", ring: "ring-purple-600/20" },

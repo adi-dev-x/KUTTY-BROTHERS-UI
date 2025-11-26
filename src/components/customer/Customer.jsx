@@ -4,7 +4,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
-import Footer from "../footer/Footer";
+
 
 const Customer = ({ onLogout }) => {
   const [customers, setCustomers] = useState([]);
@@ -258,8 +258,8 @@ const Customer = ({ onLogout }) => {
                             <td className="whitespace-nowrap px-6 py-4">
                               <span
                                 className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${customer.status === "Active"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
                                   }`}
                               >
                                 {customer.status}
@@ -320,8 +320,8 @@ const Customer = ({ onLogout }) => {
                             key={i + 1}
                             onClick={() => handlePageChange(i + 1)}
                             className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === i + 1
-                                ? "z-10 bg-yellow-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
-                                : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                              ? "z-10 bg-yellow-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
+                              : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
                               }`}
                           >
                             {i + 1}
@@ -344,7 +344,6 @@ const Customer = ({ onLogout }) => {
           </div>
         </main>
       </div>
-      <Footer />
 
       {/* Modal Form */}
       {showForm && (

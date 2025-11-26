@@ -65,7 +65,7 @@ const StockReport = ({ onLogout }) => {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 15;
 
   const [brands, setBrands] = useState([]);
   const [mainTypes, setMainTypes] = useState([]);
@@ -414,7 +414,7 @@ const StockReport = ({ onLogout }) => {
           ) : (
             <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
               <h3 className="mb-3 text-lg font-semibold text-gray-900">Stock Report</h3>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50 text-gray-600">
                     <tr>
@@ -495,8 +495,8 @@ const StockReport = ({ onLogout }) => {
                             key={i + 1}
                             onClick={() => setCurrentPage(i + 1)}
                             className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === i + 1
-                                ? "z-10 bg-yellow-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
-                                : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                              ? "z-10 bg-yellow-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
+                              : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
                               }`}
                           >
                             {i + 1}

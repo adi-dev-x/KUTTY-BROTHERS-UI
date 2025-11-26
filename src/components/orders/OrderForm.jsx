@@ -171,7 +171,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="relative w-full max-w-3xl rounded-xl bg-white p-5 shadow-xl">
+      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
         <button
           className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100"
           onClick={() => window.location.reload()}

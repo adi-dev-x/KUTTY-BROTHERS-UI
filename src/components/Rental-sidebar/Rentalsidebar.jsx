@@ -57,7 +57,7 @@ const Rentalsidebar = () => {
       </div>
 
       <ul className="space-y-1.5 pb-24">
-        <li>
+        <li className="py-2">
           <NavLink
             to="/irl-dashboard"
             className={({ isActive }) =>
@@ -70,7 +70,7 @@ const Rentalsidebar = () => {
           </NavLink>
         </li>
 
-        <li>
+        <li className="py-2">
           <NavLink
             to="/rental-dashboard"
             className={({ isActive }) =>
@@ -83,7 +83,7 @@ const Rentalsidebar = () => {
           </NavLink>
         </li>
 
-        <li>
+        <li className="py-2">
           <div className={linkBase} title="Attributes">
             <Layers className={iconCls} />
             {!collapsed && <span className="flex-1">Attributes</span>}
@@ -129,7 +129,7 @@ const Rentalsidebar = () => {
           </ul>
         )}
 
-        <li>
+        <li className="py-2">
           <NavLink
             to="/stock-report"
             className={({ isActive }) =>
@@ -142,7 +142,7 @@ const Rentalsidebar = () => {
           </NavLink>
         </li>
 
-        <li>
+        <li className="py-2">
           <NavLink
             to="/orders"
             className={({ isActive }) =>
@@ -155,7 +155,7 @@ const Rentalsidebar = () => {
           </NavLink>
         </li>
 
-        <li>
+        <li className="py-2">
           <NavLink
             to="/list-orders"
             className={({ isActive }) =>
@@ -167,18 +167,10 @@ const Rentalsidebar = () => {
             {!collapsed && <span>List Orders</span>}
           </NavLink>
         </li>
-      </ul>
 
-      {/* Homepage Button at Bottom */}
-      <div className="absolute bottom-20 left-0 right-0 px-5">
-        <NavLink
-          to="/"
-          className="group flex items-center justify-center gap-3 rounded-xl border-2 border-yellow-600 bg-white px-4 py-3 text-yellow-600 shadow-md transition-all duration-300 hover:bg-yellow-600 hover:text-white hover:shadow-lg hover:scale-105 active:scale-95"
-        >
-          <Home className={collapsed ? "h-6 w-6" : "h-5 w-5"} />
-          {!collapsed && <span className="font-semibold">Home</span>}
-        </NavLink>
-      </div>
+        {/* Homepage Button at Bottom */}
+
+      </ul>
     </aside>
   );
 };
