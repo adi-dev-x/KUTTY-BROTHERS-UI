@@ -374,6 +374,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
             {formData.items.map((it, idx) => (
               <div key={`${it.item_id}-${idx}`} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                 <h4 className="text-sm font-semibold text-gray-900">{it.item_name}</h4>
+                <p className="text-sm text-gray-600">Item Code: {it.item_code}</p>
                 <p className="text-sm text-gray-600">Amount: {it.amount}</p>
                 <p className="text-sm text-gray-600">Returned At: {it.expired_at}</p>
                 {it.images.length > 0 && (

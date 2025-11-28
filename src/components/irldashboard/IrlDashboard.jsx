@@ -31,14 +31,78 @@ const statuses = [
 ];
 
 const statusConfig = {
-  AVAILABLE: { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50", ring: "ring-green-600/20" },
-  RENTED: { icon: ShoppingCart, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-600/20" },
-  DAMAGED: { icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50", ring: "ring-red-600/20" },
-  REPAIRING: { icon: Wrench, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-600/20" },
-  EXPIRED: { icon: XCircle, color: "text-gray-600", bg: "bg-gray-50", ring: "ring-gray-600/20" },
-  BLOCKED: { icon: Ban, color: "text-rose-600", bg: "bg-rose-50", ring: "ring-rose-600/20" },
-  RESERVED: { icon: Calendar, color: "text-purple-600", bg: "bg-purple-50", ring: "ring-purple-600/20" },
-  PENDING: { icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50", ring: "ring-yellow-600/20" },
+  AVAILABLE: {
+    icon: CheckCircle,
+    label: "Available",
+    gradient: "from-emerald-500 to-teal-400",
+    text: "text-emerald-600",
+    bg: "bg-emerald-50",
+    border: "border-emerald-100",
+    shadow: "shadow-emerald-100"
+  },
+  RENTED: {
+    icon: ShoppingCart,
+    label: "Rented",
+    gradient: "from-blue-500 to-indigo-400",
+    text: "text-blue-600",
+    bg: "bg-blue-50",
+    border: "border-blue-100",
+    shadow: "shadow-blue-100"
+  },
+  DAMAGED: {
+    icon: AlertTriangle,
+    label: "Damaged",
+    gradient: "from-red-500 to-rose-400",
+    text: "text-red-600",
+    bg: "bg-red-50",
+    border: "border-red-100",
+    shadow: "shadow-red-100"
+  },
+  REPAIRING: {
+    icon: Wrench,
+    label: "Repairing",
+    gradient: "from-orange-500 to-amber-400",
+    text: "text-orange-600",
+    bg: "bg-orange-50",
+    border: "border-orange-100",
+    shadow: "shadow-orange-100"
+  },
+  EXPIRED: {
+    icon: XCircle,
+    label: "Expired",
+    gradient: "from-gray-600 to-slate-500",
+    text: "text-gray-600",
+    bg: "bg-gray-50",
+    border: "border-gray-200",
+    shadow: "shadow-gray-100"
+  },
+  BLOCKED: {
+    icon: Ban,
+    label: "Blocked",
+    gradient: "from-rose-600 to-pink-500",
+    text: "text-rose-600",
+    bg: "bg-rose-50",
+    border: "border-rose-100",
+    shadow: "shadow-rose-100"
+  },
+  RESERVED: {
+    icon: Calendar,
+    label: "Reserved",
+    gradient: "from-purple-500 to-violet-400",
+    text: "text-purple-600",
+    bg: "bg-purple-50",
+    border: "border-purple-100",
+    shadow: "shadow-purple-100"
+  },
+  PENDING: {
+    icon: Clock,
+    label: "Pending",
+    gradient: "from-yellow-400 to-amber-300",
+    text: "text-yellow-600",
+    bg: "bg-yellow-50",
+    border: "border-yellow-100",
+    shadow: "shadow-yellow-100"
+  },
 };
 
 const IrlDashboard = ({ onLogout }) => {
@@ -142,23 +206,29 @@ const IrlDashboard = ({ onLogout }) => {
                   <div
                     key={status}
                     onClick={() => navigate(`/dashboard-details/${status}`)}
-                    className={`group relative cursor-pointer overflow-hidden rounded-xl bg-white p-5 shadow-sm ring-1 transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${config.ring}`}
+                    className={`group relative cursor-pointer overflow-hidden rounded-2xl bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border ${config.border}`}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="relative z-10 flex flex-col justify-between h-full">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className={`rounded-xl p-2.5 bg-gradient-to-br ${config.gradient} text-white shadow-md`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div className={`text-xs font-bold uppercase tracking-wider ${config.text} bg-white/80 px-2 py-1 rounded-full backdrop-blur-sm`}>
+                          {config.label}
+                        </div>
+                      </div>
+
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                          {status}
-                        </p>
-                        <h3 className="mt-2 text-2xl font-bold text-gray-900">
+                        <h3 className="text-3xl font-bold text-gray-900 tracking-tight">
                           {totals[status] || 0}
                         </h3>
-                      </div>
-                      <div className={`rounded-lg p-2 ${config.bg} ${config.color}`}>
-                        <Icon className="h-5 w-5" />
+                        <p className="text-xs font-medium text-gray-400 mt-1">Total Items</p>
                       </div>
                     </div>
-                    {/* Hover Effect Background */}
-                    <div className={`absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-0 transition-opacity duration-300 group-hover:opacity-10 ${config.bg.replace('bg-', 'bg-current text-')}`}></div>
+
+                    {/* Decorative Background Elements */}
+                    <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-10 bg-gradient-to-br ${config.gradient} blur-xl transition-all duration-500 group-hover:scale-150 group-hover:opacity-20`}></div>
+                    <div className={`absolute -bottom-6 -left-6 h-20 w-20 rounded-full opacity-5 bg-gradient-to-tr ${config.gradient} blur-lg`}></div>
                   </div>
                 );
               })}
