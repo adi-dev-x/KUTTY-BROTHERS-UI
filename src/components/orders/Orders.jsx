@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FiDownload, FiPlus, FiTrash2 } from "react-icons/fi";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Header from "../header/Header";
@@ -85,47 +84,27 @@ const Orders = ({ onLogout }) => {
     }
   };
 
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Orders Report", 14, 20);
+  const handleDownloadExcel = () => {
+    const tableData = orders.map((o, i) => ({
+      "S.No": i + 1,
+      "Customer Name": o.customer_name || "-",
+      "Customer ID": o.customer_id || "-",
+      "Contact Person": o.contact_name || "-",
+      "Contact Number": o.contact_number || "-",
+      "Shipping Address": o.shipping_address || "-",
+      "Inventory ID": o.inventory_id || "-",
+      "Generated Amount": o.generated_amount || "-",
+      "Current Amount": o.current_amount || "-",
+      "Advance Amount": o.advance_amount || "-",
+      "Placed At": o.placed_at || "-",
+      "Returned At": o.declined_at || "-",
+      "Status": o.status || "-",
+    }));
 
-    const tableColumn = [
-      "S.No",
-      "Customer Name",
-      "Customer ID",
-      "Contact Person",
-      "Contact Number",
-      "Shipping Address",
-      "Inventory ID",
-      "Generated Amount",
-      "Current Amount",
-      "Advance Amount",
-      "Placed At",
-      "Returned At",
-      "Transactions",
-      "Status",
-    ];
-
-    const tableRows = orders.map((o, i) => [
-      i + 1,
-      o.customer_name || "-",
-      o.customer_id || "-",
-      o.contact_name || "-",
-      o.contact_number || "-",
-      o.shipping_address || "-",
-      o.inventory_id || "-",
-      o.generated_amount || "-",
-      o.current_amount || "-",
-      o.advance_amount || "-",
-      o.placed_at || "-",
-      o.declined_at || "-",
-      "View Transaction", // In PDF just show text
-      o.status || "-",
-    ]);
-
-    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30 });
-    doc.save("orders_report.pdf");
+    const worksheet = XLSX.utils.json_to_sheet(tableData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+    XLSX.writeFile(workbook, "orders_report.xlsx");
   };
 
   const filteredOrders = orders.filter(
@@ -158,8 +137,8 @@ const Orders = ({ onLogout }) => {
             <button className="inline-flex items-center gap-2 rounded-lg bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={() => setShowForm(!showForm)}>
               <FiPlus /> Add Order
             </button>
-            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={handleDownloadPDF}>
-              <FiDownload /> Download PDF
+            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={handleDownloadExcel}>
+              <FiDownload /> Download Excel
             </button>
           </div>
 
@@ -288,8 +267,8 @@ const Orders = ({ onLogout }) => {
                             key={i + 1}
                             onClick={() => setCurrentPage(i + 1)}
                             className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === i + 1
-                                ? "z-10 bg-yellow-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
-                                : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                              ? "z-10 bg-yellow-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
+                              : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
                               }`}
                           >
                             {i + 1}

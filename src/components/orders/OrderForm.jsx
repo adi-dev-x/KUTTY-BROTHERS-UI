@@ -162,6 +162,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
         });
 
         if (onAddOrder) onAddOrder(orderPayload);
+        window.location.reload();
       }
     } catch (err) {
       console.error("Save order failed", err.response?.data || err.message);

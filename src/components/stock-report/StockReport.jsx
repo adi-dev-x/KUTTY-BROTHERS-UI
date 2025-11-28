@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import { FiDownload, FiPlus } from "react-icons/fi";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 // ===================== AutocompleteInput =====================
 const AutocompleteInput = ({ list = [], value = "", setValue, keyName }) => {
@@ -200,54 +199,32 @@ const StockReport = ({ onLogout }) => {
     }
   };
 
-  // Download PDF
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Stock Report", 14, 20);
+  // Download Excel
+  const handleDownloadExcel = () => {
+    const tableData = stocks.map((s, i) => ({
+      "S.No": i + 1,
+      "Item Name": s.item_name,
+      "Brand": s.brand,
+      "Main Type": s.item_main_type,
+      "Sub Type": s.item_sub_type,
+      "Description": s.description,
+      "Main Code": s.main_code,
+      "Sub Code": s.sub_code,
+      "Available": s.available_count || 0,
+      "Rented": s.rented_count || 0,
+      "Damaged": s.damaged_count || 0,
+      "Repairing": s.not_initiated_count || 0,
+      "Expired": s.worn_out_count || 0,
+      "Blocked": s.blocked_count || 0,
+      "Reserved": s.reserved_count || 0,
+      "Pending": s.pending_count || 0,
+      "Total Sum": calculateTotalSum(s),
+    }));
 
-    const tableColumn = [
-      "S.No",
-      "Item Name",
-      "Brand",
-      "Main Type",
-      "Sub Type",
-      "Description",
-      "Main Code",
-      "Sub Code",
-      "Available",
-      "Rented",
-      "Damaged",
-      "Repairing",
-      "Expired",
-      "Blocked",
-      "Reserved",
-      "Pending",
-      "Total Sum",
-    ];
-
-    const tableRows = stocks.map((s, i) => [
-      i + 1,
-      s.item_name,
-      s.brand,
-      s.item_main_type,
-      s.item_sub_type,
-      s.description,
-      s.main_code,
-      s.sub_code,
-      s.available_count || 0,
-      s.rented_count || 0,
-      s.damaged_count || 0,
-      s.not_initiated_count || 0,
-      s.worn_out_count || 0,
-      s.blocked_count || 0,
-      s.reserved_count || 0,
-      s.pending_count || 0,
-      calculateTotalSum(s),
-    ]);
-
-    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30 });
-    doc.save("stock_report.pdf");
+    const worksheet = XLSX.utils.json_to_sheet(tableData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Report");
+    XLSX.writeFile(workbook, "stock_report.xlsx");
   };
 
   // Filter stocks
@@ -292,8 +269,8 @@ const StockReport = ({ onLogout }) => {
             <button className="inline-flex items-center gap-2 rounded-lg bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={() => setShowForm(true)}>
               <FiPlus /> Add Stock
             </button>
-            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={handleDownloadPDF}>
-              <FiDownload /> Download PDF
+            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={handleDownloadExcel}>
+              <FiDownload /> Download Excel
             </button>
           </div>
 

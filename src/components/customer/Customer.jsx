@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FiDownload, FiPlus, FiSearch, FiX, FiChevronLeft, FiChevronRight, FiEdit2, FiTrash2 } from "react-icons/fi";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 
@@ -130,33 +129,21 @@ const Customer = ({ onLogout }) => {
     }
   };
 
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Customer Report", 14, 20);
+  const handleDownloadExcel = () => {
+    const tableData = customers.map((c) => ({
+      "ID": c.customer_id,
+      "Name": c.name,
+      "Phone": c.phone,
+      "Type": c.type,
+      "GST": c.gst,
+      "Address": c.address,
+      "Status": c.status,
+    }));
 
-    const tableColumn = [
-      "ID",
-      "Name",
-      "Phone",
-      "Type",
-      "GST",
-      "Address",
-      "Status",
-    ];
-
-    const tableRows = customers.map((c) => [
-      c.customer_id,
-      c.name,
-      c.phone,
-      c.type,
-      c.gst,
-      c.address,
-      c.status,
-    ]);
-
-    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30 });
-    doc.save("customers.pdf");
+    const worksheet = XLSX.utils.json_to_sheet(tableData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Customers");
+    XLSX.writeFile(workbook, "customers_report.xlsx");
   };
 
   return (
@@ -182,10 +169,10 @@ const Customer = ({ onLogout }) => {
                   <FiPlus className="h-4 w-4" /> Add Customer
                 </button>
                 <button
-                  onClick={handleDownloadPDF}
+                  onClick={handleDownloadExcel}
                   className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
                 >
-                  <FiDownload className="h-4 w-4" /> Export PDF
+                  <FiDownload className="h-4 w-4" /> Export Excel
                 </button>
               </div>
             </div>

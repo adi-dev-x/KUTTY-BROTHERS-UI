@@ -5,26 +5,23 @@ import { MdOutlineDelete } from "react-icons/md";
 import { IoDownloadOutline } from "react-icons/io5";
 import { TbFileInvoice } from "react-icons/tb";
 import { IoMdAddCircleOutline } from "react-icons/io";
-
-
-
-
+import * as XLSX from "xlsx";
 
 const InvoicePage = () => {
   const [invoices, setInvoices] = useState([
     { id: 1, customer: "John Doe", amount: 1200, date: "2025-08-01", status: "Paid" },
     { id: 2, customer: "Alice Smith", amount: 850, date: "2025-08-05", status: "Unpaid" },
     { id: 3, customer: "Bob Johnson", amount: 600, date: "2025-08-10", status: "Paid" },
-     { id: 4, customer: "John Doe", amount: 1200, date: "2025-08-01", status: "Paid" },
+    { id: 4, customer: "John Doe", amount: 1200, date: "2025-08-01", status: "Paid" },
     { id: 5, customer: "Alice Smith", amount: 850, date: "2025-08-05", status: "Unpaid" },
     { id: 6, customer: "Bob Johnson", amount: 600, date: "2025-08-10", status: "Paid" },
-     { id: 7, customer: "John Doe", amount: 1200, date: "2025-08-01", status: "Paid" },
+    { id: 7, customer: "John Doe", amount: 1200, date: "2025-08-01", status: "Paid" },
     { id: 8, customer: "Alice Smith", amount: 850, date: "2025-08-05", status: "Unpaid" },
     { id: 9, customer: "Bob Johnson", amount: 600, date: "2025-08-10", status: "Paid" },
-     { id: 10, customer: "John Doe", amount: 1200, date: "2025-08-01", status: "Paid" },
+    { id: 10, customer: "John Doe", amount: 1200, date: "2025-08-01", status: "Paid" },
     { id: 11, customer: "Alice Smith", amount: 850, date: "2025-08-05", status: "Unpaid" },
     { id: 12, customer: "Bob Johnson", amount: 600, date: "2025-08-10", status: "Paid" },
-     { id: 13, customer: "John Doe", amount: 1200, date: "2025-08-01", status: "Paid" },
+    { id: 13, customer: "John Doe", amount: 1200, date: "2025-08-01", status: "Paid" },
     { id: 14, customer: "Alice Smith", amount: 850, date: "2025-08-05", status: "Unpaid" },
     { id: 15, customer: "Bob Johnson", amount: 600, date: "2025-08-10", status: "Paid" },
   ]);
@@ -66,6 +63,21 @@ const InvoicePage = () => {
         inv.id === id ? { ...inv, status: inv.status === "Paid" ? "Unpaid" : "Paid" } : inv
       )
     );
+  };
+
+  const handleDownloadExcel = (invoice) => {
+    const tableData = [{
+      "ID": invoice.id,
+      "Customer": invoice.customer,
+      "Amount": invoice.amount,
+      "Date": invoice.date,
+      "Status": invoice.status
+    }];
+
+    const worksheet = XLSX.utils.json_to_sheet(tableData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoice");
+    XLSX.writeFile(workbook, `invoice_${invoice.id}.xlsx`);
   };
 
   return (
@@ -150,7 +162,7 @@ const InvoicePage = () => {
                       <button className="inline-flex items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700" onClick={() => handleDelete(inv.id)}>
                         <MdOutlineDelete /> Delete
                       </button>
-                      <button className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" onClick={() => alert("Downloading Invoice PDF...")}>
+                      <button className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" onClick={() => handleDownloadExcel(inv)}>
                         <IoDownloadOutline /> Download
                       </button>
                     </div>

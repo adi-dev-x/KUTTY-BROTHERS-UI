@@ -3,8 +3,7 @@ import Header from "../header/Header";
 import Footer from "../footer/Footer";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import { FiEdit, FiTrash2, FiDownload } from "react-icons/fi";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const ToolsDashboard = ({ onLogout }) => {
   const [tools, setTools] = useState([]);
@@ -96,20 +95,19 @@ const ToolsDashboard = ({ onLogout }) => {
     setMenuOpen(null);
   };
 
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text("Tools Report", 14, 20);
+  const handleDownloadExcel = () => {
+    const tableData = tools.map((t) => ({
+      "ID": t.tool_id,
+      "Tool Name": t.tool_name,
+      "Tool Code": t.tool_code,
+      "Description": t.description,
+      "Status": t.status,
+    }));
 
-    const tableColumn = ["ID", "Tool Name", "Tool Code", "Description", "Status"];
-    const tableRows = [];
-
-    tools.forEach((t) => {
-      tableRows.push([t.tool_id, t.tool_name, t.tool_code, t.description, t.status]);
-    });
-
-    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 30 });
-    doc.save("tools.pdf");
+    const worksheet = XLSX.utils.json_to_sheet(tableData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Tools");
+    XLSX.writeFile(workbook, "tools_report.xlsx");
   };
 
   return (
@@ -142,8 +140,8 @@ const ToolsDashboard = ({ onLogout }) => {
               <button className="rounded-lg bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={handleAddClick}>
                 + Add Tool
               </button>
-              <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={handleDownloadPDF}>
-                <FiDownload /> Download PDF
+              <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={handleDownloadExcel}>
+                <FiDownload /> Download Excel
               </button>
             </div>
           </div>
