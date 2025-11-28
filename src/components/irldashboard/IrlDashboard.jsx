@@ -274,9 +274,6 @@ const IrlDashboard = ({ onLogout }) => {
               <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-100 lg:col-span-2">
                 <div className="mb-6 flex items-center justify-between">
                   <h3 className="text-lg font-bold text-gray-900">Top Rented Products</h3>
-                  <button className="flex items-center gap-1 text-sm font-medium text-yellow-600 hover:text-yellow-700">
-                    View All <ArrowRight className="h-4 w-4" />
-                  </button>
                 </div>
 
                 <div className="overflow-hidden rounded-xl border border-gray-100">
