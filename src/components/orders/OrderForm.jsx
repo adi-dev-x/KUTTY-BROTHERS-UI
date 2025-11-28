@@ -23,6 +23,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
   const [showItemForm, setShowItemForm] = useState(false);
   const [itemData, setItemData] = useState({
     item_id: "",
+    item_code: "",
     item_name: "",
     expired_at: "",
     amount: "",
@@ -63,6 +64,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
       ...itemData,
       item_name: name,
       item_id: item ? item.item_id : "",
+      item_code: item ? item.item_code : "",
     });
   };
 
@@ -121,6 +123,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
 
     setItemData({
       item_id: "",
+      item_code: "",
       item_name: "",
       expired_at: "",
       amount: "",
@@ -295,9 +298,17 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                 <div className="sm:col-span-2">
                   <input
                     type="text"
-                    placeholder="Item ID"
-                    value={itemData.item_id}
-                    onChange={(e) => setItemData({ ...itemData, item_id: e.target.value })}
+                    placeholder="Item Code"
+                    value={itemData.item_code}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      const item = itemOptions.find((i) => i.item_code === code);
+                      setItemData({
+                        ...itemData,
+                        item_code: code,
+                        item_id: item ? item.item_id : "",
+                      });
+                    }}
                     className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
                   />
                 </div>
