@@ -252,7 +252,6 @@ const IrlDashboard = ({ onLogout }) => {
                         <h4 className="text-xl font-bold text-gray-900">{transactions.completed}</h4>
                       </div>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-gray-300 transition-transform group-hover:translate-x-1 group-hover:text-green-500" />
                   </div>
 
                   <div className="group flex items-center justify-between rounded-xl border border-gray-100 p-4 transition-colors hover:bg-yellow-50/50 hover:border-yellow-100">
@@ -265,7 +264,6 @@ const IrlDashboard = ({ onLogout }) => {
                         <h4 className="text-xl font-bold text-gray-900">{transactions.pending}</h4>
                       </div>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-gray-300 transition-transform group-hover:translate-x-1 group-hover:text-yellow-500" />
                   </div>
                 </div>
               </div>
