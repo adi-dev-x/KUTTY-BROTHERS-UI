@@ -274,9 +274,9 @@ const IrlDashboard = ({ onLogout }) => {
                   <h3 className="text-lg font-bold text-gray-900">Top Rented Products</h3>
                 </div>
 
-                <div className="overflow-hidden rounded-xl border border-gray-100">
+                <div className="overflow-y-auto max-h-[380px] rounded-xl border border-gray-100">
                   <table className="min-w-full divide-y divide-gray-100">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Rank</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Product Name</th>

@@ -11,7 +11,7 @@ import {
   FaTimes,
   FaDownload,
 } from "react-icons/fa";
- 
+
 
 const OrderDetails = ({ onLogout }) => {
   const { delivery_id } = useParams();
@@ -42,7 +42,7 @@ const OrderDetails = ({ onLogout }) => {
         );
         const data = res.data?.data || [];
         setOrderItems(data);
-        
+
         // Calculate total using generated amounts (with markup)
         const calculateGeneratedTotal = (items) => {
           return items.reduce((sum, item) => {
@@ -50,18 +50,18 @@ const OrderDetails = ({ onLogout }) => {
             return sum + generatedAmount;
           }, 0);
         };
-        
+
         // Extract order info from first item (assuming all items share same order details)
         if (data.length > 0) {
           const orderDetails = {
             customer_name: data[0].customer_name || "N/A",
             customer_gst: data[0].customer_gst || "",
-            delivery_chelan_number: data[0].delivery_chelan_number|| "",
+            delivery_chelan_number: data[0].delivery_chelan_number || "",
             order_date: data[0].placed_at ? new Date(data[0].placed_at).toLocaleDateString() : new Date().toLocaleDateString(),
             total_value: calculateGeneratedTotal(data)
           };
           setOrderInfo(orderDetails);
-          
+
           // Pre-populate DC form with API data
           setDCFormData({
             vehicleNumber: '',
@@ -79,23 +79,23 @@ const OrderDetails = ({ onLogout }) => {
     };
     fetchOrderDetails();
   }, [delivery_id]);
-const generateDCNumber = () => {
-  // Use the delivery challan number from API if available
-  if (dcFormData.deliveryChallanNumber) {
-    // Ensure it's 7 digits - pad with leading zeros if shorter, truncate if longer
-    const dcNumber = dcFormData.deliveryChallanNumber.toString().replace(/\D/g, ''); // Remove non-digits
-    return "DC"+dcNumber.padStart(10, '0').slice(0, 10);
-  }
-  
-  // Generate a 7-digit DC number
-  const date = new Date();
-  const year = date.getFullYear().toString().slice(-2); // 2 digits
-  const month = (date.getMonth() + 1).toString().padStart(2, '0'); // 2 digits
-  const day = date.getDate().toString().padStart(2, '0'); // 2 digits
-  const random = Math.floor(Math.random() * 10); // 1 digit random
-  
-  return `${year}${month}${day}${random}`; // Total: 7 digits
-};
+  const generateDCNumber = () => {
+    // Use the delivery challan number from API if available
+    if (dcFormData.deliveryChallanNumber) {
+      // Ensure it's 7 digits - pad with leading zeros if shorter, truncate if longer
+      const dcNumber = dcFormData.deliveryChallanNumber.toString().replace(/\D/g, ''); // Remove non-digits
+      return "DC" + dcNumber.padStart(10, '0').slice(0, 10);
+    }
+
+    // Generate a 7-digit DC number
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2); // 2 digits
+    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // 2 digits
+    const day = date.getDate().toString().padStart(2, '0'); // 2 digits
+    const random = Math.floor(Math.random() * 10); // 1 digit random
+
+    return `${year}${month}${day}${random}`; // Total: 7 digits
+  };
 
   const generateQRData = () => {
     const qrData = {
@@ -125,13 +125,13 @@ const generateDCNumber = () => {
 
   const printDeliveryChallan = () => {
     setDownloadingDC(true);
-    
+
     try {
       const dcWindow = window.open('', '_blank');
-      
+
       const qrCodeData = encodeURIComponent(generateQRData());
       const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${qrCodeData}&format=png&ecc=M&margin=1`;
-      
+
       const dcHTML = `
         <!DOCTYPE html>
         <html>
@@ -372,7 +372,7 @@ const generateDCNumber = () => {
 
       dcWindow.document.write(dcHTML);
       dcWindow.document.close();
-      
+
       setTimeout(() => {
         dcWindow.print();
       }, 1000);
@@ -445,7 +445,7 @@ const generateDCNumber = () => {
 
       setSelectedItem(null);
       setAfterImageFile(null);
-      
+
       const res = await axios.get(
         `https://ems.binlaundry.com/irrl/genericApiJoin/orderDetails?order_id='${delivery_id}'`
       );
@@ -467,15 +467,15 @@ const generateDCNumber = () => {
         <div className="mx-auto w-full max-w-7xl flex-1 p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">Order Details - #{delivery_id}</h2>
-            <button 
-              onClick={() => setShowDCPreview(true)} 
+            <button
+              onClick={() => setShowDCPreview(true)}
               disabled={downloadingDC}
               className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <FaDownload /> {downloadingDC ? 'Processing...' : 'Generate DC'}
             </button>
           </div>
-          
+
           <button onClick={() => navigate(-1)} className="mb-4 inline-flex items-center gap-2 text-sm text-gray-700 hover:underline">
             <FaArrowLeft /> Back
           </button>
@@ -535,7 +535,7 @@ const generateDCNumber = () => {
                   const cleanAfterUrl = item.after_images
                     ? item.after_images.replace(/[{}]/g, "").trim()
                     : null;
-                  
+
                   const currentAmount = parseInt(item.current_amount) || 0;
                   const generatedAmount = Math.round(item.generated_amount);
 
@@ -572,7 +572,7 @@ const generateDCNumber = () => {
       {showDCPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="relative w-full max-w-lg overflow-y-auto rounded-lg bg-white p-5 shadow-lg">
-            <button 
+            <button
               className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100"
               onClick={() => setShowDCPreview(false)}
             >
@@ -583,7 +583,7 @@ const generateDCNumber = () => {
               Delivery Challan Preview
             </h3>
 
-            <form 
+            <form
               onSubmit={(e) => { e.preventDefault(); handleDCFormSubmit(); }}
               className="flex flex-col gap-4"
             >
@@ -602,13 +602,14 @@ const generateDCNumber = () => {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-semibold text-gray-700">Vehicle Number</label>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Vehicle Number *</label>
                   <input
                     type="text"
                     value={dcFormData.vehicleNumber}
                     onChange={(e) => setDCFormData(prev => ({ ...prev, vehicleNumber: e.target.value.toUpperCase() }))}
                     placeholder="e.g., TN01AB1234"
                     className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                    required
                   />
                 </div>
 
