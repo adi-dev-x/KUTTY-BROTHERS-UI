@@ -728,6 +728,29 @@ const OrderDetails = ({ onLogout }) => {
     invoiceWindow.document.close();
   };
 
+  const handleInlineStatusChange = async (item, newStatus) => {
+    try {
+      const payload = {
+        delivery_item_id: item.delivery_item_id,
+        status: newStatus,
+        after_images: item.after_images,
+      };
+
+      await axios.post("https://ems.binlaundry.com/irrl/updateOrderItem", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      // Refresh data
+      const res = await axios.get(
+        `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+      );
+      setOrderItems(res.data?.data || []);
+    } catch (err) {
+      console.error("Status update failed:", err);
+      alert("Status update failed!");
+    }
+  };
+
   const renderBeforeImage = (images, item) => {
     if (!images || images === "{}") return <span>No images</span>;
 
@@ -898,7 +921,18 @@ const OrderDetails = ({ onLogout }) => {
                       <td className="px-4 py-2">₹{item.rent_amount}</td>
                       <td className="px-4 py-2">₹{currentAmount}</td>
                       <td className="px-4 py-2 font-semibold text-blue-600">₹{generatedAmount}</td>
-                      <td className="px-4 py-2">{item.status}</td>
+                      <td className="px-4 py-2">
+                        <select
+                          value={item.status}
+                          onChange={(e) => handleInlineStatusChange(item, e.target.value)}
+                          className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                        >
+                          <option value="INITIATED">INITIATED</option>
+                          <option value="RESERVED">RESERVED</option>
+                          <option value="RETURNED">RETURNED</option>
+                          <option value="COMPLETED">COMPLETED</option>
+                        </select>
+                      </td>
                       <td className="px-4 py-2">{item.placed_at}</td>
                       <td className="px-4 py-2">{item.returned_at}</td>
                       <td className="px-4 py-2">{renderBeforeImage(item.before_images, item)}</td>
