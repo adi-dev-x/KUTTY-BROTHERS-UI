@@ -34,6 +34,15 @@ const OrderDetails = ({ onLogout }) => {
     remarks: '',
     deliveryChallanNumber: ''
   });
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [invoiceFormData, setInvoiceFormData] = useState({
+    customerName: '',
+    customerAddress: '',
+    customerGSTIN: '',
+    invoiceDate: new Date().toISOString().split('T')[0],
+    returnDate: '',
+    modeOfPayment: 'Immediate'
+  });
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -70,6 +79,15 @@ const OrderDetails = ({ onLogout }) => {
             customerName: orderDetails.customer_name,
             remarks: '',
             deliveryChallanNumber: orderDetails.delivery_chelan_number
+          });
+
+          setInvoiceFormData({
+            customerName: orderDetails.customer_name,
+            customerAddress: '',
+            customerGSTIN: orderDetails.customer_gst,
+            invoiceDate: new Date().toISOString().split('T')[0],
+            returnDate: '',
+            modeOfPayment: 'Immediate'
           });
         }
       } catch (err) {
@@ -387,8 +405,34 @@ const OrderDetails = ({ onLogout }) => {
   };
 
   const printInvoice = () => {
+    setShowInvoicePreview(false);
     const invoiceWindow = window.open('', '_blank');
-    const invoiceDate = new Date().toLocaleDateString('en-GB');
+    const formattedInvoiceDate = new Date(invoiceFormData.invoiceDate).toLocaleDateString('en-GB');
+    const formattedReturnDate = invoiceFormData.returnDate ? new Date(invoiceFormData.returnDate).toLocaleDateString('en-GB') : '-';
+
+    // Calculate totals
+    const subTotal = orderItems.reduce((sum, item) => sum + (parseInt(item.generated_amount) || 0), 0);
+    const cgst = subTotal * 0.09;
+    const sgst = subTotal * 0.09;
+    const totalAmount = subTotal + cgst + sgst;
+
+    const numberToWords = (num) => {
+      const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+      const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+      if ((num = num.toString()).length > 9) return 'overflow';
+      const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+      if (!n) return;
+      let str = '';
+      str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+      str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+      str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+      str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+      str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) + 'Only' : '';
+      return str || 'Zero Only';
+    };
+
+    const amountInWords = numberToWords(Math.round(totalAmount));
 
     const invoiceHTML = `
       <!DOCTYPE html>
@@ -401,126 +445,249 @@ const OrderDetails = ({ onLogout }) => {
             margin: 20px; 
             background: white;
             color: black;
+            font-size: 12px;
           }
           .invoice-container { 
-            border: 1px solid #ccc; 
-            padding: 40px;
+            border: 2px solid black; 
             max-width: 800px;
             margin: 0 auto;
             background: white;
           }
           .header { 
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 40px;
+            text-align: center; 
+            border-bottom: 2px solid black;
+            padding: 10px;
+            position: relative;
           }
-          .company-details {
-            text-align: right;
+          .logo {
+            position: absolute;
+            left: 20px;
+            top: 10px;
+            width: 80px;
+            height: 80px;
           }
           .company-name { 
-            font-size: 24px; 
+            font-size: 20px; 
             font-weight: bold; 
-            color: #333;
             margin-bottom: 5px;
           }
           .invoice-title {
-            font-size: 32px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 20px;
-          }
-          .bill-to {
-            margin-bottom: 30px;
-          }
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-          }
-          .items-table th {
-            background: #f8f9fa;
-            padding: 12px;
-            text-align: left;
-            border-bottom: 2px solid #ddd;
-          }
-          .items-table td {
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-          }
-          .total-section {
-            text-align: right;
-            margin-top: 20px;
-          }
-          .total-row {
+            text-align: center;
             font-size: 18px;
             font-weight: bold;
-            margin-top: 10px;
+            padding: 5px;
+            border-bottom: 1px solid black;
+            background: #f0f0f0;
+          }
+          .section {
+            border-bottom: 1px solid black;
+            padding: 10px;
+          }
+          .flex-row {
+            display: flex;
+            justify-content: space-between;
+          }
+          .half-width {
+            width: 48%;
+          }
+          .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+          }
+          .customer-section {
+            display: flex;
+            border-bottom: 1px solid black;
+          }
+          .customer-box {
+            flex: 1;
+            padding: 10px;
+          }
+          .border-right {
+            border-right: 1px solid black;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          th, td {
+            border: 1px solid black;
+            padding: 5px;
+            text-align: left;
+          }
+          th {
+            background: #f0f0f0;
+            text-align: center;
+          }
+          .text-right {
+            text-align: right;
+          }
+          .text-center {
+            text-align: center;
+          }
+          .no-border-bottom {
+            border-bottom: none;
+          }
+          .no-border-top {
+            border-top: none;
           }
           @media print {
             .no-print { display: none; }
             body { margin: 0; }
-            .invoice-container { border: none; }
           }
         </style>
       </head>
       <body>
         <div class="invoice-container">
           <div class="header">
-            <div>
-              <img src="/irr.png" alt="IRR Logo" style="width: 80px; height: 80px;" />
-            </div>
-            <div class="company-details">
-              <div class="company-name">IRR TECHNO FAB</div>
-              <div>Door No. 276-D, Vanagaram Road</div>
-              <div>Athipet, Ambattur, Chennai - 600 058</div>
-              <div>GSTIN: 33AAAPII35L2ZA</div>
+            <img src="/irr.png" alt="IRR Logo" class="logo" />
+            <div class="company-name">IRR TECHNO FAB FY-2024-2025</div>
+            <div>NO.276-D, VANAGARAM ROAD, ATHIPET, AMBATTUR, CHENNAI – 600 058</div>
+            <div><strong>GSTIN/UIN:</strong> 33AAAPI1135L2Z4 | <strong>State:</strong> Tamil Nadu (Code: 33)</div>
+          </div>
+
+          <div class="invoice-title">TAX INVOICE</div>
+
+          <div class="section">
+            <div class="flex-row">
+              <div class="half-width">
+                <div><strong>Invoice No:</strong> ${delivery_id}</div>
+                <div><strong>Invoice Date:</strong> ${formattedInvoiceDate}</div>
+                <div><strong>Delivery Note:</strong> ${orderInfo?.delivery_chelan_number || '-'}</div>
+                <div><strong>Delivery Note Date:</strong> ${orderInfo?.order_date || '-'}</div>
+              </div>
+              <div class="half-width text-right">
+                <div><strong>Mode/Terms of Payment:</strong> ${invoiceFormData.modeOfPayment}</div>
+                <div><strong>Return Date:</strong> ${formattedReturnDate}</div>
+              </div>
             </div>
           </div>
 
-          <div class="invoice-title">INVOICE</div>
-
-          <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
-            <div class="bill-to">
-              <strong>Bill To:</strong><br>
-              ${orderInfo?.customer_name || 'N/A'}<br>
-              ${orderInfo?.customer_gst ? `GSTIN: ${orderInfo.customer_gst}` : ''}
+          <div class="customer-section">
+            <div class="customer-box border-right">
+              <strong>Buyer (Bill To)</strong><br>
+              <strong>Name:</strong> ${invoiceFormData.customerName || 'N/A'}<br>
+              <strong>Address:</strong> ${invoiceFormData.customerAddress || '-'}<br>
+              <strong>GSTIN/UIN:</strong> ${invoiceFormData.customerGSTIN || '-'}<br>
+              <strong>State & Code:</strong> Tamil Nadu (33)
             </div>
-            <div style="text-align: right;">
-              <strong>Invoice Date:</strong> ${invoiceDate}<br>
-              <strong>Order ID:</strong> ${delivery_id}
+            <div class="customer-box">
+              <strong>Consignee (Ship To)</strong><br>
+              <strong>Name:</strong> ${invoiceFormData.customerName || 'N/A'}<br>
+              <strong>Address:</strong> ${invoiceFormData.customerAddress || '-'}<br>
+              <strong>GSTIN/UIN:</strong> ${invoiceFormData.customerGSTIN || '-'}<br>
+              <strong>State & Code:</strong> Tamil Nadu (33)
             </div>
           </div>
 
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Item Description</th>
-                <th style="text-align: right;">Rent Amount</th>
-                <th style="text-align: right;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${orderItems.map((item, index) => `
+          <div class="items-section">
+            <table>
+              <thead>
                 <tr>
-                  <td>${index + 1}</td>
-                  <td>${item.item_name || 'Item'}</td>
-                  <td style="text-align: right;">₹${item.rent_amount}</td>
-                  <td style="text-align: right;">₹${Math.round(item.generated_amount)}</td>
+                  <th style="width: 5%">SI No</th>
+                  <th style="width: 40%">Description of Services</th>
+                  <th style="width: 10%">HSN/SAC</th>
+                  <th style="width: 10%">Quantity</th>
+                  <th style="width: 15%">Rate (₹)</th>
+                  <th style="width: 20%">Amount (₹)</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${orderItems.map((item, index) => `
+                  <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td>${item.item_name || 'Item'}</td>
+                    <td class="text-center">9973</td>
+                    <td class="text-center">1</td>
+                    <td class="text-right">${item.rent_amount}</td>
+                    <td class="text-right">${Math.round(item.generated_amount)}</td>
+                  </tr>
+                `).join('')}
+                <!-- Fill empty rows if needed -->
+                ${Array.from({ length: Math.max(0, 5 - orderItems.length) }, () => `
+                  <tr>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
 
-          <div class="total-section">
-            <div class="total-row">
-              Total Amount: ₹${orderInfo?.total_value || 0}
+          <div class="flex-row" style="border-bottom: 1px solid black;">
+            <div style="width: 60%; border-right: 1px solid black; padding: 10px;">
+              <strong>Tax Details</strong>
+              <table style="margin-top: 5px; font-size: 11px;">
+                <tr>
+                  <th>Description</th>
+                  <th>Rate</th>
+                  <th>Amount (₹)</th>
+                </tr>
+                <tr>
+                  <td>CGST</td>
+                  <td class="text-center">9%</td>
+                  <td class="text-right">${cgst.toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td>SGST</td>
+                  <td class="text-center">9%</td>
+                  <td class="text-right">${sgst.toFixed(2)}</td>
+                </tr>
+              </table>
+              <div style="margin-top: 10px;">
+                <strong>Amount in Words:</strong><br>
+                ${amountInWords}
+              </div>
+            </div>
+            <div style="width: 40%; padding: 10px;">
+              <div class="flex-row" style="margin-bottom: 5px;">
+                <span>Sub Total:</span>
+                <span>₹${subTotal.toFixed(2)}</span>
+              </div>
+              <div class="flex-row" style="margin-bottom: 5px;">
+                <span>CGST (9%):</span>
+                <span>₹${cgst.toFixed(2)}</span>
+              </div>
+              <div class="flex-row" style="margin-bottom: 5px;">
+                <span>SGST (9%):</span>
+                <span>₹${sgst.toFixed(2)}</span>
+              </div>
+              <div class="flex-row" style="border-top: 1px solid black; padding-top: 5px; font-weight: bold;">
+                <span>Total Invoice Amount:</span>
+                <span>₹${totalAmount.toFixed(2)}</span>
+              </div>
             </div>
           </div>
 
-          <div style="margin-top: 50px; text-align: center; font-size: 14px; color: #666;">
-            Thank you for your business!
+          <div class="flex-row" style="border-bottom: 1px solid black;">
+            <div style="width: 50%; padding: 10px; border-right: 1px solid black;">
+              <strong>Declaration:</strong><br>
+              We declare that this invoice shows the actual price of the goods/services described and that all particulars are true and correct.
+            </div>
+            <div style="width: 50%; padding: 10px;">
+              <strong>Company's Bank Details</strong><br>
+              <strong>Account Holder:</strong> IRR TECHNO FAB<br>
+              <strong>Bank Name:</strong> HDFC Bank Limited<br>
+              <strong>Account No:</strong> 99999444014737<br>
+              <strong>Branch & IFSC Code:</strong> HDFC0007637
+            </div>
           </div>
+
+          <div class="flex-row" style="min-height: 100px;">
+            <div style="width: 50%; padding: 10px; border-right: 1px solid black; display: flex; align-items: flex-end;">
+              <strong>Customer's Seal & Signature</strong>
+            </div>
+            <div style="width: 50%; padding: 10px; text-align: right; display: flex; flex-direction: column; justify-content: space-between;">
+              <strong>For IRR TECHNO FAB FY-2024-2025</strong>
+              <br><br><br>
+              <strong>Authorised Signatory</strong>
+            </div>
+          </div>
+
         </div>
 
         <div class="no-print" style="text-align: center; margin: 20px;">
@@ -629,12 +796,12 @@ const OrderDetails = ({ onLogout }) => {
               >
                 <FaDownload /> {downloadingDC ? 'Processing...' : 'Generate DC'}
               </button>
-              {/* <button
-                onClick={printInvoice}
+              <button
+                onClick={() => setShowInvoicePreview(true)}
                 className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
               >
                 <FaFileInvoice /> Download Invoice
-              </button> */}
+              </button>
             </div>
           </div>
 
@@ -680,7 +847,7 @@ const OrderDetails = ({ onLogout }) => {
               <thead className="bg-gray-50 text-gray-600">
                 <tr>
                   <th className="px-4 py-2 text-left">S.No</th>
-                  <th className="px-4 py-2 text-left">Item ID</th>
+                  <th className="px-4 py-2 text-left">Item Code</th>
                   <th className="px-4 py-2 text-left">Item Name</th>
                   <th className="px-4 py-2 text-left">Rent Amount</th>
                   <th className="px-4 py-2 text-left">Current Amount</th>
@@ -704,7 +871,7 @@ const OrderDetails = ({ onLogout }) => {
                   return (
                     <tr key={`${item.delivery_item_id}-${idx}`} className="hover:bg-yellow-50/40">
                       <td className="px-4 py-2">{idx + 1}</td>
-                      <td className="px-4 py-2">{item.item_id}</td>
+                      <td className="px-4 py-2">{item.item_code || 'N/A'}</td>
                       <td className="px-4 py-2">{item.item_name || 'N/A'}</td>
                       <td className="px-4 py-2">₹{item.rent_amount}</td>
                       <td className="px-4 py-2">₹{currentAmount}</td>
@@ -838,6 +1005,111 @@ const OrderDetails = ({ onLogout }) => {
             </form>
           </div>
         </div>
+      )}
+
+      {showInvoicePreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-lg overflow-y-auto rounded-lg bg-white p-5 shadow-lg">
+            <button
+              className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100"
+              onClick={() => setShowInvoicePreview(false)}
+            >
+              <FaTimes />
+            </button>
+
+            <h3 className="mb-4 text-center text-lg font-semibold text-gray-900">
+              Invoice Details
+            </h3>
+
+            <form
+              onSubmit={(e) => { e.preventDefault(); printInvoice(); }}
+              className="flex flex-col gap-4"
+            >
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">
+                  Customer Name
+                </label>
+                <input
+                  type="text"
+                  value={invoiceFormData.customerName}
+                  onChange={(e) => setInvoiceFormData(prev => ({ ...prev, customerName: e.target.value }))}
+                  className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">
+                  Customer Address
+                </label>
+                <textarea
+                  value={invoiceFormData.customerAddress}
+                  onChange={(e) => setInvoiceFormData(prev => ({ ...prev, customerAddress: e.target.value }))}
+                  rows="2"
+                  className="w-full resize-y rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">GSTIN</label>
+                  <input
+                    type="text"
+                    value={invoiceFormData.customerGSTIN}
+                    onChange={(e) => setInvoiceFormData(prev => ({ ...prev, customerGSTIN: e.target.value.toUpperCase() }))}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Mode of Payment</label>
+                  <input
+                    type="text"
+                    value={invoiceFormData.modeOfPayment}
+                    onChange={(e) => setInvoiceFormData(prev => ({ ...prev, modeOfPayment: e.target.value }))}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Invoice Date</label>
+                  <input
+                    type="date"
+                    value={invoiceFormData.invoiceDate}
+                    onChange={(e) => setInvoiceFormData(prev => ({ ...prev, invoiceDate: e.target.value }))}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Return Date</label>
+                  <input
+                    type="date"
+                    value={invoiceFormData.returnDate}
+                    onChange={(e) => setInvoiceFormData(prev => ({ ...prev, returnDate: e.target.value }))}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowInvoicePreview(false)}
+                  className="rounded-md border-2 border-gray-400 px-4 py-2 text-sm text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                >
+                  <FaFileInvoice /> Generate & Print Invoice
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
       )}
 
       {selectedItem && (
