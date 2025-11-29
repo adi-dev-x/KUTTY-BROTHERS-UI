@@ -67,6 +67,7 @@ const OrderDetails = ({ onLogout }) => {
             customer_name: data[0].customer_name || "N/A",
             customer_gst: data[0].customer_gst || "",
             delivery_chelan_number: data[0].delivery_chelan_number || "",
+            order_number: data[0].order_id || delivery_id,
             order_date: data[0].placed_at ? new Date(data[0].placed_at).toLocaleDateString() : new Date().toLocaleDateString(),
             total_value: calculateGeneratedTotal(data)
           };
@@ -452,12 +453,14 @@ const OrderDetails = ({ onLogout }) => {
     };
 
     const amountInWords = numberToWords(Math.round(totalAmount));
+    const rawOrderNo = orderInfo?.delivery_chelan_number || delivery_id || '';
+    const invoiceNo = rawOrderNo.replace(/ORD/i, 'INV');
 
     const invoiceHTML = `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Invoice - ${delivery_id}</title>
+        <title>Invoice - ${invoiceNo}</title>
         <style>
           body { 
             font-family: Arial, sans-serif; 
@@ -570,7 +573,7 @@ const OrderDetails = ({ onLogout }) => {
           <div class="section">
             <div class="flex-row">
               <div class="half-width">
-                <div><strong>Invoice No:</strong> ${delivery_id}</div>
+                <div><strong>Invoice No:</strong> ${invoiceNo}</div>
                 <div><strong>Invoice Date:</strong> ${formattedInvoiceDate}</div>
                 <div><strong>Delivery Note:</strong> ${orderInfo?.delivery_chelan_number || '-'}</div>
                 <div><strong>Delivery Note Date:</strong> ${orderInfo?.order_date || '-'}</div>
@@ -606,7 +609,7 @@ const OrderDetails = ({ onLogout }) => {
                   <th style="width: 5%">SI No</th>
                   <th style="width: 40%">Description of Services</th>
                   <th style="width: 10%">HSN/SAC</th>
-                  <th style="width: 10%">Quantity</th>
+                  <th style="width: 10%">No of Days</th>
                   <th style="width: 15%">Rate (₹)</th>
                   <th style="width: 20%">Amount (₹)</th>
                 </tr>
