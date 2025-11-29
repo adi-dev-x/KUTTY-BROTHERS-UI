@@ -214,7 +214,7 @@ const Customer = ({ onLogout }) => {
                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Type</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">GST</th>
                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
+
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
@@ -252,28 +252,12 @@ const Customer = ({ onLogout }) => {
                                 {customer.status}
                               </span>
                             </td>
-                            <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                              <div className="flex justify-end gap-2">
-                                <button
-                                  onClick={() => handleEdit(customer)}
-                                  className="rounded p-1 text-blue-600 hover:bg-blue-50"
-                                  title="Edit"
-                                >
-                                  <FiEdit2 className="h-4 w-4" />
-                                </button>
-                                <button
-                                  className="rounded p-1 text-red-600 hover:bg-red-50"
-                                  title="Delete"
-                                >
-                                  <FiTrash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </td>
+
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="7" className="px-6 py-8 text-center text-sm text-gray-500">
+                          <td colSpan="6" className="px-6 py-8 text-center text-sm text-gray-500">
                             No customers found matching your search.
                           </td>
                         </tr>
