@@ -67,8 +67,9 @@ const OrderDetails = ({ onLogout }) => {
             customer_name: data[0].customer_name || "N/A",
             customer_gst: data[0].customer_gst || "",
             delivery_chelan_number: data[0].delivery_chelan_number || "",
-            order_number: data[0].order_id || delivery_id,
+            order_number: data[0].order_number || delivery_id,
             order_date: data[0].placed_at ? new Date(data[0].placed_at).toLocaleDateString() : new Date().toLocaleDateString(),
+            advance_amount: parseInt(data[0].advance_amount || 0),
             total_value: calculateGeneratedTotal(data)
           };
           setOrderInfo(orderDetails);
@@ -435,6 +436,8 @@ const OrderDetails = ({ onLogout }) => {
     const cgst = subTotal * 0.09;
     const sgst = subTotal * 0.09;
     const totalAmount = subTotal + cgst + sgst;
+    const advanceAmount = orderInfo?.advance_amount || 0;
+    const balanceAmount = totalAmount - advanceAmount;
 
     const numberToWords = (num) => {
       const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
@@ -453,7 +456,7 @@ const OrderDetails = ({ onLogout }) => {
     };
 
     const amountInWords = numberToWords(Math.round(totalAmount));
-    const rawOrderNo = orderInfo?.delivery_chelan_number || delivery_id || '';
+    const rawOrderNo = orderInfo?.order_number || delivery_id || '';
     const invoiceNo = rawOrderNo.replace(/ORD/i, 'INV');
 
     const invoiceHTML = `
@@ -684,6 +687,14 @@ const OrderDetails = ({ onLogout }) => {
               <div class="flex-row" style="border-top: 1px solid black; padding-top: 5px; font-weight: bold;">
                 <span>Total Invoice Amount:</span>
                 <span>₹${totalAmount.toFixed(2)}</span>
+              </div>
+              <div class="flex-row" style="margin-bottom: 5px;">
+                <span>Advance Amount:</span>
+                <span>₹${advanceAmount.toFixed(2)}</span>
+              </div>
+              <div class="flex-row" style="border-top: 1px solid black; padding-top: 5px; font-weight: bold;">
+                <span>Balance Amount:</span>
+                <span>₹${balanceAmount.toFixed(2)}</span>
               </div>
             </div>
           </div>
