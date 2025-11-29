@@ -10,6 +10,7 @@ import {
   FaSave,
   FaTimes,
   FaDownload,
+  FaFileInvoice,
 } from "react-icons/fa";
 
 
@@ -385,6 +386,159 @@ const OrderDetails = ({ onLogout }) => {
     }
   };
 
+  const printInvoice = () => {
+    const invoiceWindow = window.open('', '_blank');
+    const invoiceDate = new Date().toLocaleDateString('en-GB');
+
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice - ${delivery_id}</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: white;
+            color: black;
+          }
+          .invoice-container { 
+            border: 1px solid #ccc; 
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+          }
+          .header { 
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+          }
+          .company-details {
+            text-align: right;
+          }
+          .company-name { 
+            font-size: 24px; 
+            font-weight: bold; 
+            color: #333;
+            margin-bottom: 5px;
+          }
+          .invoice-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+          }
+          .bill-to {
+            margin-bottom: 30px;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          .items-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #ddd;
+          }
+          .items-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+          }
+          .total-section {
+            text-align: right;
+            margin-top: 20px;
+          }
+          .total-row {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+          }
+          @media print {
+            .no-print { display: none; }
+            body { margin: 0; }
+            .invoice-container { border: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-container">
+          <div class="header">
+            <div>
+              <img src="/irr.png" alt="IRR Logo" style="width: 80px; height: 80px;" />
+            </div>
+            <div class="company-details">
+              <div class="company-name">IRR TECHNO FAB</div>
+              <div>Door No. 276-D, Vanagaram Road</div>
+              <div>Athipet, Ambattur, Chennai - 600 058</div>
+              <div>GSTIN: 33AAAPII35L2ZA</div>
+            </div>
+          </div>
+
+          <div class="invoice-title">INVOICE</div>
+
+          <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+            <div class="bill-to">
+              <strong>Bill To:</strong><br>
+              ${orderInfo?.customer_name || 'N/A'}<br>
+              ${orderInfo?.customer_gst ? `GSTIN: ${orderInfo.customer_gst}` : ''}
+            </div>
+            <div style="text-align: right;">
+              <strong>Invoice Date:</strong> ${invoiceDate}<br>
+              <strong>Order ID:</strong> ${delivery_id}
+            </div>
+          </div>
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Item Description</th>
+                <th style="text-align: right;">Rent Amount</th>
+                <th style="text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${orderItems.map((item, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${item.item_name || 'Item'}</td>
+                  <td style="text-align: right;">₹${item.rent_amount}</td>
+                  <td style="text-align: right;">₹${Math.round(item.generated_amount)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="total-section">
+            <div class="total-row">
+              Total Amount: ₹${orderInfo?.total_value || 0}
+            </div>
+          </div>
+
+          <div style="margin-top: 50px; text-align: center; font-size: 14px; color: #666;">
+            Thank you for your business!
+          </div>
+        </div>
+
+        <div class="no-print" style="text-align: center; margin: 20px;">
+          <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer;">
+            Print Invoice
+          </button>
+          <button onclick="window.close()" style="padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer;">
+            Close
+          </button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    invoiceWindow.document.write(invoiceHTML);
+    invoiceWindow.document.close();
+  };
+
   const renderBeforeImage = (images, item) => {
     if (!images || images === "{}") return <span>No images</span>;
 
@@ -467,13 +621,21 @@ const OrderDetails = ({ onLogout }) => {
         <div className="mx-auto w-full max-w-7xl flex-1 p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
-            <button
-              onClick={() => setShowDCPreview(true)}
-              disabled={downloadingDC}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <FaDownload /> {downloadingDC ? 'Processing...' : 'Generate DC'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDCPreview(true)}
+                disabled={downloadingDC}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <FaDownload /> {downloadingDC ? 'Processing...' : 'Generate DC'}
+              </button>
+              <button
+                onClick={printInvoice}
+                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
+              >
+                <FaFileInvoice /> Download Invoice
+              </button>
+            </div>
           </div>
 
           <button onClick={() => navigate(-1)} className="mb-4 inline-flex items-center gap-2 text-sm text-gray-700 hover:underline">
