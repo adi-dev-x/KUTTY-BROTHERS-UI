@@ -410,8 +410,27 @@ const OrderDetails = ({ onLogout }) => {
     const formattedInvoiceDate = new Date(invoiceFormData.invoiceDate).toLocaleDateString('en-GB');
     const formattedReturnDate = invoiceFormData.returnDate ? new Date(invoiceFormData.returnDate).toLocaleDateString('en-GB') : '-';
 
-    // Calculate totals
-    const subTotal = orderItems.reduce((sum, item) => sum + (parseInt(item.generated_amount) || 0), 0);
+    // Calculate totals based on return date
+    const getDaysAndTotal = (item) => {
+      if (!invoiceFormData.returnDate || !item.placed_at) {
+        return { days: 1, total: parseInt(item.generated_amount) || 0 };
+      }
+
+      const placedDate = new Date(item.placed_at);
+      const returnDate = new Date(invoiceFormData.returnDate);
+
+      // Calculate difference in milliseconds
+      const diffTime = returnDate - placedDate;
+      // Convert to days (ceil to ensure at least 1 day if same day or close)
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Ensure at least 1 day rent
+      const days = diffDays > 0 ? diffDays : 1;
+
+      return { days, total: days * (parseInt(item.rent_amount) || 0) };
+    };
+
+    const subTotal = orderItems.reduce((sum, item) => sum + getDaysAndTotal(item).total, 0);
     const cgst = subTotal * 0.09;
     const sgst = subTotal * 0.09;
     const totalAmount = subTotal + cgst + sgst;
@@ -442,7 +461,7 @@ const OrderDetails = ({ onLogout }) => {
         <style>
           body { 
             font-family: Arial, sans-serif; 
-            margin: 20px; 
+            margin: 40px; 
             background: white;
             color: black;
             font-size: 12px;
@@ -533,7 +552,7 @@ const OrderDetails = ({ onLogout }) => {
           }
           @media print {
             .no-print { display: none; }
-            body { margin: 0; }
+            body { margin: 20mm; }
           }
         </style>
       </head>
@@ -593,16 +612,19 @@ const OrderDetails = ({ onLogout }) => {
                 </tr>
               </thead>
               <tbody>
-                ${orderItems.map((item, index) => `
-                  <tr>
-                    <td class="text-center">${index + 1}</td>
-                    <td>${item.item_name || 'Item'}</td>
-                    <td class="text-center">9973</td>
-                    <td class="text-center">1</td>
-                    <td class="text-right">${item.rent_amount}</td>
-                    <td class="text-right">${Math.round(item.generated_amount)}</td>
-                  </tr>
-                `).join('')}
+                ${orderItems.map((item, index) => {
+      const { days, total } = getDaysAndTotal(item);
+      return `
+                    <tr>
+                      <td class="text-center">${index + 1}</td>
+                      <td>${item.item_name || 'Item'}</td>
+                      <td class="text-center">9973</td>
+                      <td class="text-center">${days}</td>
+                      <td class="text-right">${item.rent_amount}</td>
+                      <td class="text-right">${Math.round(total)}</td>
+                    </tr>
+                  `;
+    }).join('')}
                 <!-- Fill empty rows if needed -->
                 ${Array.from({ length: Math.max(0, 5 - orderItems.length) }, () => `
                   <tr>
