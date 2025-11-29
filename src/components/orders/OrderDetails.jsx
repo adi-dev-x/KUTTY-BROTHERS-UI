@@ -893,6 +893,10 @@ const OrderDetails = ({ onLogout }) => {
                   </div>
                 )}
                 <div>
+                  <div className="text-gray-600">Advance Amount</div>
+                  <div className="font-medium text-gray-900">₹{orderInfo.advance_amount || 0}</div>
+                </div>
+                <div>
                   <div className="text-gray-600">Total Value</div>
                   <div className="font-semibold text-blue-600">₹{orderInfo.total_value}</div>
                 </div>
