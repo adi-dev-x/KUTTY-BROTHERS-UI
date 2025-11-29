@@ -629,12 +629,12 @@ const OrderDetails = ({ onLogout }) => {
               >
                 <FaDownload /> {downloadingDC ? 'Processing...' : 'Generate DC'}
               </button>
-              <button
+              {/* <button
                 onClick={printInvoice}
                 className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
               >
                 <FaFileInvoice /> Download Invoice
-              </button>
+              </button> */}
             </div>
           </div>
 
