@@ -466,7 +466,7 @@ const OrderDetails = ({ onLogout }) => {
         <Rentalsidebar />
         <div className="mx-auto w-full max-w-7xl flex-1 p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">Order Details - #{delivery_id}</h2>
+            <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
             <button
               onClick={() => setShowDCPreview(true)}
               disabled={downloadingDC}
