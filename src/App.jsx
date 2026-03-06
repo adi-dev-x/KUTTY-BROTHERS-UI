@@ -5,6 +5,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import LoginPage from "./components/LoginPage/LoginPage";
 import MainPage from "./components/MainPage/MainPage";
 import AttendancePage from "./components/attendance/AttendancePage";
+import SiteAttendance from "./components/attendance/SiteAttendance";
+import AllEmployeesAttendance from "./components/attendance/AllEmployeesAttendance";
 import Dashboard from "./components/dashboard/Dashboard";
 import RentalDashboard from "./components/customer/Customer";
 import InvoicePage from "./components/invoice/InvoicePage";
@@ -15,6 +17,7 @@ import Tools from "./components/tools/Tools";
 import Category from "./components/category/Category";
 import Employees from "./components/employees/employees";
 import Sites from "./components/sites/Sites";
+import SiteDetails from "./components/sites/SiteDetails";
 
 // Orders
 import Orders from "./components/orders/Orders";
@@ -60,6 +63,14 @@ function App() {
         <Route
           path="/attendance"
           element={isLoggedIn ? <AttendancePage onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/attendance/site/:id"
+          element={isLoggedIn ? <SiteAttendance onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/attendance/all-employees"
+          element={isLoggedIn ? <AllEmployeesAttendance onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
         {/* Dashboard */}
@@ -120,6 +131,10 @@ function App() {
         <Route
           path="/sites"
           element={isLoggedIn ? <Sites onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/sites/:id"
+          element={isLoggedIn ? <SiteDetails onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
         {/* Stock */}

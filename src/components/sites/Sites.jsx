@@ -4,6 +4,7 @@ import Footer from "../footer/Footer";
 import { database } from "../../firebase";
 import { ref, push, set, onValue, update, remove } from "firebase/database";
 import { Building, Plus, Edit2, Check, X, Trash2, AlertTriangle } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Sites = ({ onLogout }) => {
     const [sites, setSites] = useState([]);
@@ -126,9 +127,10 @@ const Sites = ({ onLogout }) => {
                     {/* Sites Grid */}
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                         {sites.map((site) => (
-                            <div
+                            <Link
                                 key={site.id}
-                                className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border border-gray-100"
+                                to={`/sites/${site.id}`}
+                                className="group relative cursor-pointer overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border border-gray-100 block"
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1 min-w-0">
@@ -137,7 +139,7 @@ const Sites = ({ onLogout }) => {
                                                 <Building className="h-5 w-5" />
                                             </div>
                                             {editingId === site.id ? (
-                                                <div className="flex-1 flex items-center gap-2">
+                                                <div className="flex-1 flex items-center gap-2" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
                                                     <input
                                                         type="text"
                                                         value={editSiteName}
@@ -158,48 +160,48 @@ const Sites = ({ onLogout }) => {
                                             </p>
                                         ) : null}
                                     </div>
-
-                                    <div className="ml-4 flex items-center gap-2">
-                                        {editingId === site.id ? (
-                                            <>
-                                                <button
-                                                    onClick={() => handleSaveEdit(site.id)}
-                                                    className="rounded p-1.5 text-green-600 hover:bg-green-50 transition-colors"
-                                                    title="Save"
-                                                >
-                                                    <Check className="h-5 w-5" />
-                                                </button>
-                                                <button
-                                                    onClick={handleCancelEdit}
-                                                    className="rounded p-1.5 text-red-600 hover:bg-red-50 transition-colors"
-                                                    title="Cancel"
-                                                >
-                                                    <X className="h-5 w-5" />
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <button
-                                                    onClick={() => handleEditClick(site)}
-                                                    className="rounded p-1.5 text-gray-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-gray-100 hover:text-gray-900"
-                                                    title="Edit site"
-                                                >
-                                                    <Edit2 className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteClick(site.id)}
-                                                    className="rounded p-1.5 text-gray-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
-                                                    title="Delete site"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
                                 </div>
 
                                 <div className="absolute top-0 right-0 h-24 w-24 translate-x-12 -translate-y-12 rounded-full bg-yellow-50 opacity-50 blur-2xl group-hover:bg-yellow-100 transition-colors duration-500"></div>
-                            </div>
+
+                                <div className="absolute bottom-4 right-4 flex items-center gap-2" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                    {editingId === site.id ? (
+                                        <>
+                                            <button
+                                                onClick={() => handleSaveEdit(site.id)}
+                                                className="rounded p-1.5 text-green-600 hover:bg-green-50 z-10 relative transition-colors"
+                                                title="Save"
+                                            >
+                                                <Check className="h-5 w-5" />
+                                            </button>
+                                            <button
+                                                onClick={handleCancelEdit}
+                                                className="rounded p-1.5 text-red-600 hover:bg-red-50 z-10 relative transition-colors"
+                                                title="Cancel"
+                                            >
+                                                <X className="h-5 w-5" />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={() => handleEditClick(site)}
+                                                className="rounded p-1.5 text-gray-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-gray-100 z-10 relative hover:text-gray-900"
+                                                title="Edit site"
+                                            >
+                                                <Edit2 className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteClick(site.id)}
+                                                className="rounded p-1.5 text-gray-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-50 z-10 relative hover:text-red-600"
+                                                title="Delete site"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </Link>
                         ))}
 
                         {sites.length === 0 && (

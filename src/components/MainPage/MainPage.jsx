@@ -23,12 +23,6 @@ const MainPage = ({ onLogout }) => {
       path: "/accounts",
     },
     {
-      icon: <FaUsers size={30} />,
-      title: "Employees",
-      description: "Track employee records, payroll, and attendance.",
-      path: "/employees",
-    },
-    {
       icon: <FaClipboardList size={30} />,
       title: "Attendance",
       description: "Assign, monitor, and manage project finances.",
@@ -47,9 +41,9 @@ const MainPage = ({ onLogout }) => {
       path: "/irl-dashboard", // ✅ updated path
     },
     {
-      icon: <FaBuilding size={30} />,
-      title: "Sites",
-      description: "Manage construction sites and locations.",
+      icon: <FaUsers size={30} />,
+      title: "Employees",
+      description: "Manage employee locations, designations, and salaries.",
       path: "/sites",
     },
     {
