@@ -7,6 +7,7 @@ import {
   FaFileInvoice,
   FaUsers,
   FaMoneyBill,
+  FaBuilding,
 } from "react-icons/fa";
 import Header from "../header/Header";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +45,12 @@ const MainPage = ({ onLogout }) => {
       title: "Rentals",
       description: "Providing rental tools and details.",
       path: "/irl-dashboard", // ✅ updated path
+    },
+    {
+      icon: <FaBuilding size={30} />,
+      title: "Sites",
+      description: "Manage construction sites and locations.",
+      path: "/sites",
     },
     {
       icon: <FaCog size={30} />,

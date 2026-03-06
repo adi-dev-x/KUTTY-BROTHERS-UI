@@ -14,6 +14,7 @@ import Brand from "./components/brand/brand";
 import Tools from "./components/tools/Tools";
 import Category from "./components/category/Category";
 import Employees from "./components/employees/employees";
+import Sites from "./components/sites/Sites";
 
 // Orders
 import Orders from "./components/orders/Orders";
@@ -115,6 +116,10 @@ function App() {
         <Route
           path="/employees"
           element={isLoggedIn ? <Employees onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/sites"
+          element={isLoggedIn ? <Sites onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
         {/* Stock */}
