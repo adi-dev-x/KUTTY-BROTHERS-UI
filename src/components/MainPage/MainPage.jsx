@@ -24,8 +24,8 @@ const MainPage = ({ onLogout }) => {
     },
     {
       icon: <FaClipboardList size={30} />,
-      title: "Attendance",
-      description: "Assign, monitor, and manage project finances.",
+      title: "Attendance & Payroll",
+      description: "Manage employee attendance, pay calculations, and project finances.",
       path: "/attendance",
     },
     {

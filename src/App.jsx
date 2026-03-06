@@ -7,6 +7,8 @@ import MainPage from "./components/MainPage/MainPage";
 import AttendancePage from "./components/attendance/AttendancePage";
 import SiteAttendance from "./components/attendance/SiteAttendance";
 import AllEmployeesAttendance from "./components/attendance/AllEmployeesAttendance";
+import AttendanceDashboard from "./components/attendance/AttendanceDashboard";
+import PayrollInfo from "./components/attendance/PayrollInfo";
 import Dashboard from "./components/dashboard/Dashboard";
 import RentalDashboard from "./components/customer/Customer";
 import InvoicePage from "./components/invoice/InvoicePage";
@@ -62,7 +64,15 @@ function App() {
         {/* Attendance */}
         <Route
           path="/attendance"
+          element={isLoggedIn ? <AttendanceDashboard onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/attendance/sites"
           element={isLoggedIn ? <AttendancePage onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/attendance/payroll"
+          element={isLoggedIn ? <PayrollInfo onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
         <Route
           path="/attendance/site/:id"
