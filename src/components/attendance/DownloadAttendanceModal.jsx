@@ -3,7 +3,7 @@ import { X, Download, Calendar } from 'lucide-react';
 import { ref, get } from "firebase/database";
 import { database } from "../../firebase";
 
-const DownloadAttendanceModal = ({ isOpen, onClose }) => {
+const DownloadAttendanceModal = ({ isOpen, onClose, targetSiteId }) => {
     const today = new Date().toISOString().split('T')[0];
     const [startDate, setStartDate] = useState(today);
     const [endDate, setEndDate] = useState(today);
@@ -41,29 +41,48 @@ const DownloadAttendanceModal = ({ isOpen, onClose }) => {
 
             const dateList = generateDatesList(startDate, endDate);
 
+            // Format MS to string like "4h 30m"
+            const formatMsToHours = (ms) => {
+                if (!ms) return "0h 0m";
+                const totalSec = Math.floor(ms / 1000);
+                const hours = Math.floor(totalSec / 3600);
+                const minutes = Math.floor((totalSec % 3600) / 60);
+                return `${hours}h ${minutes}m`;
+            };
+
             // Generate CSV content
-            let csvContent = "Date,Site Name,Employee Name,Designation,Status,Check In Time,Check Out Time\n";
+            let csvContent = "Date,Site Name,Employee Name,Designation,Status,Check In Time,Check Out Time,Total Working Hours\n";
 
             dateList.forEach(date => {
-                Object.keys(sitesData).forEach(siteId => {
+                const targetSites = targetSiteId ? [targetSiteId] : Object.keys(sitesData);
+
+                targetSites.forEach(siteId => {
                     const site = sitesData[siteId];
-                    if (site.employees) {
+                    if (site && site.employees) {
                         Object.keys(site.employees).forEach(empId => {
                             const emp = site.employees[empId];
 
                             // Get status
-                            let status = "Not Marked";
+                            let status = "Absent";
                             let inTime = "--";
                             let outTime = "--";
+                            let totalWorkingHours = "0h 0m";
 
                             if (attData[siteId] && attData[siteId][date] && attData[siteId][date][empId]) {
                                 const raw = attData[siteId][date][empId];
                                 if (typeof raw === 'string') {
                                     status = raw;
                                 } else {
-                                    status = raw.status || "Not Marked";
+                                    status = raw.status || "Absent";
                                     inTime = raw.checkInTime || "--";
                                     outTime = raw.checkOutTime || "--";
+
+                                    if (raw.totalAccumulatedMs) {
+                                        totalWorkingHours = formatMsToHours(raw.totalAccumulatedMs);
+                                        if (raw.totalAccumulatedMs > 0 && status !== 'Present') {
+                                            status = "Present";
+                                        }
+                                    }
                                 }
                             }
 
@@ -75,19 +94,24 @@ const DownloadAttendanceModal = ({ isOpen, onClose }) => {
                             const safeStatus = `"${status}"`;
                             const safeIn = `"${inTime}"`;
                             const safeOut = `"${outTime}"`;
+                            const safeHours = `"${totalWorkingHours}"`;
 
-                            csvContent += `${safeDate},${safeSiteName},${safeEmpName},${safeDesig},${safeStatus},${safeIn},${safeOut}\n`;
+                            csvContent += `${safeDate},${safeSiteName},${safeEmpName},${safeDesig},${safeStatus},${safeIn},${safeOut},${safeHours}\n`;
                         });
                     }
                 });
             });
 
             // Trigger download
+            const suffix = targetSiteId && sitesData[targetSiteId]?.name
+                ? sitesData[targetSiteId].name.replace(/\s+/g, '_')
+                : "All_Employees";
+
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
             link.setAttribute("href", url);
-            link.setAttribute("download", `Attendance_Report_${startDate}_to_${endDate}.csv`);
+            link.setAttribute("download", `Attendance_${suffix}_${startDate}_to_${endDate}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();

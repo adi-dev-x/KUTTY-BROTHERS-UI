@@ -4,9 +4,10 @@ import Header from "../header/Header";
 import Footer from "../footer/Footer";
 import { database } from "../../firebase";
 import { ref, get, set, onValue } from "firebase/database";
-import { Users, ArrowLeft, Building, Search, Calendar, CheckSquare, Download } from "lucide-react";
+import { Users, ArrowLeft, Building, Search, Calendar, CheckSquare, Download, Edit2, History } from "lucide-react";
 import AttendanceSidebar from "./AttendanceSidebar";
 import DownloadAttendanceModal from "./DownloadAttendanceModal";
+import AttendanceHistoryModal from "./AttendanceHistoryModal";
 import TimerDisplay from "./TimerDisplay";
 
 const SiteAttendance = ({ onLogout }) => {
@@ -17,6 +18,72 @@ const SiteAttendance = ({ onLogout }) => {
     const [employees, setEmployees] = useState([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+    const [editModal, setEditModal] = useState({ isOpen: false, empId: null, checkInTime: '', checkOutTime: '' });
+    const [historyModal, setHistoryModal] = useState({ isOpen: false, empId: null, siteId: null, empName: "" });
+
+    const convert12to24 = (time12) => {
+        if (!time12 || !time12.includes(' ')) return "";
+        const [time, modifier] = time12.split(' ');
+        let [hours, minutes] = time.split(':');
+        if (hours === '12') hours = '00';
+        if (modifier === 'PM') hours = String(parseInt(hours, 10) + 12);
+        return `${String(hours).padStart(2, '0')}:${minutes}`;
+    };
+
+    const convert24to12 = (time24) => {
+        if (!time24) return "";
+        const [h, m] = time24.split(':');
+        let hour = parseInt(h, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12;
+        return `${String(hour).padStart(2, '0')}:${m} ${ampm}`;
+    };
+
+    const openEditModal = (empId) => {
+        const currentRec = attendanceRecords[empId];
+        let defaultIn = "";
+        let defaultOut = "";
+        if (typeof currentRec === 'object') {
+            defaultIn = convert12to24(currentRec.checkInTime);
+            defaultOut = convert12to24(currentRec.checkOutTime);
+        }
+        setEditModal({
+            isOpen: true,
+            empId,
+            checkInTime: defaultIn,
+            checkOutTime: defaultOut
+        });
+    };
+
+    const handleSaveManualTime = async () => {
+        const { empId, checkInTime, checkOutTime } = editModal;
+        try {
+            const attendanceRef = ref(database, `attendance/${siteId}/${selectedDate}/${empId}`);
+
+            const currentRec = typeof attendanceRecords[empId] === 'object' ? attendanceRecords[empId] : {};
+            const tsAccumulated = currentRec.totalAccumulatedMs || 0;
+
+            let status = currentRec.status || "Present";
+            if (checkInTime && !checkOutTime) status = "Checked In";
+            if (checkOutTime) status = "Checked Out";
+
+            const finalIn = checkInTime ? convert24to12(checkInTime) : "";
+            const finalOut = checkOutTime ? convert24to12(checkOutTime) : "";
+
+            await set(attendanceRef, {
+                status: status,
+                checkInTime: finalIn,
+                checkOutTime: finalOut,
+                totalAccumulatedMs: tsAccumulated,
+                lastCheckInTs: status === "Checked In" ? new Date().getTime() : null
+            });
+
+            setEditModal({ isOpen: false, empId: null, checkInTime: '', checkOutTime: '' });
+        } catch (error) {
+            console.error(error);
+            alert("Failed to save times.");
+        }
+    };
 
     // Get today's date in YYYY-MM-DD format as default
     const getToday = () => {
@@ -136,18 +203,12 @@ const SiteAttendance = ({ onLogout }) => {
         return safeName.includes(query) || safeDesignation.includes(query);
     });
 
-    const getStatusClasses = (empId, status) => {
-        const currentRecord = attendanceRecords[empId] || {};
-        const currentStatus = typeof currentRecord === 'string' ? currentRecord : currentRecord.status;
-
-        const isSelected = currentStatus === status;
-        const baseClasses = "flex-1 rounded-lg py-2 text-sm font-semibold transition-all border outline-none";
-
-        if (!isSelected) return `${baseClasses} border-gray-200 bg-white text-gray-500 hover:bg-gray-50 hover:border-gray-300`;
-
-        if (status === "Checked In") return `${baseClasses} bg-green-500 text-white border-green-500 shadow-md shadow-green-500/20`;
-        if (status === "Checked Out") return `${baseClasses} bg-blue-500 text-white border-blue-500 shadow-md shadow-blue-500/20`;
-        return baseClasses;
+    const getStatusClasses = (empId, isCheckedIn) => {
+        const baseClasses = "flex-1 rounded-lg py-2.5 text-sm font-bold transition-all border outline-none shadow-sm";
+        if (isCheckedIn) {
+            return `${baseClasses} bg-red-500 text-white border-red-500 hover:bg-red-600 shadow-red-500/20`;
+        }
+        return `${baseClasses} bg-green-500 text-white border-green-500 hover:bg-green-600 shadow-green-500/20`;
     };
 
     return (
@@ -238,26 +299,45 @@ const SiteAttendance = ({ onLogout }) => {
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <div className="flex flex-col gap-2 max-w-[220px] mx-auto min-w-[180px]">
+                                                        <div className="flex items-center justify-between gap-4 w-full min-w-[340px]">
                                                             <div className="flex items-center gap-2">
+                                                                {(() => {
+                                                                    const currentRecord = attendanceRecords[emp.id] || {};
+                                                                    const currentStatus = typeof currentRecord === 'string' ? currentRecord : currentRecord.status;
+                                                                    const isCheckedIn = currentStatus === "Checked In";
+
+                                                                    return (
+                                                                        <button
+                                                                            onClick={() => handleMarkAttendance(emp.id, isCheckedIn ? "Checked Out" : "Checked In")}
+                                                                            className={getStatusClasses(emp.id, isCheckedIn) + " min-w-[120px]"}
+                                                                        >
+                                                                            {isCheckedIn ? "Check Out" : "Check In"}
+                                                                        </button>
+                                                                    );
+                                                                })()}
                                                                 <button
-                                                                    onClick={() => handleMarkAttendance(emp.id, "Checked In")}
-                                                                    className={getStatusClasses(emp.id, "Checked In")}
+                                                                    onClick={() => setHistoryModal({ isOpen: true, empId: emp.id, siteId: siteId, empName: emp.name })}
+                                                                    className="text-blue-600 hover:text-blue-700 bg-blue-50 p-2 text-xs rounded-lg transition-colors flex items-center justify-center border border-blue-100"
+                                                                    title="View History"
                                                                 >
-                                                                    Check In
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleMarkAttendance(emp.id, "Checked Out")}
-                                                                    className={getStatusClasses(emp.id, "Checked Out")}
-                                                                >
-                                                                    Check Out
+                                                                    <History className="h-4 w-4" />
                                                                 </button>
                                                             </div>
-                                                            <div className="flex justify-between items-center text-[11px] text-gray-500 px-2 font-medium bg-gray-50 rounded-lg p-1.5 border border-gray-100">
-                                                                <span className="flex items-center gap-1 font-bold text-yellow-600">
+                                                            <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500 font-medium bg-gray-50 rounded-lg p-2 border border-gray-100 flex-1">
+                                                                <span className="flex items-center gap-1 font-bold text-yellow-600 w-[60px]">
                                                                     <TimerDisplay record={attendanceRecords[emp.id]} />
                                                                 </span>
-                                                                <span>{typeof attendanceRecords[emp.id] === 'object' && attendanceRecords[emp.id].checkInTime ? `In: ${attendanceRecords[emp.id].checkInTime}` : 'Not Checked In'}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span>In: {typeof attendanceRecords[emp.id] === 'object' && attendanceRecords[emp.id].checkInTime ? attendanceRecords[emp.id].checkInTime : '--'}</span>
+                                                                    <span>Out: {typeof attendanceRecords[emp.id] === 'object' && attendanceRecords[emp.id].checkOutTime ? attendanceRecords[emp.id].checkOutTime : '--'}</span>
+                                                                    <button
+                                                                        onClick={() => openEditModal(emp.id)}
+                                                                        className="ml-1 text-yellow-600 hover:text-yellow-700 bg-yellow-50 p-1 rounded transition-colors"
+                                                                        title="Edit manual time"
+                                                                    >
+                                                                        <Edit2 className="h-3 w-3" />
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -285,6 +365,62 @@ const SiteAttendance = ({ onLogout }) => {
             <DownloadAttendanceModal
                 isOpen={isDownloadModalOpen}
                 onClose={() => setIsDownloadModalOpen(false)}
+                targetSiteId={siteId}
+            />
+
+            {/* Edit Time Modal */}
+            {editModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl relative mt-[-10vh]">
+                        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Edit2 className="h-5 w-5 text-yellow-600" />
+                            Edit Manual Times
+                        </h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Check In Time</label>
+                                <input
+                                    type="time"
+                                    value={editModal.checkInTime}
+                                    onChange={(e) => setEditModal({ ...editModal, checkInTime: e.target.value })}
+                                    className="w-full rounded-xl border border-gray-200 py-3 px-4 text-sm font-medium text-gray-900 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 bg-gray-50"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Check Out Time</label>
+                                <input
+                                    type="time"
+                                    value={editModal.checkOutTime}
+                                    onChange={(e) => setEditModal({ ...editModal, checkOutTime: e.target.value })}
+                                    className="w-full rounded-xl border border-gray-200 py-3 px-4 text-sm font-medium text-gray-900 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 bg-gray-50"
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                onClick={() => setEditModal({ isOpen: false, empId: null, checkInTime: '', checkOutTime: '' })}
+                                className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveManualTime}
+                                className="flex-1 rounded-xl bg-yellow-600 py-2.5 text-sm font-semibold text-white hover:bg-yellow-700 transition shadow-sm"
+                            >
+                                Save Times
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* History Modal */}
+            <AttendanceHistoryModal
+                isOpen={historyModal.isOpen}
+                onClose={() => setHistoryModal({ isOpen: false, empId: null, siteId: null, empName: "" })}
+                empId={historyModal.empId}
+                siteId={historyModal.siteId}
+                empName={historyModal.empName}
             />
 
             <Footer />

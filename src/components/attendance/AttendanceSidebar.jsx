@@ -3,12 +3,15 @@ import {
     LayoutDashboard,
     CheckSquare,
     Banknote,
-    ChevronDown
+    ChevronDown,
+    Building,
+    ArrowLeft
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 const AttendanceSidebar = () => {
     const [collapsed, setCollapsed] = useState(false);
+    const location = useLocation();
 
     useEffect(() => {
         const saved = localStorage.getItem("attendanceSidebarCollapsed");
@@ -25,6 +28,18 @@ const AttendanceSidebar = () => {
         "group flex items-center gap-3 rounded-xl px-4 py-3 text-gray-600 transition-all duration-300 hover:bg-gradient-to-r hover:from-yellow-50 hover:to-yellow-100/50 hover:text-yellow-600 hover:shadow-sm hover:translate-x-1";
     const activeBase = "bg-gradient-to-r from-yellow-50 to-yellow-100/50 text-yellow-600 font-semibold shadow-md border-l-4 border-yellow-600";
     const iconCls = collapsed ? "h-6 w-6 transition-transform group-hover:scale-110" : "h-5 w-5 transition-transform group-hover:scale-110";
+
+    const isSiteContext = location.pathname.includes('/attendance/site/');
+    const isAllEmployeesContext = location.pathname.includes('/attendance/all-employees');
+
+    let siteId = null;
+    if (isSiteContext) {
+        const parts = location.pathname.split('/');
+        // Assuming path looks like /attendance/site/:id/attendance
+        siteId = parts[3];
+    }
+
+    const hasContext = isSiteContext || isAllEmployeesContext;
 
     return (
         <aside
@@ -50,45 +65,75 @@ const AttendanceSidebar = () => {
             </div>
 
             <ul className="space-y-1.5 pb-24">
-                <li className="py-2">
-                    <NavLink
-                        to="/attendance"
-                        end
-                        className={({ isActive }) =>
-                            `${linkBase} ${isActive ? activeBase : ""}`
-                        }
-                        title="Dashboard"
-                    >
-                        <LayoutDashboard className={iconCls} />
-                        {!collapsed && <span>Dashboard</span>}
-                    </NavLink>
-                </li>
+                {!hasContext ? (
+                    <>
+                        <li className="py-2">
+                            <NavLink
+                                to="/attendance"
+                                end
+                                className={({ isActive }) =>
+                                    `${linkBase} ${isActive ? activeBase : ""}`
+                                }
+                                title="Dashboard"
+                            >
+                                <LayoutDashboard className={iconCls} />
+                                {!collapsed && <span>Dashboard</span>}
+                            </NavLink>
+                        </li>
 
-                <li className="py-2">
-                    <NavLink
-                        to="/attendance/sites"
-                        className={({ isActive }) =>
-                            `${linkBase} ${isActive ? activeBase : ""}`
-                        }
-                        title="Attendance"
-                    >
-                        <CheckSquare className={iconCls} />
-                        {!collapsed && <span>Attendance</span>}
-                    </NavLink>
-                </li>
+                        <li className="py-2">
+                            <NavLink
+                                to="/attendance/sites"
+                                className={({ isActive }) =>
+                                    `${linkBase} ${isActive ? activeBase : ""}`
+                                }
+                                title="Sites & Employees"
+                            >
+                                <Building className={iconCls} />
+                                {!collapsed && <span>Sites & Employees</span>}
+                            </NavLink>
+                        </li>
+                    </>
+                ) : (
+                    <>
+                        <li className="py-2 mb-4 border-b border-gray-200 pb-4">
+                            <NavLink
+                                to="/attendance/sites"
+                                className={linkBase}
+                                title="Back to Sites"
+                            >
+                                <ArrowLeft className={iconCls} />
+                                {!collapsed && <span className="text-sm font-semibold">Back to Sites</span>}
+                            </NavLink>
+                        </li>
 
-                <li className="py-2">
-                    <NavLink
-                        to="/attendance/payroll"
-                        className={({ isActive }) =>
-                            `${linkBase} ${isActive ? activeBase : ""}`
-                        }
-                        title="Payroll"
-                    >
-                        <Banknote className={iconCls} />
-                        {!collapsed && <span>Payroll</span>}
-                    </NavLink>
-                </li>
+                        <li className="py-2">
+                            <NavLink
+                                to={isAllEmployeesContext ? '/attendance/all-employees/attendance' : `/attendance/site/${siteId}/attendance`}
+                                className={({ isActive }) =>
+                                    `${linkBase} ${isActive ? activeBase : ""}`
+                                }
+                                title="Attendance"
+                            >
+                                <CheckSquare className={iconCls} />
+                                {!collapsed && <span>Attendance</span>}
+                            </NavLink>
+                        </li>
+
+                        <li className="py-2">
+                            <NavLink
+                                to={isAllEmployeesContext ? '/attendance/all-employees/payroll' : `/attendance/site/${siteId}/payroll`}
+                                className={({ isActive }) =>
+                                    `${linkBase} ${isActive ? activeBase : ""}`
+                                }
+                                title="Payroll"
+                            >
+                                <Banknote className={iconCls} />
+                                {!collapsed && <span>Payroll</span>}
+                            </NavLink>
+                        </li>
+                    </>
+                )}
             </ul>
         </aside>
     );

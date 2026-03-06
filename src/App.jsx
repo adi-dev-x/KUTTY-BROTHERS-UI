@@ -70,17 +70,23 @@ function App() {
           path="/attendance/sites"
           element={isLoggedIn ? <AttendancePage onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
+        {/* Selected Context Routes */}
         <Route
-          path="/attendance/payroll"
-          element={isLoggedIn ? <PayrollInfo onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/attendance/site/:id"
+          path="/attendance/site/:id/attendance"
           element={isLoggedIn ? <SiteAttendance onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
         <Route
-          path="/attendance/all-employees"
+          path="/attendance/site/:id/payroll"
+          element={isLoggedIn ? <PayrollInfo onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+
+        <Route
+          path="/attendance/all-employees/attendance"
           element={isLoggedIn ? <AllEmployeesAttendance onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/attendance/all-employees/payroll"
+          element={isLoggedIn ? <PayrollInfo onLogout={handleLogout} isAllEmployees={true} /> : <Navigate to="/login" />}
         />
 
         {/* Dashboard */}

@@ -4,7 +4,8 @@ import Footer from "../footer/Footer";
 import AttendanceSidebar from "./AttendanceSidebar";
 import { database } from "../../firebase";
 import { ref, onValue, set } from "firebase/database";
-import { Users, Building, Search, Banknote, Calendar, CheckCircle } from "lucide-react";
+import { Users, Building, Search, Banknote, Calendar, CheckCircle, ArrowLeft } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
 
 const getTodayMonth = () => {
     const today = new Date();
@@ -13,7 +14,10 @@ const getTodayMonth = () => {
     return `${yyyy}-${mm}`;
 };
 
-const PayrollInfo = ({ onLogout }) => {
+const PayrollInfo = ({ onLogout, isAllEmployees }) => {
+    const { id: siteId } = useParams();
+    const navigate = useNavigate();
+
     const [sitesData, setSitesData] = useState({});
     const [allEmployees, setAllEmployees] = useState([]);
 
@@ -21,6 +25,14 @@ const PayrollInfo = ({ onLogout }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedSiteFilter, setSelectedSiteFilter] = useState("ALL");
     const [selectedMonth, setSelectedMonth] = useState(getTodayMonth());
+
+    useEffect(() => {
+        if (isAllEmployees) {
+            setSelectedSiteFilter("ALL");
+        } else if (siteId) {
+            setSelectedSiteFilter(siteId);
+        }
+    }, [isAllEmployees, siteId]);
 
     // Data Maps
     const [attendanceData, setAttendanceData] = useState({});
@@ -166,60 +178,71 @@ const PayrollInfo = ({ onLogout }) => {
                 <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
                     <div className="mx-auto max-w-7xl">
 
-                        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                                    <Banknote className="h-8 w-8 text-green-600" />
-                                    Payroll Management
-                                </h1>
-                                <p className="mt-2 text-sm text-gray-600">
-                                    Process salaries and view payment history for all employees.
-                                </p>
-                            </div>
+                        <div className="mb-8">
+                            <button
+                                onClick={() => navigate('/attendance/sites')}
+                                className="mb-4 flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
+                            >
+                                <ArrowLeft className="h-4 w-4" /> Back to Attendance Options
+                            </button>
 
-                            <div className="relative w-full sm:w-64">
-                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                                    <Calendar className="h-5 w-5 text-gray-400" />
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                                        <Banknote className="h-8 w-8 text-green-600" />
+                                        {siteId && sitesData[siteId] ? `${sitesData[siteId].name} Payroll` : 'Payroll Management'}
+                                    </h1>
+                                    <p className="mt-2 text-sm text-gray-600">
+                                        Process salaries and view payment history.
+                                    </p>
                                 </div>
-                                <input
-                                    type="month"
-                                    value={selectedMonth}
-                                    onChange={(e) => setSelectedMonth(e.target.value)}
-                                    className="block w-full rounded-xl border border-gray-200 py-3 pl-11 pr-4 text-sm font-semibold text-gray-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 transition-all bg-white shadow-sm"
-                                />
+
+                                <div className="relative w-full sm:w-64">
+                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                                        <Calendar className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="month"
+                                        value={selectedMonth}
+                                        onChange={(e) => setSelectedMonth(e.target.value)}
+                                        className="block w-full rounded-xl border border-gray-200 py-3 pl-11 pr-4 text-sm font-semibold text-gray-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 transition-all bg-white shadow-sm"
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        {/* Sites Filter Carousel */}
-                        <div className="mb-8">
-                            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Filter by Site</h2>
-                            <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbars -mx-4 px-4 sm:mx-0 sm:px-0">
-                                <button
-                                    onClick={() => setSelectedSiteFilter('ALL')}
-                                    className={`flex min-w-[160px] flex-col items-center justify-center gap-3 rounded-2xl p-6 text-center transition-all ${selectedSiteFilter === 'ALL'
+                        {/* Sites Filter Carousel (Only visible on All Employees) */}
+                        {isAllEmployees && (
+                            <div className="mb-8">
+                                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Filter by Site</h2>
+                                <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbars -mx-4 px-4 sm:mx-0 sm:px-0">
+                                    <button
+                                        onClick={() => setSelectedSiteFilter('ALL')}
+                                        className={`flex min-w-[160px] flex-col items-center justify-center gap-3 rounded-2xl p-6 text-center transition-all ${selectedSiteFilter === 'ALL'
                                             ? 'bg-gradient-to-br from-green-600 to-green-500 text-white shadow-lg shadow-green-600/30 ring-1 ring-green-700'
                                             : 'bg-white text-gray-600 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 hover:-translate-y-1'
-                                        }`}
-                                >
-                                    <Users className={`h-8 w-8 ${selectedSiteFilter === 'ALL' ? 'text-green-100' : 'text-gray-400'}`} />
-                                    <span className="font-bold text-sm">All Employees</span>
-                                </button>
-
-                                {Object.keys(sitesData).map(siteId => (
-                                    <button
-                                        key={siteId}
-                                        onClick={() => setSelectedSiteFilter(siteId)}
-                                        className={`flex min-w-[180px] flex-col items-center justify-center gap-3 rounded-2xl p-6 text-center transition-all ${selectedSiteFilter === siteId
-                                                ? 'bg-gradient-to-br from-green-600 to-green-500 text-white shadow-lg shadow-green-600/30 ring-1 ring-green-700'
-                                                : 'bg-white text-gray-600 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 hover:-translate-y-1'
                                             }`}
                                     >
-                                        <Building className={`h-8 w-8 ${selectedSiteFilter === siteId ? 'text-green-100' : 'text-gray-400'}`} />
-                                        <span className="font-bold text-sm line-clamp-2">{sitesData[siteId].name}</span>
+                                        <Users className={`h-8 w-8 ${selectedSiteFilter === 'ALL' ? 'text-green-100' : 'text-gray-400'}`} />
+                                        <span className="font-bold text-sm">All Employees</span>
                                     </button>
-                                ))}
+
+                                    {Object.keys(sitesData).map(siteId => (
+                                        <button
+                                            key={siteId}
+                                            onClick={() => setSelectedSiteFilter(siteId)}
+                                            className={`flex min-w-[180px] flex-col items-center justify-center gap-3 rounded-2xl p-6 text-center transition-all ${selectedSiteFilter === siteId
+                                                ? 'bg-gradient-to-br from-green-600 to-green-500 text-white shadow-lg shadow-green-600/30 ring-1 ring-green-700'
+                                                : 'bg-white text-gray-600 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 hover:-translate-y-1'
+                                                }`}
+                                        >
+                                            <Building className={`h-8 w-8 ${selectedSiteFilter === siteId ? 'text-green-100' : 'text-gray-400'}`} />
+                                            <span className="font-bold text-sm line-clamp-2">{sitesData[siteId].name}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Search Bar */}
                         <div className="mb-6 relative w-full sm:max-w-md">

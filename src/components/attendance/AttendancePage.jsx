@@ -63,7 +63,7 @@ const AttendancePage = ({ onLogout }) => {
           <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
 
             <Link
-              to="/attendance/all-employees"
+              to="/attendance/all-employees/attendance"
               className="rounded-xl bg-gradient-to-br from-yellow-600 to-yellow-500 p-6 text-left shadow-sm ring-1 ring-yellow-700 transition hover:-translate-y-1 hover:shadow-lg hover:shadow-yellow-600/30 text-white"
             >
               <FaUsers className="mb-3 text-3xl text-yellow-100" />
@@ -74,7 +74,7 @@ const AttendancePage = ({ onLogout }) => {
             {filteredSites.map((site) => (
               <Link
                 key={site.id}
-                to={`/attendance/site/${site.id}`}
+                to={`/attendance/site/${site.id}/attendance`}
                 className="rounded-xl bg-white p-6 text-center shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(202,138,4,0.25)] block"
               >
                 <FaMapMarkerAlt className="mx-auto mb-3 text-3xl text-yellow-600" />
