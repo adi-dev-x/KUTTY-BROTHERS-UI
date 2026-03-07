@@ -39,7 +39,7 @@ import IRLDashboard from "./components/irldashboard/IrlDashboard";
 import DashboardDetails from "./components/irldashboard/irlDashboardDetails";
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const handleLoginSuccess = () => setIsLoggedIn(true);
   const handleLogout = () => setIsLoggedIn(false);
