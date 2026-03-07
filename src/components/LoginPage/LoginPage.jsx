@@ -14,8 +14,8 @@ const LoginPage = ({ onLoginSuccess }) => {
     e.preventDefault();
 
     // ✅ Temporary credentials
-    const validUsername = "admin";
-    const validPassword = "Admin@1234";
+    const validUsername = "kuttybrothers1982@gmail.com";
+    const validPassword = "ktbs2211";
 
     if (email === validUsername && password === validPassword) {
       setError("");
