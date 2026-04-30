@@ -1,8 +1,28 @@
-import React, { useState, useEffect } from "react";
-import { FiDownload, FiPlus, FiSearch, FiX, FiChevronLeft, FiChevronRight, FiEdit2, FiTrash2 } from "react-icons/fi";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Download,
+  Plus,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Sparkles,
+  Users,
+  UserCheck,
+  Filter,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
+
+function initials(name) {
+  if (!name || typeof name !== "string") return "?";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 
 const Customer = ({ onLogout }) => {
@@ -42,19 +62,37 @@ const Customer = ({ onLogout }) => {
       });
   }, []);
 
-  // Search filter
-  const filteredCustomers = customers.filter(
-    (c) =>
-      (c.name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (c.customer_id || "").toString().includes(search) ||
-      (c.phone || "").includes(search)
+  const filteredCustomers = useMemo(
+    () =>
+      customers.filter(
+        (c) =>
+          (c.name || "").toLowerCase().includes(search.toLowerCase()) ||
+          (c.customer_id || "").toString().includes(search) ||
+          (c.phone || "").includes(search)
+      ),
+    [customers, search]
   );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredCustomers.slice(indexOfFirstItem, indexOfLastItem);
+
+  const { totalCustomers, activeCustomers, matchingLines } = useMemo(() => {
+    const active = customers.filter(
+      (c) => (c.status || "").toLowerCase() === "active"
+    ).length;
+    return {
+      totalCustomers: customers.length,
+      activeCustomers: active,
+      matchingLines: filteredCustomers.length,
+    };
+  }, [customers, filteredCustomers.length]);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -146,119 +184,220 @@ const Customer = ({ onLogout }) => {
     XLSX.writeFile(workbook, "customers_report.xlsx");
   };
 
+  const inputClass =
+    "mt-1.5 block w-full rounded-xl border border-slate-200/90 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20";
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-gray-50">
+    <div className="relative flex h-screen flex-col overflow-hidden bg-slate-50">
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_-30%,rgba(251,191,36,0.12),transparent),radial-gradient(ellipse_80%_50%_at_100%_40%,rgba(59,130,246,0.06),transparent),radial-gradient(ellipse_60%_40%_at_0%_90%,rgba(16,185,129,0.05),transparent)]"
+        aria-hidden
+      />
       <Header onLogout={onLogout} />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="relative flex flex-1 overflow-hidden">
         <Rentalsidebar />
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl space-y-6">
-            {/* Page Header */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-                <p className="text-sm text-gray-500">Manage your customer database</p>
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8">
+            {/* Hero */}
+            <section className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-6 shadow-lg shadow-slate-900/5 ring-1 ring-slate-100 sm:p-8">
+              <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-amber-100/80 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-16 left-1/3 h-48 w-48 rounded-full bg-emerald-50/90 blur-3xl" />
+              <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900">
+                    <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                    Rental workspace
+                  </div>
+                  <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                      Customers
+                    </h1>
+                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
+                      Manage renters and billing contacts in one place—search, export, and onboard new customers quickly.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleAddClick}
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-500/25 transition hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-white"
+                  >
+                    <Plus className="h-4 w-4" strokeWidth={2.5} />
+                    Add customer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadExcel}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export Excel
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleAddClick}
-                  className="inline-flex items-center gap-2 rounded-lg bg-yellow-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
-                >
-                  <FiPlus className="h-4 w-4" /> Add Customer
-                </button>
-                <button
-                  onClick={handleDownloadExcel}
-                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
-                >
-                  <FiDownload className="h-4 w-4" /> Export Excel
-                </button>
-              </div>
-            </div>
 
-            {/* Search Bar */}
-            <div className="relative max-w-md">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <FiSearch className="h-5 w-5 text-gray-400" />
+              {/* Stats */}
+              <div className="relative mt-8 grid gap-4 sm:grid-cols-3">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                      <Users className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Total customers
+                      </p>
+                      <p className="text-2xl font-bold tabular-nums text-slate-900">{totalCustomers}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                      <UserCheck className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Active accounts
+                      </p>
+                      <p className="text-2xl font-bold tabular-nums text-slate-900">{activeCustomers}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+                      <Filter className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Matching filter
+                      </p>
+                      <p className="text-2xl font-bold tabular-nums text-slate-900">{filteredCustomers.length}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
+            </section>
+
+            {/* Search */}
+            <div className="relative max-w-xl">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search by name, ID, or phone..."
-                className="block w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-3 text-sm placeholder-gray-500 shadow-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500"
+                placeholder="Search by name, customer ID, or phone..."
+                className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setCurrentPage(1); // Reset to first page on search
+                  setCurrentPage(1);
                 }}
               />
             </div>
 
-            {/* Content Area */}
+            {/* Table card */}
             {loading ? (
-              <div className="flex h-64 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-yellow-600 border-t-transparent"></div>
-                  <p className="text-sm font-medium text-gray-500">Loading customers...</p>
-                </div>
+              <div className="flex min-h-[280px] flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-sm">
+                <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-amber-500 border-t-transparent" />
+                <p className="mt-4 text-sm font-medium text-slate-500">Loading customers…</p>
               </div>
             ) : (
-              <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
+              <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg shadow-slate-900/5">
+                <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-6 py-4 sm:px-8">
+                  <h2 className="text-base font-semibold text-slate-900">Directory</h2>
+                  <p className="text-sm text-slate-500">
+                    {filteredCustomers.length} record{filteredCustomers.length !== 1 ? "s" : ""}{" "}
+                    {search ? " match your search" : " in total"}
+                  </p>
+                </div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">ID</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Contact</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Type</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">GST</th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-
+                  <table className="min-w-full border-collapse [&_td]:border-r [&_td]:border-slate-200 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-slate-200 [&_th:last-child]:border-r-0">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-100 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                        <th className="whitespace-nowrap px-6 py-4 sm:px-8">ID</th>
+                        <th className="whitespace-nowrap px-6 py-4 sm:px-8">Customer</th>
+                        <th className="whitespace-nowrap px-6 py-4 sm:px-8">Contact</th>
+                        <th className="whitespace-nowrap px-6 py-4 sm:px-8">Type</th>
+                        <th className="whitespace-nowrap px-6 py-4 sm:px-8">GST</th>
+                        <th className="whitespace-nowrap px-6 py-4 sm:px-8">Status</th>
+                        <th className="whitespace-nowrap px-6 py-4 text-right sm:px-8">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
+                    <tbody className="divide-y divide-slate-100">
                       {currentItems.length > 0 ? (
-                        currentItems.map((customer) => (
-                          <tr key={customer.customer_id} className="transition-colors hover:bg-gray-50">
-                            <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                        currentItems.map((customer, idx) => (
+                          <tr
+                            key={customer.customer_id}
+                            className={
+                              "transition-colors hover:bg-amber-50/40 " +
+                              (idx % 2 === 1 ? "bg-slate-50/40" : "bg-white")
+                            }
+                          >
+                            <td className="whitespace-nowrap px-6 py-4 text-sm font-mono text-slate-500 sm:px-8">
                               #{customer.customer_id}
                             </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-gray-900">{customer.name}</span>
-                                <span className="text-xs text-gray-500">{customer.short_name}</span>
+                            <td className="px-6 py-4 sm:px-8">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-xs font-bold text-slate-950 shadow-inner">
+                                  {initials(customer.name)}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate font-medium text-slate-900">{customer.name}</p>
+                                  {customer.short_name ? (
+                                    <p className="truncate text-xs text-slate-500">{customer.short_name}</p>
+                                  ) : null}
+                                </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className="text-sm text-gray-900">{customer.phone}</span>
-                                <span className="text-xs text-gray-500">{customer.email}</span>
-                              </div>
+                            <td className="max-w-[220px] px-6 py-4 sm:px-8">
+                              <p className="truncate text-sm text-slate-800">{customer.phone || "—"}</p>
+                              {customer.email ? (
+                                <p className="truncate text-xs text-slate-500">{customer.email}</p>
+                              ) : null}
                             </td>
-                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                              {customer.type}
+                            <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600 sm:px-8">
+                              {customer.type || "—"}
                             </td>
-                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                              {customer.gst || "-"}
+                            <td className="whitespace-nowrap px-6 py-4 font-mono text-sm text-slate-600 sm:px-8">
+                              {customer.gst || "—"}
                             </td>
-                            <td className="whitespace-nowrap px-6 py-4">
+                            <td className="whitespace-nowrap px-6 py-4 sm:px-8">
                               <span
-                                className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${customer.status === "Active"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
+                                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${(customer.status || "").toLowerCase() === "active"
+                                  ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/15"
+                                  : "bg-rose-50 text-rose-700 ring-1 ring-rose-600/15"
                                   }`}
                               >
-                                {customer.status}
+                                {customer.status || "—"}
                               </span>
                             </td>
-
+                            <td className="whitespace-nowrap px-6 py-4 text-right sm:px-8">
+                              <button
+                                type="button"
+                                onClick={() => handleEdit(customer)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit
+                              </button>
+                            </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="6" className="px-6 py-8 text-center text-sm text-gray-500">
-                            No customers found matching your search.
+                          <td colSpan={7} className="px-6 py-16 text-center">
+                            <div className="mx-auto max-w-sm">
+                              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                                <Search className="h-7 w-7" />
+                              </div>
+                              <p className="text-sm font-medium text-slate-900">No customers found</p>
+                              <p className="mt-1 text-sm text-slate-500">
+                                Try adjusting your search or add a new customer to get started.
+                              </p>
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -266,49 +405,49 @@ const Customer = ({ onLogout }) => {
                   </table>
                 </div>
 
-                {/* Pagination */}
-                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
-                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm text-gray-700">
-                        Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{" "}
-                        <span className="font-medium">{Math.min(indexOfLastItem, filteredCustomers.length)}</span> of{" "}
-                        <span className="font-medium">{filteredCustomers.length}</span> results
-                      </p>
-                    </div>
-                    <div>
-                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                        <button
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          disabled={currentPage === 1}
-                          className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <span className="sr-only">Previous</span>
-                          <FiChevronLeft className="h-5 w-5" aria-hidden="true" />
-                        </button>
-                        {Array.from({ length: totalPages }, (_, i) => (
-                          <button
-                            key={i + 1}
-                            onClick={() => handlePageChange(i + 1)}
-                            className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === i + 1
-                              ? "z-10 bg-yellow-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
-                              : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                              }`}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          disabled={currentPage === totalPages}
-                          className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <span className="sr-only">Next</span>
-                          <FiChevronRight className="h-5 w-5" aria-hidden="true" />
-                        </button>
-                      </nav>
-                    </div>
-                  </div>
+                <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/80 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                  <p className="text-center text-sm text-slate-600 sm:text-left">
+                    Showing{" "}
+                    <span className="font-semibold text-slate-900">{filteredCustomers.length === 0 ? 0 : indexOfFirstItem + 1}</span>{" "}
+                    to{" "}
+                    <span className="font-semibold text-slate-900">
+                      {Math.min(indexOfLastItem, filteredCustomers.length)}
+                    </span>{" "}
+                    of <span className="font-semibold text-slate-900">{filteredCustomers.length}</span>
+                  </p>
+                  <nav className="flex justify-center gap-1 sm:justify-end" aria-label="Pagination">
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1 || totalPages === 0}
+                      className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <span className="sr-only">Previous</span>
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <button
+                        type="button"
+                        key={i + 1}
+                        onClick={() => handlePageChange(i + 1)}
+                        className={`min-w-[2.5rem] rounded-lg px-3 py-2 text-sm font-semibold transition ${currentPage === i + 1
+                          ? "bg-amber-600 text-white shadow-md shadow-amber-500/20"
+                          : "border border-transparent text-slate-700 hover:bg-white hover:shadow-sm"
+                          }`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      className="inline-flex items-center rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <span className="sr-only">Next</span>
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </nav>
                 </div>
               </div>
             )}
@@ -316,100 +455,104 @@ const Customer = ({ onLogout }) => {
         </main>
       </div>
 
-      {/* Modal Form */}
+      {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-2xl rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {editingCustomer ? "Edit Customer" : "Add New Customer"}
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-amber-100 bg-gradient-to-r from-amber-50 via-white to-amber-50/50 px-6 py-5 sm:px-8">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">
+                  {editingCustomer ? "Edit customer" : "New customer"}
+                </h2>
+                <p className="mt-0.5 text-sm text-slate-600">
+                  {editingCustomer ? "Update details below." : "Fill in the essentials to create a profile."}
+                </p>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+                className="rounded-xl bg-slate-100 p-2 text-slate-600 transition hover:bg-slate-200 hover:text-slate-900"
+                aria-label="Close"
               >
-                <FiX className="h-5 w-5" />
+                <X className="h-5 w-5" strokeWidth={2.5} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-8 p-6 sm:p-8">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700">Name</label>
+                <div className="sm:col-span-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Full name
+                  </label>
                   <input
                     type="text"
                     required
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 sm:text-sm"
+                    className={inputClass}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
                 </div>
-
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700">Short Name</label>
+                <div className="sm:col-span-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Short name
+                  </label>
                   <input
                     type="text"
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 sm:text-sm"
+                    className={inputClass}
                     value={formData.short_name}
                     onChange={(e) => setFormData({ ...formData, short_name: e.target.value })}
                   />
                 </div>
-
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700">Phone</label>
+                <div className="sm:col-span-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Phone</label>
                   <input
                     type="text"
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 sm:text-sm"
+                    className={inputClass}
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   />
                 </div>
-
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                <div className="sm:col-span-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</label>
                   <input
                     type="email"
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 sm:text-sm"
+                    className={inputClass}
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
                 </div>
-
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700">Type</label>
+                <div className="sm:col-span-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Type</label>
                   <input
                     type="text"
                     placeholder="Individual / Company"
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 sm:text-sm"
+                    className={inputClass}
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   />
                 </div>
-
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700">GST Number</label>
+                <div className="sm:col-span-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">GST number</label>
                   <input
                     type="text"
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 sm:text-sm"
+                    className={inputClass}
                     value={formData.gst}
                     onChange={(e) => setFormData({ ...formData, gst: e.target.value })}
                   />
                 </div>
-
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700">Address</label>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Address</label>
                   <textarea
                     rows={3}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 sm:text-sm"
+                    className={inputClass + " resize-y"}
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   />
                 </div>
-
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700">Status</label>
+                <div className="sm:col-span-2 sm:max-w-xs">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</label>
                   <select
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 sm:text-sm"
+                    className={inputClass}
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                   >
@@ -419,19 +562,19 @@ const Customer = ({ onLogout }) => {
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+                  className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/30"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-yellow-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+                  className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-500/25 transition hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
                 >
-                  {editingCustomer ? "Update Customer" : "Save Customer"}
+                  {editingCustomer ? "Update customer" : "Save customer"}
                 </button>
               </div>
             </form>

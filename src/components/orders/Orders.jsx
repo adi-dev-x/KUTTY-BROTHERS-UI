@@ -1,11 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { FiDownload, FiPlus, FiTrash2 } from "react-icons/fi";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Download,
+  Plus,
+  Trash2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import * as XLSX from "xlsx";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import OrderForm from "./OrderForm";
+
+const fieldSelect =
+  "rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-800 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20";
+
+const thClass =
+  "whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-600";
 
 const Orders = ({ onLogout }) => {
   const [orders, setOrders] = useState([]);
@@ -17,7 +30,6 @@ const Orders = ({ onLogout }) => {
   const rowsPerPage = 8;
   const navigate = useNavigate();
 
-  // Fetch orders
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -48,13 +60,11 @@ const Orders = ({ onLogout }) => {
     fetchStatuses();
   }, []);
 
-  // Add new order locally
   const handleAddOrder = (newOrder) => {
     setOrders([...orders, newOrder]);
     setShowForm(false);
   };
 
-  // Update status
   const handleStatusChange = async (delivery_id, newStatus) => {
     try {
       await axios.get(
@@ -71,7 +81,6 @@ const Orders = ({ onLogout }) => {
     }
   };
 
-  // Delete order
   const handleDelete = async (delivery_id) => {
     try {
       await axios.get(
@@ -107,191 +116,264 @@ const Orders = ({ onLogout }) => {
     XLSX.writeFile(workbook, "orders_report.xlsx");
   };
 
-  const filteredOrders = orders.filter(
-    (o) =>
-      (o.customer_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (o.customer_id || "").toLowerCase().includes(search.toLowerCase()) ||
-      (o.status || "").toLowerCase().includes(search.toLowerCase())
+  const filteredOrders = useMemo(
+    () =>
+      orders.filter(
+        (o) =>
+          (o.customer_name || "").toLowerCase().includes(search.toLowerCase()) ||
+          (o.customer_id || "").toLowerCase().includes(search.toLowerCase()) ||
+          (o.status || "").toLowerCase().includes(search.toLowerCase())
+      ),
+    [orders, search]
   );
 
-  // Pagination
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const { totalOrders, matchingLines, completedCount } = useMemo(() => ({
+    totalOrders: orders.length,
+    matchingLines: filteredOrders.length,
+    completedCount: orders.filter((o) => (o.status || "").toUpperCase() === "COMPLETED").length,
+  }), [orders, filteredOrders.length]);
+
   const indexOfLastRow = currentPage * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
   const currentRows = filteredOrders.slice(indexOfFirstRow, indexOfLastRow);
   const totalPages = Math.ceil(filteredOrders.length / rowsPerPage);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="relative flex h-screen flex-col overflow-hidden bg-slate-50">
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_-30%,rgba(251,191,36,0.08),transparent)]"
+        aria-hidden
+      />
       <Header onLogout={onLogout} />
-      <div className="flex flex-1 overflow-hidden bg-gray-100">
+
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <Rentalsidebar />
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="mb-4 flex items-center gap-3">
-            <input
-              type="text"
-              placeholder="Search orders..."
-              className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none ring-yellow-600/20 transition focus:border-yellow-600 focus:ring-2"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <button className="inline-flex items-center gap-2 rounded-lg bg-yellow-600 px-3 py-2 text-sm font-semibold text-white hover:bg-yellow-700" onClick={() => setShowForm(!showForm)}>
-              <FiPlus /> Add Order
-            </button>
-            <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" onClick={handleDownloadExcel}>
-              <FiDownload /> Download Excel
-            </button>
-          </div>
 
-          {showForm && (
-            <OrderForm
-              onAddOrder={handleAddOrder}
-              onClose={() => setShowForm(false)}
-            />
-          )}
-
-          {loading ? (
-            <p className="text-gray-600">Loading orders...</p>
-          ) : (
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-              <h3 className="mb-3 text-lg font-semibold text-gray-900">Orders Report</h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-gray-600">
-                    <tr>
-                      <th className="px-4 py-2 text-left">S.No</th>
-                      <th className="px-4 py-2 text-left">Customer Name</th>
-                      <th className="px-4 py-2 text-left">Customer ID</th>
-                      <th className="px-4 py-2 text-left">Contact Person</th>
-                      <th className="px-4 py-2 text-left">Contact Number</th>
-                      <th className="px-4 py-2 text-left">Shipping Address</th>
-                      <th className="px-4 py-2 text-left">Inventory ID</th>
-                      <th className="px-4 py-2 text-left">Generated Amount</th>
-                      <th className="px-4 py-2 text-left">Current Amount</th>
-                      <th className="px-4 py-2 text-left">Advance Amount</th>
-                      <th className="px-4 py-2 text-left">Placed At</th>
-                      <th className="px-4 py-2 text-left">Returned At</th>
-                      <th className="px-4 py-2 text-left">Transactions</th>
-                      <th className="px-4 py-2 text-left">Status</th>
-                      <th className="px-4 py-2 text-left">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {currentRows.map((o, i) => (
-                      <tr
-                        key={o.delivery_id}
-                        onClick={() => navigate(`/order-details/${o.delivery_id}`)}
-                        className="cursor-pointer hover:bg-yellow-50/40"
-                      >
-                        <td className="px-4 py-2">{indexOfFirstRow + i + 1}</td>
-                        <td className="px-4 py-2">{o.customer_name || "-"}</td>
-                        <td className="px-4 py-2">{o.customer_id || "-"}</td>
-                        <td className="px-4 py-2">{o.contact_name || "-"}</td>
-                        <td className="px-4 py-2">{o.contact_number || "-"}</td>
-                        <td className="px-4 py-2">{o.shipping_address || "-"}</td>
-                        <td className="px-4 py-2">{o.inventory_id || "-"}</td>
-                        <td className="px-4 py-2">{o.generated_amount || "-"}</td>
-                        <td className="px-4 py-2">{o.current_amount || "-"}</td>
-                        <td className="px-4 py-2">{o.advance_amount || "-"}</td>
-                        <td className="px-4 py-2">{o.placed_at || "-"}</td>
-                        <td className="px-4 py-2">{o.declined_at || "-"}</td>
-                        <td className="px-4 py-2">
-                          <button
-                            className="rounded-md border border-gray-300 px-3 py-1.5 text-gray-700 transition hover:bg-gray-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate("/transaction", {
-                                state: { order_id: o.delivery_id },
-                              });
-                            }}
-                          >
-                            View Transaction
-                          </button>
-                        </td>
-                        <td className="px-4 py-2">
-                          <select
-                            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
-                            value={o.status}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) =>
-                              handleStatusChange(o.delivery_id, e.target.value)
-                            }
-                          >
-                            {statuses.map((s) => (
-                              <option key={s} value={s}>
-                                {s}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="px-4 py-2">
-                          <button
-                            className="rounded-md bg-red-600 px-3 py-1.5 text-white transition hover:bg-red-700"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(o.delivery_id);
-                            }}
-                          >
-                            <FiTrash2 />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 sm:p-3">
+            <div className="shrink-0 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+              <div className="px-3 py-1.5">
+                <h1 className="text-sm font-semibold text-slate-900">Orders</h1>
               </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
-                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm text-gray-700">
-                        Showing <span className="font-medium">{indexOfFirstRow + 1}</span> to{" "}
-                        <span className="font-medium">{Math.min(indexOfLastRow, filteredOrders.length)}</span> of{" "}
-                        <span className="font-medium">{filteredOrders.length}</span> results
-                      </p>
-                    </div>
-                    <div>
-                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                        <button
-                          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                          disabled={currentPage === 1}
-                          className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <span className="sr-only">Previous</span>
-                          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                        {Array.from({ length: totalPages }, (_, i) => (
-                          <button
-                            key={i + 1}
-                            onClick={() => setCurrentPage(i + 1)}
-                            className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === i + 1
-                              ? "z-10 bg-yellow-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600"
-                              : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                              }`}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                          disabled={currentPage === totalPages}
-                          className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <span className="sr-only">Next</span>
-                          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </nav>
-                    </div>
-                  </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-1.5">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600">
+                  <span className="tabular-nums">
+                    <span className="text-slate-400">Total orders</span>{" "}
+                    <span className="font-semibold text-slate-900">{totalOrders}</span>
+                  </span>
+                  <span className="tabular-nums">
+                    <span className="text-slate-400">Matching search</span>{" "}
+                    <span className="font-semibold text-slate-900">{matchingLines}</span>
+                  </span>
+                  <span className="tabular-nums">
+                    <span className="text-slate-400">Completed</span>{" "}
+                    <span className="font-semibold text-slate-900">{completedCount}</span>
+                  </span>
                 </div>
-              )}
+                <div className="relative min-w-[min(100%,10rem)] flex-1 basis-[8rem]">
+                  <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search…"
+                    className="w-full rounded-md border border-slate-200 bg-slate-50 py-1 pl-7 pr-2 text-[11px] text-slate-900 placeholder:text-slate-400 focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500/25"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(true)}
+                    className="inline-flex items-center gap-1 rounded-md bg-amber-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-amber-700"
+                  >
+                    <Plus className="h-3 w-3" strokeWidth={2.5} />
+                    Add order
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadExcel}
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <Download className="h-3 w-3" />
+                    Export Excel
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
+
+            {showForm && (
+              <OrderForm onAddOrder={handleAddOrder} onClose={() => setShowForm(false)} />
+            )}
+
+            {loading ? (
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-lg border border-slate-200 bg-white">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                <p className="mt-3 text-xs font-medium text-slate-500">Loading…</p>
+              </div>
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                <div className="min-h-0 flex-1 overflow-auto">
+                  <table className="min-w-full border-collapse text-xs [&_td]:border-r [&_td]:border-slate-200 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-slate-200 [&_th:last-child]:border-r-0">
+                    <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-100">
+                      <tr>
+                        <th className={thClass}>#</th>
+                        <th className={thClass}>Customer</th>
+                        <th className={thClass}>Cust. ID</th>
+                        <th className={thClass}>Contact</th>
+                        <th className={thClass}>Phone</th>
+                        <th className={thClass}>Address</th>
+                        <th className={thClass}>Inventory</th>
+                        <th className={thClass}>Gen. amt</th>
+                        <th className={thClass}>Current</th>
+                        <th className={thClass}>Advance</th>
+                        <th className={thClass}>Placed</th>
+                        <th className={thClass}>Returned</th>
+                        <th className={thClass}>Transactions</th>
+                        <th className={thClass}>Status</th>
+                        <th className={`${thClass} text-right`}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {currentRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={15} className="px-6 py-16 text-center">
+                            <div className="mx-auto max-w-sm">
+                              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                                <Search className="h-7 w-7" />
+                              </div>
+                              <p className="text-sm font-medium text-slate-900">No orders found</p>
+                              <p className="mt-1 text-sm text-slate-500">Try another search or add an order.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        currentRows.map((o, i) => (
+                          <tr
+                            key={o.delivery_id}
+                            onClick={() => navigate(`/order-details/${o.delivery_id}`)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                navigate(`/order-details/${o.delivery_id}`);
+                              }
+                            }}
+                            className={`cursor-pointer transition-colors hover:bg-amber-50/50 focus:bg-amber-50/50 focus:outline-none ${(indexOfFirstRow + i) % 2 === 1 ? "bg-slate-50/50" : "bg-white"}`}
+                          >
+                            <td className="whitespace-nowrap px-2 py-2 font-mono text-slate-500">{indexOfFirstRow + i + 1}</td>
+                            <td className="max-w-[120px] truncate px-2 py-2 font-medium text-slate-900" title={o.customer_name}>{o.customer_name || "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 text-slate-700">{o.customer_id || "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 text-slate-700">{o.contact_name || "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 text-slate-700">{o.contact_number || "—"}</td>
+                            <td className="max-w-[140px] truncate px-2 py-2 text-slate-600" title={o.shipping_address}>{o.shipping_address || "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-slate-600">{o.inventory_id || "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{o.generated_amount ?? "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{o.current_amount ?? "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{o.advance_amount ?? "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 text-[11px] text-slate-600">{o.placed_at || "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 text-[11px] text-slate-600">{o.declined_at || "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-amber-200 hover:bg-amber-50 hover:text-amber-900"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate("/transaction", {
+                                    state: { order_id: o.delivery_id },
+                                  });
+                                }}
+                              >
+                                View
+                              </button>
+                            </td>
+                            <td className="whitespace-nowrap px-2 py-2" onClick={(e) => e.stopPropagation()}>
+                              <select
+                                className={fieldSelect}
+                                value={o.status}
+                                onChange={(e) =>
+                                  handleStatusChange(o.delivery_id, e.target.value)
+                                }
+                              >
+                                {statuses.map((s) => (
+                                  <option key={s} value={s}>
+                                    {s}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="whitespace-nowrap px-2 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center rounded-md border border-rose-200 bg-rose-50 p-1.5 text-rose-700 transition hover:bg-rose-100"
+                                title="Delete order"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(o.delivery_id);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/90 px-3 py-2">
+                    <p className="text-xs text-slate-600">
+                      <span className="font-semibold text-slate-900">{matchingLines === 0 ? 0 : indexOfFirstRow + 1}</span>
+                      –
+                      <span className="font-semibold text-slate-900">{Math.min(indexOfLastRow, matchingLines)}</span>
+                      {" "}of{" "}
+                      <span className="font-semibold text-slate-900">{matchingLines}</span>
+                    </p>
+                    <nav className="flex items-center gap-0.5" aria-label="Pagination">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="inline-flex items-center rounded-md border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <span className="sr-only">Previous</span>
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      {Array.from({ length: totalPages }, (_, idx) => (
+                        <button
+                          type="button"
+                          key={idx + 1}
+                          onClick={() => setCurrentPage(idx + 1)}
+                          className={`min-w-[2rem] rounded-md px-2 py-1 text-xs font-semibold ${currentPage === idx + 1
+                            ? "bg-amber-600 text-white"
+                            : "text-slate-700 hover:bg-white"
+                            }`}
+                        >
+                          {idx + 1}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="inline-flex items-center rounded-md border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <span className="sr-only">Next</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </nav>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </main>
       </div>
     </div>
   );
