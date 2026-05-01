@@ -4,6 +4,23 @@ import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import Footer from "../footer/Footer";
 
+function pickHsnFromRow(s) {
+  if (!s || typeof s !== "object") return "";
+  const v =
+    s.hsn_code ??
+    s.hsnCode ??
+    s.HSN_Code ??
+    s.HSNCode ??
+    s.hsn ??
+    s.HSN ??
+    s.gst_hsn ??
+    s.gst_hsn_code ??
+    s.item_hsn_code ??
+    s.Item_HSN_Code ??
+    "";
+  return v === null || v === undefined ? "" : String(v).trim();
+}
+
 const StockDetail = ({ onLogout }) => {
   // ✅ now using sub_code instead of item_code
   const { sub_code } = useParams();
@@ -13,13 +30,18 @@ const StockDetail = ({ onLogout }) => {
 
   useEffect(() => {
     // ✅ updated API call to use sub_code
-    console.log(`https://ems.binlaundry.com/irrl/genericApiUnjoin/productSingle?sub_code='${sub_code}'`)
     fetch(
       `https://ems.binlaundry.com/irrl/genericApiUnjoin/productSingle?sub_code='${sub_code}'`
     )
       .then((res) => res.json())
       .then((data) => {
-        if (data.data) setStocks(data.data);
+        const rows = Array.isArray(data?.data) ? data.data : [];
+        setStocks(
+          rows.map((row) => ({
+            ...row,
+            hsn_code: pickHsnFromRow(row),
+          }))
+        );
         setLoading(false);
       })
       .catch((err) => {
@@ -86,6 +108,7 @@ const StockDetail = ({ onLogout }) => {
     "Description",
     "Item Code",
     "Sub Code",
+    "HSN Code",
     "Category",
     "Created At",
   ];
@@ -121,6 +144,7 @@ const StockDetail = ({ onLogout }) => {
                     <td className="px-4 py-2">{s.description}</td>
                     <td className="px-4 py-2">{s.item_code}</td>
                     <td className="px-4 py-2">{s.sub_code}</td>
+                    <td className="px-4 py-2">{pickHsnFromRow(s) || "—"}</td>
                     <td className="px-4 py-2">{s.category}</td>
                     <td className="px-4 py-2">{new Date(s.created_at).toLocaleString()}</td>
                   </tr>

@@ -90,23 +90,38 @@ const StockReport = ({ onLogout }) => {
     description: "",
     main_code: "",
     sub_code: "",
+    hsn_code: "",
     add_count: "",
     status: "AVAILABLE",
   });
 
   const navigate = useNavigate();
 
-  // Normalize stock
+  // Normalize stock (API field names vary — collect HSN from common keys)
   const normalizeStock = (s) => {
+    if (!s || typeof s !== "object") return s;
     const maybeSub =
-      s?.sub_code ??
-      s?.subCode ??
-      s?.subcode ??
-      s?.new_sub_code ??
-      s?.inventory_id ??
-      s?.main_code ??
+      s.sub_code ??
+      s.subCode ??
+      s.subcode ??
+      s.new_sub_code ??
+      s.inventory_id ??
+      s.main_code ??
       "";
-    return { ...s, sub_code: maybeSub };
+    const hsn =
+      s.hsn_code ??
+      s.hsnCode ??
+      s.HSN_Code ??
+      s.HSNCode ??
+      s.hsn ??
+      s.HSN ??
+      s.gst_hsn ??
+      s.gst_hsn_code ??
+      s.item_hsn_code ??
+      s.Item_HSN_Code ??
+      "";
+    const hsnStr = hsn === null || hsn === undefined ? "" : String(hsn).trim();
+    return { ...s, sub_code: maybeSub, hsn_code: hsnStr };
   };
 
   // Total sum for an item
@@ -185,6 +200,7 @@ const StockReport = ({ onLogout }) => {
         description: formData.description,
         main_code: formData.main_code,
         sub_code: formData.sub_code,
+        hsn_code: formData.hsn_code?.trim() || undefined,
         units: Number(formData.add_count),
         category: formData.status,
       };
@@ -219,6 +235,7 @@ const StockReport = ({ onLogout }) => {
       "Description": s.description,
       "Main Code": s.main_code,
       "Sub Code": s.sub_code,
+      "HSN Code": s.hsn_code ?? "",
       "Available": s.available_count || 0,
       "Rented": s.rented_count || 0,
       "Damaged": s.damaged_count || 0,
@@ -242,7 +259,8 @@ const StockReport = ({ onLogout }) => {
       const name = (s.item_name || "").toLowerCase();
       const brand = (s.brand || "").toLowerCase();
       const code = (s.sub_code || "").toLowerCase();
-      return name.includes(q) || brand.includes(q) || code.includes(q);
+      const hsn = (s.hsn_code || "").toLowerCase();
+      return name.includes(q) || brand.includes(q) || code.includes(q) || hsn.includes(q);
     });
   }, [stocks, search]);
 
@@ -423,6 +441,19 @@ const StockReport = ({ onLogout }) => {
                       </div>
 
                       <div className="sm:col-span-2">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">HSN code</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          value={formData.hsn_code}
+                          onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
+                          className={formFieldClass}
+                          placeholder="e.g. 9967"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
                         <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Description</label>
                         <input
                           type="text"
@@ -498,6 +529,7 @@ const StockReport = ({ onLogout }) => {
                         <th className={thClass}>Description</th>
                         <th className={thClass}>Main code</th>
                         <th className={thClass}>Sub code</th>
+                        <th className={thClass}>HSN code</th>
                         <th className={thClass}>Avail.</th>
                         <th className={thClass}>Rented</th>
                         <th className={thClass}>Damaged</th>
@@ -512,7 +544,7 @@ const StockReport = ({ onLogout }) => {
                     <tbody className="divide-y divide-slate-100">
                       {currentItems.length === 0 ? (
                         <tr>
-                          <td colSpan={17} className="px-6 py-16 text-center">
+                          <td colSpan={18} className="px-6 py-16 text-center">
                             <div className="mx-auto max-w-sm">
                               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
                                 <Search className="h-7 w-7" />
@@ -549,6 +581,7 @@ const StockReport = ({ onLogout }) => {
                             </td>
                             <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-slate-600">{item.main_code || "—"}</td>
                             <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] font-medium text-amber-800">{item.sub_code || "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-slate-700">{item.hsn_code || "—"}</td>
                             <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.available_count ?? "—"}</td>
                             <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.rented_count ?? "—"}</td>
                             <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.damaged_count ?? "—"}</td>

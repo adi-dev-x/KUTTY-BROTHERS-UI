@@ -38,11 +38,37 @@ import TransactionDetails from "./components/transactions/TransactionDetails";
 import IRLDashboard from "./components/irldashboard/IrlDashboard";
 import DashboardDetails from "./components/irldashboard/irlDashboardDetails";
 
-function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const AUTH_STORAGE_KEY = "kb_session_logged_in";
 
-  const handleLoginSuccess = () => setIsLoggedIn(true);
-  const handleLogout = () => setIsLoggedIn(false);
+function readStoredLogin() {
+  try {
+    return localStorage.getItem(AUTH_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function persistLogin(active) {
+  try {
+    if (active) localStorage.setItem(AUTH_STORAGE_KEY, "1");
+    else localStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    /* private mode / quota */
+  }
+}
+
+function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(readStoredLogin);
+
+  const handleLoginSuccess = () => {
+    persistLogin(true);
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    persistLogin(false);
+    setIsLoggedIn(false);
+  };
 
   return (
     <Router>

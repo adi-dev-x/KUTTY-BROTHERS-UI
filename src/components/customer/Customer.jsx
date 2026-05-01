@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Download,
   Plus,
@@ -7,10 +7,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Pencil,
+  Trash2,
   Sparkles,
   Users,
   UserCheck,
   Filter,
+  AlertTriangle,
+  CheckCircle,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import Header from "../header/Header";
@@ -24,6 +27,29 @@ function initials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+const CUSTOMERS_API = "https://ems.binlaundry.com/irrl/customers";
+const GENERIC_DELETE_URL = "https://ems.binlaundry.com/irrl/genericDelete";
+/** DB table name for genericDelete payload (`table_name`). Change if your backend expects another identifier. */
+const CUSTOMER_TABLE_NAME = "customer";
+
+function parseJsonSafe(raw) {
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Handles shapes like `{ "msg": { "error": "..." } }` from the EMS API. */
+function apiErrorMessage(body, rawFallback) {
+  if (body?.msg != null && typeof body.msg === "object" && body.msg.error != null) {
+    return String(body.msg.error);
+  }
+  if (typeof body?.msg === "string") return body.msg;
+  if (body?.message != null) return String(body.message);
+  if (typeof body?.error === "string") return body.error;
+  return rawFallback?.trim() || "Request failed";
+}
 
 const Customer = ({ onLogout }) => {
   const [customers, setCustomers] = useState([]);
@@ -31,6 +57,12 @@ const Customer = ({ onLogout }) => {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  /** Customer awaiting delete confirmation — modal open when set */
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  /** Bottom toast after delete or fatal validation */
+  const [notice, setNotice] = useState(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -77,6 +109,32 @@ const Customer = ({ onLogout }) => {
     setCurrentPage(1);
   }, [search]);
 
+  useEffect(() => {
+    const tp = Math.ceil(filteredCustomers.length / itemsPerPage) || 1;
+    setCurrentPage((p) => Math.min(p, tp));
+  }, [filteredCustomers.length, itemsPerPage]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4200);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  const closeDeleteModal = useCallback(() => {
+    if (deletingId) return;
+    setDeleteTarget(null);
+    setDeleteError(null);
+  }, [deletingId]);
+
+  useEffect(() => {
+    if (!deleteTarget || deletingId) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") closeDeleteModal();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [deleteTarget, deletingId, closeDeleteModal]);
+
   // Pagination logic
   const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -114,6 +172,63 @@ const Customer = ({ onLogout }) => {
     setShowForm(true);
   };
 
+  const openDeleteModal = (customer) => {
+    const id = customer?.customer_id;
+    if (id == null || id === "") {
+      setNotice({
+        variant: "error",
+        title: "Cannot delete",
+        message: "This row has no customer id.",
+      });
+      return;
+    }
+    setDeleteError(null);
+    setDeleteTarget(customer);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.customer_id;
+    const idStr = String(id);
+    const label = deleteTarget.name || `Customer #${idStr}`;
+
+    setDeleteError(null);
+    setDeletingId(idStr);
+    try {
+      const res = await fetch(GENERIC_DELETE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          table_name: CUSTOMER_TABLE_NAME,
+          id: idStr,
+        }),
+      });
+
+      const raw = await res.text();
+      const body = parseJsonSafe(raw);
+
+      if (!res.ok) {
+        throw new Error(apiErrorMessage(body, raw) || `HTTP ${res.status}`);
+      }
+      if (body?.msg?.error != null) {
+        throw new Error(apiErrorMessage(body, raw));
+      }
+
+      setCustomers((prev) => prev.filter((c) => String(c.customer_id) !== idStr));
+      setDeleteTarget(null);
+      setNotice({
+        variant: "success",
+        title: "Customer removed",
+        message: `${label} was deleted successfully.`,
+      });
+    } catch (err) {
+      console.error("Error deleting customer:", err);
+      setDeleteError(err?.message || "Delete failed. Try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
     setFormData({
@@ -146,7 +261,7 @@ const Customer = ({ onLogout }) => {
     };
 
     try {
-      const res = await fetch("https://ems.binlaundry.com/irrl/customers", {
+      const res = await fetch(CUSTOMERS_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -375,14 +490,25 @@ const Customer = ({ onLogout }) => {
                               </span>
                             </td>
                             <td className="whitespace-nowrap px-6 py-4 text-right sm:px-8">
-                              <button
-                                type="button"
-                                onClick={() => handleEdit(customer)}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                                Edit
-                              </button>
+                              <div className="inline-flex flex-wrap items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEdit(customer)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openDeleteModal(customer)}
+                                  disabled={deletingId === String(customer.customer_id)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  {deletingId === String(customer.customer_id) ? "…" : "Delete"}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -454,6 +580,119 @@ const Customer = ({ onLogout }) => {
           </div>
         </main>
       </div>
+
+      {/* Delete confirmation */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[3px]"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-desc"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeDeleteModal();
+          }}
+        >
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_25px_50px_-12px_rgba(15,23,42,0.35)] ring-1 ring-black/5">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 via-rose-500 to-amber-400" aria-hidden />
+            <div className="flex gap-4 p-6 pt-7">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-100 to-rose-50 shadow-inner ring-1 ring-rose-200/80">
+                <AlertTriangle className="h-6 w-6 text-rose-600" strokeWidth={2} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 id="delete-dialog-title" className="text-lg font-bold tracking-tight text-slate-900">
+                  Delete customer?
+                </h2>
+                <p id="delete-dialog-desc" className="mt-2 text-sm leading-relaxed text-slate-600">
+                  This permanently removes{" "}
+                  <span className="font-semibold text-slate-900">
+                    {deleteTarget.name || `Customer #${deleteTarget.customer_id}`}
+                  </span>{" "}
+                  from your directory. This action cannot be undone.
+                </p>
+                <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-500 ring-1 ring-slate-100">
+                  ID <span className="font-semibold text-slate-700">{deleteTarget.customer_id}</span>
+                </p>
+                {deleteError && (
+                  <div className="mt-4 flex gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-800 ring-1 ring-rose-100">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+                    <span>{deleteError}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={!!deletingId}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => confirmDelete()}
+                disabled={!!deletingId}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/25 transition hover:from-rose-700 hover:to-rose-600 disabled:opacity-60"
+              >
+                {deletingId ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Deleting…
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete customer
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {notice && (
+        <div className="pointer-events-none fixed bottom-6 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-md -translate-x-1/2">
+          <div
+            className={
+              "animate-customer-toast pointer-events-auto flex gap-3 rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-md " +
+              (notice.variant === "success"
+                ? "border-emerald-200/90 bg-emerald-50/95 text-emerald-950 ring-1 ring-emerald-500/15"
+                : "border-rose-200/90 bg-rose-50/95 text-rose-950 ring-1 ring-rose-500/15")
+            }
+          >
+            <div
+              className={
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-inner ring-1 " +
+                (notice.variant === "success"
+                  ? "bg-emerald-100 ring-emerald-200/80"
+                  : "bg-rose-100 ring-rose-200/80")
+              }
+            >
+              {notice.variant === "success" ? (
+                <CheckCircle className="h-5 w-5 text-emerald-600" strokeWidth={2} />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-rose-600" strokeWidth={2} />
+              )}
+            </div>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <p className="text-sm font-bold">{notice.title}</p>
+              <p className="mt-0.5 text-sm opacity-90">{notice.message}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              className="shrink-0 rounded-lg p-1 text-current opacity-60 transition hover:bg-black/5 hover:opacity-100"
+              aria-label="Dismiss"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {showForm && (

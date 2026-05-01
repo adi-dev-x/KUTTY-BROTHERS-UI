@@ -20,6 +20,17 @@ const fieldSelect =
 const thClass =
   "whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-600";
 
+function pickInvoiceId(o) {
+  return (
+    o?.invoice_id ??
+    o?.invoiceId ??
+    o?.Invoice_Id ??
+    o?.invoice_number ??
+    o?.invoiceNumber ??
+    ""
+  );
+}
+
 const Orders = ({ onLogout }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +113,7 @@ const Orders = ({ onLogout }) => {
       "Contact Number": o.contact_number || "-",
       "Shipping Address": o.shipping_address || "-",
       "Inventory ID": o.inventory_id || "-",
+      "Invoice ID": pickInvoiceId(o) || "-",
       "Generated Amount": o.generated_amount || "-",
       "Current Amount": o.current_amount || "-",
       "Advance Amount": o.advance_amount || "-",
@@ -122,7 +134,8 @@ const Orders = ({ onLogout }) => {
         (o) =>
           (o.customer_name || "").toLowerCase().includes(search.toLowerCase()) ||
           (o.customer_id || "").toLowerCase().includes(search.toLowerCase()) ||
-          (o.status || "").toLowerCase().includes(search.toLowerCase())
+          (o.status || "").toLowerCase().includes(search.toLowerCase()) ||
+          String(pickInvoiceId(o)).toLowerCase().includes(search.toLowerCase())
       ),
     [orders, search]
   );
@@ -159,8 +172,8 @@ const Orders = ({ onLogout }) => {
               <div className="px-3 py-1.5">
                 <h1 className="text-sm font-semibold text-slate-900">Orders</h1>
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-1.5">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600">
+              <div className="flex min-w-0 flex-nowrap items-center gap-x-4 overflow-x-auto px-3 py-1.5 [-webkit-overflow-scrolling:touch]">
+                <div className="flex shrink-0 flex-nowrap items-center gap-x-4 text-[11px] text-slate-600">
                   <span className="tabular-nums">
                     <span className="text-slate-400">Total orders</span>{" "}
                     <span className="font-semibold text-slate-900">{totalOrders}</span>
@@ -227,6 +240,7 @@ const Orders = ({ onLogout }) => {
                         <th className={thClass}>Phone</th>
                         <th className={thClass}>Address</th>
                         <th className={thClass}>Inventory</th>
+                        <th className={thClass}>Invoice ID</th>
                         <th className={thClass}>Gen. amt</th>
                         <th className={thClass}>Current</th>
                         <th className={thClass}>Advance</th>
@@ -240,7 +254,7 @@ const Orders = ({ onLogout }) => {
                     <tbody className="divide-y divide-slate-100">
                       {currentRows.length === 0 ? (
                         <tr>
-                          <td colSpan={15} className="px-6 py-16 text-center">
+                          <td colSpan={16} className="px-6 py-16 text-center">
                             <div className="mx-auto max-w-sm">
                               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
                                 <Search className="h-7 w-7" />
@@ -254,13 +268,25 @@ const Orders = ({ onLogout }) => {
                         currentRows.map((o, i) => (
                           <tr
                             key={o.delivery_id}
-                            onClick={() => navigate(`/order-details/${o.delivery_id}`)}
+                            onClick={() =>
+                              navigate(`/order-details/${o.delivery_id}`, {
+                                state: {
+                                  invoiceIdFromList: pickInvoiceId(o) || undefined,
+                                  orderStatusFromList: o.status ?? undefined,
+                                },
+                              })
+                            }
                             role="button"
                             tabIndex={0}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                navigate(`/order-details/${o.delivery_id}`);
+                                navigate(`/order-details/${o.delivery_id}`, {
+                                  state: {
+                                    invoiceIdFromList: pickInvoiceId(o) || undefined,
+                                    orderStatusFromList: o.status ?? undefined,
+                                  },
+                                });
                               }
                             }}
                             className={`cursor-pointer transition-colors hover:bg-amber-50/50 focus:bg-amber-50/50 focus:outline-none ${(indexOfFirstRow + i) % 2 === 1 ? "bg-slate-50/50" : "bg-white"}`}
@@ -272,6 +298,9 @@ const Orders = ({ onLogout }) => {
                             <td className="whitespace-nowrap px-2 py-2 text-slate-700">{o.contact_number || "—"}</td>
                             <td className="max-w-[140px] truncate px-2 py-2 text-slate-600" title={o.shipping_address}>{o.shipping_address || "—"}</td>
                             <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-slate-600">{o.inventory_id || "—"}</td>
+                            <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-slate-700" title={String(pickInvoiceId(o))}>
+                              {pickInvoiceId(o) || "—"}
+                            </td>
                             <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{o.generated_amount ?? "—"}</td>
                             <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{o.current_amount ?? "—"}</td>
                             <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{o.advance_amount ?? "—"}</td>

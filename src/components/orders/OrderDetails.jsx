@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import { uploadIrrlOrderImages } from "../../utils/irrlUploadImages";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import {
@@ -11,15 +12,183 @@ import {
   FaTimes,
   FaDownload,
   FaFileInvoice,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 
+/** POST body: item_id, delivery_item_id, damage_images, clear */
+const ORDER_ITEM_DAMAGE_URL = "https://ems.binlaundry.com/irrl/markDamage";
+
+/** POST body: order_id, guarantee_images */
+const INITIATE_ORDER_URL = "https://ems.binlaundry.com/irrl/initiateOrder";
+
+const DAMAGE_RESTRICTED_STATUSES = ["INITIATED", "RESERVED"];
+
+/** If every line shares the same `status`, treat it as order-level (detail payload quirks). */
+function uniformLineItemStatus(items) {
+  if (!items?.length) return "";
+  const statuses = items.map((r) => String(r.status ?? "").trim()).filter(Boolean);
+  if (!statuses.length) return "";
+  const upper = statuses.map((s) => s.toUpperCase());
+  if (new Set(upper).size !== 1) return "";
+  return statuses[0];
+}
+
+/** Same intent as listOrders row `o.status`: scan joined rows for delivery/order-level columns first. */
+function pickOrderLevelDeliveryStatus(items) {
+  if (!items?.length) return "";
+  const keys = [
+    "order_status",
+    "order_delivery_status",
+    "delivery_order_status",
+    "Order_Status",
+    "orderStatus",
+  ];
+  for (const row of items) {
+    for (const key of keys) {
+      const v = row[key];
+      if (v != null && String(v).trim() !== "") return String(v).trim();
+    }
+  }
+  return "";
+}
+
+/**
+ * Prefer API order/delivery fields, then status passed from Orders list (navigation),
+ * then uniform line `status`, then first line `status`.
+ */
+function resolveOrderLevelStatus(items, statusFromOrdersList = "") {
+  const fromDelivery = pickOrderLevelDeliveryStatus(items);
+  const fromNav = String(statusFromOrdersList ?? "").trim();
+  const uniform = uniformLineItemStatus(items);
+  const firstLine = items?.[0] ? String(items[0].status ?? "").trim() : "";
+  const raw = fromDelivery || fromNav || uniform || firstLine || "";
+  const u = raw.toUpperCase().trim();
+  return u || "INITIATED";
+}
+
+function parseGuaranteeImagesFromRow(row) {
+  if (!row || typeof row !== "object") return [];
+  const raw =
+    row.guarantee_images ??
+    row.guaranteeImages ??
+    row.initiate_guarantee_images ??
+    row.GuaranteeImages;
+  if (raw == null || raw === "") return [];
+  if (Array.isArray(raw)) {
+    return [...new Set(raw.map((u) => String(u).trim()).filter(Boolean))];
+  }
+  if (typeof raw === "string") {
+    const s = raw.trim();
+    if (!s || s === "{}") return [];
+    if (s.startsWith("{") && s.endsWith("}")) {
+      const inner = s.slice(1, -1).trim();
+      if (!inner) return [];
+      return [
+        ...new Set(
+          inner
+            .split(",")
+            .map((u) => u.trim().replace(/^["']|["']$/g, ""))
+            .filter(Boolean)
+        ),
+      ];
+    }
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) {
+        return [...new Set(parsed.map((u) => String(u).trim()).filter(Boolean))];
+      }
+    } catch (_) {
+      /* single URL */
+    }
+    return [s];
+  }
+  return [];
+}
+
+function collectGuaranteeImagesFromItems(items) {
+  const out = [];
+  const seen = new Set();
+  for (const row of items || []) {
+    for (const u of parseGuaranteeImagesFromRow(row)) {
+      if (!seen.has(u)) {
+        seen.add(u);
+        out.push(u);
+      }
+    }
+  }
+  return out;
+}
+
+/** Legacy API used RETURNED; UI/API now use BLOCKED */
+function normalizeLineItemStatusForSelect(status) {
+  const u = (status || "").toUpperCase();
+  if (u === "RETURNED") return "BLOCKED";
+  return status ?? "";
+}
+
+/** Before-image modal only allows COMPLETED / BLOCKED */
+function normalizeBeforeImageModalStatus(status) {
+  const u = (normalizeLineItemStatusForSelect(status) || "").toUpperCase();
+  if (u === "BLOCKED") return "BLOCKED";
+  if (u === "COMPLETED") return "COMPLETED";
+  return "COMPLETED";
+}
+
+/** Same resolution as Orders list `pickInvoiceId` */
+function pickInvoiceIdFromAPI(row) {
+  if (!row) return "";
+  return (
+    row.invoice_id ??
+    row.invoiceId ??
+    row.Invoice_Id ??
+    row.invoice_number ??
+    row.invoiceNumber ??
+    ""
+  );
+}
+
+function resolveOrderLevelInvoiceId(rows, fallbackFromOrdersPage) {
+  const fromNav = fallbackFromOrdersPage != null && fallbackFromOrdersPage !== ""
+    ? String(fallbackFromOrdersPage).trim()
+    : "";
+  if (!rows?.length) return fromNav;
+  for (const row of rows) {
+    const v = pickInvoiceIdFromAPI(row);
+    if (v !== "" && v != null) return String(v).trim();
+  }
+  return fromNav;
+}
+
+function pickInvoiceIdFromRow(item, orderFallback) {
+  const rowId = pickInvoiceIdFromAPI(item);
+  if (rowId !== "" && rowId != null) return String(rowId).trim();
+  return (
+    orderFallback?.invoice_id ??
+    orderFallback?.invoiceId ??
+    orderFallback?.invoice_number ??
+    orderFallback?.invoiceNumber ??
+    ""
+  );
+}
 
 const OrderDetails = ({ onLogout }) => {
   const { delivery_id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const invoiceIdFromOrdersPage =
+    location.state?.invoiceIdFromList ?? location.state?.invoice_id ?? "";
+  const orderStatusFromOrdersList =
+    location.state?.orderStatusFromList != null
+      ? String(location.state.orderStatusFromList).trim()
+      : "";
   const [orderItems, setOrderItems] = useState([]);
   const [orderInfo, setOrderInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const guaranteeImageUrls = useMemo(
+    () => collectGuaranteeImagesFromItems(orderItems),
+    [orderItems]
+  );
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [status, setStatus] = useState("");
@@ -44,6 +213,186 @@ const OrderDetails = ({ onLogout }) => {
     modeOfPayment: 'Immediate'
   });
 
+  const [damageModalItem, setDamageModalItem] = useState(null);
+  const [damageDescription, setDamageDescription] = useState("");
+  const [damageTempFiles, setDamageTempFiles] = useState([]);
+  const [damageUploadedUrls, setDamageUploadedUrls] = useState([]);
+  const [damageUploading, setDamageUploading] = useState(false);
+  const [damageSaving, setDamageSaving] = useState(false);
+  const [damageRestrictedAlertOpen, setDamageRestrictedAlertOpen] = useState(false);
+
+  const [orderLevelStatus, setOrderLevelStatus] = useState("INITIATED");
+
+  const [initiatedModalOpen, setInitiatedModalOpen] = useState(false);
+  const [guaranteeGalleryOpen, setGuaranteeGalleryOpen] = useState(false);
+  const [initiatedTempFiles, setInitiatedTempFiles] = useState([]);
+  const [initiatedUploadedUrls, setInitiatedUploadedUrls] = useState([]);
+  const [initiatedUploading, setInitiatedUploading] = useState(false);
+  const [initiatedSaving, setInitiatedSaving] = useState(false);
+
+  const openDamageModal = (item) => {
+    const s = (item?.status || "").toUpperCase();
+    if (DAMAGE_RESTRICTED_STATUSES.includes(s)) {
+      setDamageRestrictedAlertOpen(true);
+      return;
+    }
+    setDamageModalItem(item);
+    setDamageDescription("");
+    setDamageTempFiles([]);
+    setDamageUploadedUrls([]);
+  };
+
+  const closeDamageModal = () => {
+    setDamageModalItem(null);
+    setDamageDescription("");
+    setDamageTempFiles([]);
+    setDamageUploadedUrls([]);
+    setDamageUploading(false);
+    setDamageSaving(false);
+  };
+
+  const openInitiatedModal = () => {
+    setInitiatedModalOpen(true);
+    setInitiatedTempFiles([]);
+    setInitiatedUploadedUrls([]);
+  };
+
+  const closeInitiatedModal = () => {
+    setInitiatedModalOpen(false);
+    setInitiatedTempFiles([]);
+    setInitiatedUploadedUrls([]);
+    setInitiatedUploading(false);
+    setInitiatedSaving(false);
+  };
+
+  const handleInitiatedUploadImages = async () => {
+    try {
+      setInitiatedUploading(true);
+      const uploadedFiles = await uploadIrrlOrderImages(initiatedTempFiles);
+      setInitiatedUploadedUrls((prev) => [...prev, ...uploadedFiles.map((f) => f.url)]);
+      setInitiatedTempFiles([]);
+    } catch (err) {
+      if (err.message === "Select images first") {
+        alert("Select images first");
+      } else {
+        console.error("Upload failed", err.response?.data || err.message);
+        alert("Upload failed! Check console.");
+      }
+    } finally {
+      setInitiatedUploading(false);
+    }
+  };
+
+  const handleSubmitMoveToInitiated = async () => {
+    const orderId = String(delivery_id ?? "").trim();
+    if (!orderId) {
+      alert("Missing order id.");
+      return;
+    }
+
+    try {
+      setInitiatedSaving(true);
+      let urlList = [...initiatedUploadedUrls];
+      if (initiatedTempFiles.length > 0) {
+        const uploadedFiles = await uploadIrrlOrderImages(initiatedTempFiles);
+        urlList.push(...uploadedFiles.map((f) => f.url));
+      }
+
+      const payload = {
+        order_id: orderId,
+        guarantee_images: urlList.filter(Boolean),
+      };
+
+      await axios.post(INITIATE_ORDER_URL, payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const res = await axios.get(
+        `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+      );
+      const refreshed = res.data?.data || [];
+      setOrderItems(refreshed);
+      if (refreshed.length > 0) {
+        setOrderLevelStatus(resolveOrderLevelStatus(refreshed, ""));
+      }
+      closeInitiatedModal();
+    } catch (err) {
+      console.error("Initiate order failed:", err);
+      alert("Could not initiate order. Check console or try again.");
+    } finally {
+      setInitiatedSaving(false);
+    }
+  };
+
+  const handleDamageUploadImages = async () => {
+    try {
+      setDamageUploading(true);
+      const uploadedFiles = await uploadIrrlOrderImages(damageTempFiles);
+      setDamageUploadedUrls((prev) => [...prev, ...uploadedFiles.map((f) => f.url)]);
+      setDamageTempFiles([]);
+    } catch (err) {
+      if (err.message === "Select images first") {
+        alert("Select images first");
+      } else {
+        console.error("Upload failed", err.response?.data || err.message);
+        alert("Upload failed! Check console.");
+      }
+    } finally {
+      setDamageUploading(false);
+    }
+  };
+
+  const handleSubmitDamage = async () => {
+    if (!damageModalItem) return;
+    if (!damageDescription.trim() && damageUploadedUrls.length === 0 && damageTempFiles.length === 0) {
+      alert("Add a description or upload at least one image.");
+      return;
+    }
+
+    try {
+      setDamageSaving(true);
+      const damageImages = [...damageUploadedUrls];
+      if (damageTempFiles.length > 0) {
+        const uploadedFiles = await uploadIrrlOrderImages(damageTempFiles);
+        damageImages.push(...uploadedFiles.map((f) => f.url));
+      }
+
+      const deliveryItemId = String(damageModalItem.delivery_item_id ?? "").trim();
+      const itemId = String(
+        damageModalItem.delivery_item_id ??
+          damageModalItem.item_newid ??
+          damageModalItem.item_id ??
+          ""
+      ).trim();
+      if (!itemId) {
+        alert("Missing item id for this line.");
+        return;
+      }
+
+      const payload = {
+        item_id: itemId,
+        delivery_item_id: deliveryItemId,
+        damage_images: damageImages.filter(Boolean),
+        clear: false,
+      };
+
+      await axios.post(ORDER_ITEM_DAMAGE_URL, payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const res = await axios.get(
+        `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+      );
+      setOrderItems(res.data?.data || []);
+      closeDamageModal();
+    } catch (err) {
+      console.error("Move to damage failed:", err);
+      alert("Could not update item. Check console or try again.");
+    } finally {
+      setDamageSaving(false);
+    }
+  };
+
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
@@ -52,6 +401,14 @@ const OrderDetails = ({ onLogout }) => {
         );
         const data = res.data?.data || [];
         setOrderItems(data);
+
+        if (data.length > 0) {
+          setOrderLevelStatus(
+            resolveOrderLevelStatus(data, orderStatusFromOrdersList)
+          );
+        } else if (orderStatusFromOrdersList) {
+          setOrderLevelStatus(orderStatusFromOrdersList.toUpperCase());
+        }
 
         // Calculate total using generated amounts (with markup)
         const calculateGeneratedTotal = (items) => {
@@ -63,10 +420,14 @@ const OrderDetails = ({ onLogout }) => {
 
         // Extract order info from first item (assuming all items share same order details)
         if (data.length > 0) {
+          const invoiceIdResolved = resolveOrderLevelInvoiceId(data, invoiceIdFromOrdersPage);
           const orderDetails = {
             customer_name: data[0].customer_name || "N/A",
             customer_gst: data[0].customer_gst || "",
             delivery_chelan_number: data[0].delivery_chelan_number || "",
+            invoice_id: invoiceIdResolved,
+            invoice_number:
+              data[0].invoice_number ?? data[0].invoiceNumber ?? data[0].Invoice_Number ?? "",
             order_number: data[0].order_number || delivery_id,
             order_date: data[0].placed_at ? new Date(data[0].placed_at).toLocaleDateString() : new Date().toLocaleDateString(),
             advance_amount: parseInt(data[0].advance_amount || 0),
@@ -99,7 +460,8 @@ const OrderDetails = ({ onLogout }) => {
       }
     };
     fetchOrderDetails();
-  }, [delivery_id]);
+  }, [delivery_id, invoiceIdFromOrdersPage, orderStatusFromOrdersList]);
+
   const generateDCNumber = () => {
     // Use the delivery challan number from API if available
     if (dcFormData.deliveryChallanNumber) {
@@ -775,7 +1137,7 @@ const OrderDetails = ({ onLogout }) => {
         className="eye-btn"
         onClick={() => {
           setSelectedItem({ ...item, before_image_url: url });
-          setStatus(item.status || "INITIATED");
+          setStatus(normalizeBeforeImageModalStatus(item.status));
         }}
       >
         <FaEye />
@@ -893,12 +1255,58 @@ const OrderDetails = ({ onLogout }) => {
                   </div>
                 )}
                 <div>
+                  <div className="text-gray-600">Invoice ID</div>
+                  <div className="font-mono font-medium text-gray-900">
+                    {orderInfo.invoice_id ||
+                      pickInvoiceIdFromAPI(orderItems[0]) ||
+                      orderInfo.invoice_number ||
+                      "—"}
+                  </div>
+                </div>
+                <div>
                   <div className="text-gray-600">Advance Amount</div>
                   <div className="font-medium text-gray-900">₹{orderInfo.advance_amount || 0}</div>
                 </div>
                 <div>
                   <div className="text-gray-600">Total Value</div>
                   <div className="font-semibold text-blue-600">₹{orderInfo.total_value}</div>
+                </div>
+                <div>
+                  <div className="text-gray-600">Order status</div>
+                  <div className="font-semibold uppercase tracking-wide text-gray-900">
+                    {orderLevelStatus || "—"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Order actions
+                </p>
+                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+                  {(orderLevelStatus || "").toUpperCase() === "RESERVED" && (
+                    <button
+                      type="button"
+                      onClick={openInitiatedModal}
+                      className="inline-flex items-center justify-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow-sm transition hover:bg-emerald-100"
+                    >
+                      Move to initiated
+                    </button>
+                  )}
+                  {guaranteeImageUrls.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setGuaranteeGalleryOpen(true)}
+                      className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                    >
+                      <FaEye className="text-slate-600" />
+                      View guarantee images ({guaranteeImageUrls.length})
+                    </button>
+                  ) : (
+                    <span className="text-xs text-gray-500 sm:self-center">
+                      No guarantee images on file yet.
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -911,11 +1319,13 @@ const OrderDetails = ({ onLogout }) => {
                 <tr>
                   <th className="px-4 py-2 text-left">S.No</th>
                   <th className="px-4 py-2 text-left">Item Code</th>
+                  <th className="px-4 py-2 text-left">Invoice ID</th>
                   <th className="px-4 py-2 text-left">Item Name</th>
                   <th className="px-4 py-2 text-left">Rent Amount</th>
                   <th className="px-4 py-2 text-left">Current Amount</th>
                   <th className="px-4 py-2 text-left">Generated Amount</th>
                   <th className="px-4 py-2 text-left">Status</th>
+                  <th className="px-4 py-2 text-left whitespace-nowrap">Move to damage</th>
                   <th className="px-4 py-2 text-left">Placed At</th>
                   <th className="px-4 py-2 text-left">Returned At</th>
                   <th className="px-4 py-2 text-left">Before Images</th>
@@ -935,21 +1345,44 @@ const OrderDetails = ({ onLogout }) => {
                     <tr key={`${item.delivery_item_id}-${idx}`} className="hover:bg-yellow-50/40">
                       <td className="px-4 py-2">{idx + 1}</td>
                       <td className="px-4 py-2">{item.item_code || 'N/A'}</td>
+                      <td className="px-4 py-2 font-mono text-xs text-gray-800">
+                        {pickInvoiceIdFromRow(item, orderInfo) || "—"}
+                      </td>
                       <td className="px-4 py-2">{item.item_name || 'N/A'}</td>
                       <td className="px-4 py-2">₹{item.rent_amount}</td>
                       <td className="px-4 py-2">₹{currentAmount}</td>
                       <td className="px-4 py-2 font-semibold text-blue-600">₹{generatedAmount}</td>
                       <td className="px-4 py-2">
-                        <select
-                          value={item.status}
-                          onChange={(e) => handleInlineStatusChange(item, e.target.value)}
-                          className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                        {(item.status || "").toUpperCase() === "DAMAGED" ? (
+                          <span className="inline-flex rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-800 ring-1 ring-rose-200">
+                            DAMAGED
+                          </span>
+                        ) : (
+                          <select
+                            value={normalizeLineItemStatusForSelect(item.status)}
+                            onChange={(e) => handleInlineStatusChange(item, e.target.value)}
+                            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                          >
+                            <option value="INITIATED">INITIATED</option>
+                            <option value="RESERVED">RESERVED</option>
+                            <option value="BLOCKED">BLOCKED</option>
+                            <option value="COMPLETED">COMPLETED</option>
+                          </select>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        <button
+                          type="button"
+                          disabled={(item.status || "").toUpperCase() === "DAMAGED"}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDamageModal(item);
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <option value="INITIATED">INITIATED</option>
-                          <option value="RESERVED">RESERVED</option>
-                          <option value="RETURNED">RETURNED</option>
-                          <option value="COMPLETED">COMPLETED</option>
-                        </select>
+                          <FaExclamationTriangle className="text-rose-600" />
+                          Move to damage
+                        </button>
                       </td>
                       <td className="px-4 py-2">{item.placed_at}</td>
                       <td className="px-4 py-2">{item.returned_at}</td>
@@ -1186,6 +1619,290 @@ const OrderDetails = ({ onLogout }) => {
 
       )}
 
+      {initiatedModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+            <button
+              type="button"
+              className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100"
+              onClick={closeInitiatedModal}
+              aria-label="Close"
+            >
+              <FaTimes />
+            </button>
+            <div className="mb-4 flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                <FaUpload className="text-lg" />
+              </span>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Move to initiated</h3>
+                <p className="mt-1 text-sm text-gray-600">
+                  <span className="font-medium text-gray-800">{orderInfo?.customer_name || "Customer"}</span>
+                  {" · "}
+                  <span className="font-mono text-xs text-gray-700">{delivery_id}</span>
+                </p>
+                <p className="mt-2 text-xs text-gray-500">
+                  Submits <strong>initiateOrder</strong> for this delivery with optional guarantee image URLs.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Guarantee images (multiple)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => setInitiatedTempFiles(Array.from(e.target.files || []))}
+                  className="w-full text-sm text-gray-600 file:mr-2 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-emerald-900"
+                />
+                {initiatedTempFiles.length > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">{initiatedTempFiles.length} file(s) selected</p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleInitiatedUploadImages}
+                  disabled={initiatedUploading || initiatedTempFiles.length === 0}
+                  className="mt-2 inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <FaUpload /> {initiatedUploading ? "Uploading…" : "Upload images"}
+                </button>
+              </div>
+
+              {initiatedUploadedUrls.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Uploaded</p>
+                  <div className="flex flex-wrap gap-2">
+                    {initiatedUploadedUrls.map((url, i) => (
+                      <a
+                        key={`${url}-${i}`}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block h-16 w-16 overflow-hidden rounded-lg ring-1 ring-gray-200"
+                      >
+                        <img src={url} alt="" className="h-full w-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
+                <button
+                  type="button"
+                  onClick={closeInitiatedModal}
+                  className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitMoveToInitiated}
+                  disabled={initiatedSaving || initiatedUploading}
+                  className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {initiatedSaving ? "Saving…" : "Confirm move to initiated"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {guaranteeGalleryOpen && guaranteeImageUrls.length > 0 && (
+        <div
+          className="fixed inset-0 z-[65] flex items-center justify-center bg-black/50 p-4"
+          role="presentation"
+          onClick={() => setGuaranteeGalleryOpen(false)}
+        >
+          <div
+            className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-gray-200 bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100"
+              onClick={() => setGuaranteeGalleryOpen(false)}
+              aria-label="Close"
+            >
+              <FaTimes />
+            </button>
+            <h3 className="mb-1 text-lg font-semibold text-gray-900">Guarantee images (move to initiated)</h3>
+            <p className="mb-4 text-sm text-gray-600">
+              {guaranteeImageUrls.length} image{guaranteeImageUrls.length === 1 ? "" : "s"} stored for this order.
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {guaranteeImageUrls.map((url, i) => (
+                <a
+                  key={`${url}-${i}`}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group overflow-hidden rounded-lg ring-1 ring-gray-200 transition hover:ring-emerald-400"
+                >
+                  <img
+                    src={url}
+                    alt={`Guarantee ${i + 1}`}
+                    className="aspect-square w-full object-cover transition group-hover:opacity-95"
+                  />
+                  <span className="block truncate px-1 py-1 text-center text-[10px] text-emerald-700 underline">
+                    Open full size
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {damageRestrictedAlertOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm"
+          role="presentation"
+          onClick={() => setDamageRestrictedAlertOpen(false)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="damage-restricted-title"
+            aria-describedby="damage-restricted-desc"
+            className="relative w-full max-w-md rounded-2xl border border-amber-200/90 bg-gradient-to-b from-amber-50 via-white to-white p-6 shadow-2xl shadow-amber-950/10 ring-2 ring-amber-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute right-3 top-3 rounded-lg p-1.5 text-slate-500 transition hover:bg-amber-100 hover:text-slate-800"
+              onClick={() => setDamageRestrictedAlertOpen(false)}
+              aria-label="Close"
+            >
+              <FaTimes />
+            </button>
+            <div className="flex gap-4 pr-6">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 shadow-inner ring-2 ring-amber-200/80">
+                <FaExclamationTriangle className="text-2xl" />
+              </span>
+              <div className="min-w-0 flex-1 pt-1">
+                <h3 id="damage-restricted-title" className="text-lg font-bold tracking-tight text-slate-900">
+                  Move to damage restricted
+                </h3>
+                <p id="damage-restricted-desc" className="mt-2 text-sm leading-relaxed text-slate-600">
+                  Move to damage restricted for initiated and reserved orders.
+                </p>
+                <button
+                  type="button"
+                  className="mt-6 w-full rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-amber-600/30 transition hover:from-amber-700 hover:to-amber-800"
+                  onClick={() => setDamageRestrictedAlertOpen(false)}
+                >
+                  Got it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {damageModalItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+            <button
+              type="button"
+              className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100"
+              onClick={closeDamageModal}
+              aria-label="Close"
+            >
+              <FaTimes />
+            </button>
+            <div className="mb-4 flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-700">
+                <FaExclamationTriangle className="text-lg" />
+              </span>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Mark item as damaged</h3>
+                <p className="mt-1 text-sm text-gray-600">
+                  <span className="font-medium text-gray-800">{damageModalItem.item_name || "Item"}</span>
+                  {" · "}
+                  <span className="font-mono text-xs">{damageModalItem.item_code || "—"}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Description</label>
+                <textarea
+                  value={damageDescription}
+                  onChange={(e) => setDamageDescription(e.target.value)}
+                  rows={4}
+                  placeholder="Describe the damage, cause, and any notes for the record…"
+                  className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-rose-500 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Photos (multiple)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => setDamageTempFiles(Array.from(e.target.files || []))}
+                  className="w-full text-sm text-gray-600 file:mr-2 file:rounded-md file:border-0 file:bg-rose-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-rose-900"
+                />
+                {damageTempFiles.length > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">{damageTempFiles.length} file(s) selected</p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleDamageUploadImages}
+                  disabled={damageUploading || damageTempFiles.length === 0}
+                  className="mt-2 inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <FaUpload /> {damageUploading ? "Uploading…" : "Upload images"}
+                </button>
+              </div>
+
+              {damageUploadedUrls.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Uploaded</p>
+                  <div className="flex flex-wrap gap-2">
+                    {damageUploadedUrls.map((url, i) => (
+                      <a
+                        key={`${url}-${i}`}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block h-16 w-16 overflow-hidden rounded-lg ring-1 ring-gray-200"
+                      >
+                        <img src={url} alt="" className="h-full w-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
+                <button
+                  type="button"
+                  onClick={closeDamageModal}
+                  className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitDamage}
+                  disabled={damageSaving || damageUploading}
+                  className="inline-flex items-center gap-2 rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {damageSaving ? "Saving…" : "Confirm move to damage"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="relative w-full max-w-2xl rounded-lg bg-white p-5 shadow-lg">
@@ -1202,12 +1919,16 @@ const OrderDetails = ({ onLogout }) => {
 
             <div className="mt-4 space-y-3">
               <label className="block text-sm font-medium text-gray-700">Status</label>
-              <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="INITIATED">INITIATED</option>
-                <option value="RESERVED">RESERVED</option>
-                <option value="RETURNED">RETURNED</option>
-                <option value="COMPLETED">COMPLETED</option>
-              </select>
+              {(selectedItem.status || "").toUpperCase() === "DAMAGED" ? (
+                <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800">
+                  DAMAGED
+                </p>
+              ) : (
+                <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="BLOCKED">Blocked</option>
+                </select>
+              )}
 
               {status === "COMPLETED" && (
                 <>
