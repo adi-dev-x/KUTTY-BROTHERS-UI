@@ -190,11 +190,28 @@ function pickInvoiceIdFromRow(item, orderFallback) {
   );
 }
 
+/** Treats null, empty, and string "null" / "undefined" as no vehicle (API quirk) */
+function normalizeVehicleValue(v) {
+  if (v === false || v == null) return "";
+  const s = String(v).trim();
+  if (!s) return "";
+  if (/^null$/i.test(s) || /^undefined$/i.test(s)) return "";
+  return s;
+}
+
 function pickVehicleNumberFromOrderRow(row) {
   if (!row || typeof row !== "object") return "";
   const v = row.vehicle_number ?? row.vehicleNumber ?? row.Vehicle_Number ?? row.vehicle_no;
-  if (v === false || v == null) return "";
-  return String(v).trim();
+  return normalizeVehicleValue(v);
+}
+
+/** First line item row that has a real vehicle number, else first row (for pass fields) */
+function findRowForOrderLevelPassAndVehicle(data) {
+  if (!data?.length) return null;
+  for (const row of data) {
+    if (pickVehicleNumberFromOrderRow(row)) return row;
+  }
+  return data[0];
 }
 
 function pickPassFieldsFromOrderRow(row) {
@@ -209,8 +226,7 @@ function pickPassFieldsFromOrderRow(row) {
 }
 
 function orderHasVehicleNumber(vehicleVal) {
-  if (vehicleVal === false || vehicleVal == null) return false;
-  return String(vehicleVal).trim().length > 0;
+  return normalizeVehicleValue(vehicleVal).length > 0;
 }
 
 function buildOrderDetailsFromItems(data, deliveryId, invoiceIdFallback) {
@@ -218,7 +234,8 @@ function buildOrderDetailsFromItems(data, deliveryId, invoiceIdFallback) {
   const calculateGeneratedTotal = (items) =>
     items.reduce((sum, item) => sum + parseInt(item.generated_amount || 0), 0);
   const invoiceIdResolved = resolveOrderLevelInvoiceId(data, invoiceIdFallback);
-  const passFields = pickPassFieldsFromOrderRow(data[0]);
+  const headerRow = findRowForOrderLevelPassAndVehicle(data);
+  const passFields = pickPassFieldsFromOrderRow(headerRow || data[0]);
   return {
     customer_name: data[0].customer_name || "N/A",
     customer_gst: data[0].customer_gst || "",
@@ -232,7 +249,7 @@ function buildOrderDetailsFromItems(data, deliveryId, invoiceIdFallback) {
       : new Date().toLocaleDateString(),
     advance_amount: parseInt(data[0].advance_amount || 0),
     total_value: calculateGeneratedTotal(data),
-    vehicle_number: pickVehicleNumberFromOrderRow(data[0]),
+    vehicle_number: pickVehicleNumberFromOrderRow(headerRow || data[0]),
     ...passFields,
   };
 }
@@ -1266,13 +1283,15 @@ const OrderDetails = ({ onLogout }) => {
 
     return (
       <button
-        className="eye-btn"
+        type="button"
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-amber-300 hover:bg-amber-50/80 hover:text-amber-900"
         onClick={() => {
           setSelectedItem({ ...item, before_image_url: url });
           setStatus(normalizeBeforeImageModalStatus(item.status));
         }}
+        aria-label="View before image"
       >
-        <FaEye />
+        <FaEye className="text-sm" />
       </button>
     );
   };
@@ -1330,65 +1349,107 @@ const OrderDetails = ({ onLogout }) => {
     }
   };
 
-  if (loading) return <p className="p-6 text-gray-600">Loading order details...</p>;
-  if (!orderItems.length) return <p className="p-6 text-gray-600">No details found for this order.</p>;
+  if (loading) {
+    return (
+      <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
+        <Header onLogout={onLogout} />
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <Rentalsidebar />
+          <div className="flex min-h-0 flex-1 items-center justify-center bg-gradient-to-b from-slate-100 to-slate-50">
+            <div className="text-center">
+              <div className="mx-auto mb-3 h-9 w-9 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+              <p className="text-sm font-medium text-slate-600">Loading order details…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!orderItems.length) {
+    return (
+      <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
+        <Header onLogout={onLogout} />
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <Rentalsidebar />
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-gradient-to-b from-slate-100 to-slate-50 px-4">
+            <p className="text-center text-sm text-slate-600">No details found for this order.</p>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
+            >
+              <FaArrowLeft /> Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
       <Header onLogout={onLogout} />
-      <div className="flex flex-1 bg-gray-100">
+      <div className="flex min-h-0 flex-1 overflow-hidden bg-gradient-to-b from-slate-100 to-slate-50">
         <Rentalsidebar />
-        <div className="mx-auto w-full max-w-7xl flex-1 p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">Order Details</h2>
-            <div className="flex gap-2">
+        <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-3 overflow-hidden px-3 py-3 sm:px-4 sm:py-3 lg:px-5">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200/90 bg-white/95 pb-2.5 pt-0.5 shadow-sm ring-1 ring-slate-100/80 backdrop-blur-sm">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
               <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50/80 sm:px-3 sm:text-sm"
+              >
+                <FaArrowLeft className="text-slate-500" /> Back
+              </button>
+              <h2 className="truncate text-base font-bold tracking-tight text-slate-900 sm:text-lg">Order details</h2>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <button
+                type="button"
                 onClick={() => setShowDCPreview(true)}
                 disabled={downloadingDC}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:px-3 sm:text-sm"
               >
-                <FaDownload /> {downloadingDC ? 'Processing...' : 'Generate DC'}
+                <FaDownload className="shrink-0" /> {downloadingDC ? "Processing…" : "Generate DC"}
               </button>
               <button
+                type="button"
                 onClick={() => setShowInvoicePreview(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 sm:px-3 sm:text-sm"
               >
-                <FaFileInvoice /> Download Invoice
+                <FaFileInvoice className="shrink-0" /> Invoice
               </button>
             </div>
           </div>
 
-          <button onClick={() => navigate(-1)} className="mb-4 inline-flex items-center gap-2 text-sm text-gray-700 hover:underline">
-            <FaArrowLeft /> Back
-          </button>
-
           {orderInfo && (
-            <div className="mb-5 rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h4 className="mb-3 text-base font-semibold text-gray-900">Order Information</h4>
-              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-                <div>
-                  <div className="text-gray-600">Customer</div>
-                  <div className="font-medium text-gray-900">{orderInfo.customer_name}</div>
+            <div className="shrink-0 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm ring-1 ring-slate-100 sm:p-4">
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Order information</h4>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm lg:grid-cols-4">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-slate-500">Customer</div>
+                  <div className="truncate font-medium text-slate-900">{orderInfo.customer_name}</div>
                 </div>
-                <div>
-                  <div className="text-gray-600">Order Date</div>
-                  <div className="font-medium text-gray-900">{orderInfo.order_date}</div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-slate-500">Order date</div>
+                  <div className="font-medium text-slate-900">{orderInfo.order_date}</div>
                 </div>
                 {orderInfo.customer_gst && (
-                  <div>
-                    <div className="text-gray-600">Customer GST</div>
-                    <div className="font-medium text-gray-900">{orderInfo.customer_gst}</div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium text-slate-500">Customer GST</div>
+                    <div className="truncate font-mono text-xs font-medium text-slate-900">{orderInfo.customer_gst}</div>
                   </div>
                 )}
                 {orderInfo.delivery_challan_number && (
-                  <div>
-                    <div className="text-gray-600">DC Number</div>
-                    <div className="font-medium text-gray-900">{orderInfo.delivery_challan_number}</div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium text-slate-500">DC number</div>
+                    <div className="font-mono text-xs font-medium text-slate-900">{orderInfo.delivery_challan_number}</div>
                   </div>
                 )}
-                <div>
-                  <div className="text-gray-600">Invoice ID</div>
-                  <div className="font-mono font-medium text-gray-900">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-slate-500">Invoice ID</div>
+                  <div className="truncate font-mono text-xs font-medium text-slate-900">
                     {orderInfo.invoice_id ||
                       pickInvoiceIdFromAPI(orderItems[0]) ||
                       orderInfo.invoice_number ||
@@ -1396,34 +1457,34 @@ const OrderDetails = ({ onLogout }) => {
                   </div>
                 </div>
                 <div>
-                  <div className="text-gray-600">Advance Amount</div>
-                  <div className="font-medium text-gray-900">₹{orderInfo.advance_amount || 0}</div>
+                  <div className="text-[11px] font-medium text-slate-500">Advance</div>
+                  <div className="font-medium text-slate-900">₹{orderInfo.advance_amount || 0}</div>
                 </div>
                 <div>
-                  <div className="text-gray-600">Total Value</div>
+                  <div className="text-[11px] font-medium text-slate-500">Total value</div>
                   <div className="font-semibold text-blue-600">₹{orderInfo.total_value}</div>
                 </div>
                 <div>
-                  <div className="text-gray-600">Order status</div>
-                  <div className="font-semibold uppercase tracking-wide text-gray-900">
+                  <div className="text-[11px] font-medium text-slate-500">Order status</div>
+                  <div className="font-semibold uppercase tracking-wide text-slate-900">
                     {orderLevelStatus || "—"}
                   </div>
                 </div>
-                <div className="sm:col-span-3 flex flex-col gap-2 border-t border-gray-200 pt-3 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <div className="text-gray-600">Vehicle number</div>
-                    <div className="font-medium text-gray-900">
+                <div className="col-span-2 flex flex-col gap-2 border-t border-slate-200 pt-2 sm:flex-row sm:items-end sm:justify-between lg:col-span-4">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium text-slate-500">Vehicle number</div>
+                    <div className="font-medium text-slate-900">
                       {orderHasVehicleNumber(orderInfo.vehicle_number)
                         ? orderInfo.vehicle_number
                         : "—"}
                     </div>
                   </div>
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex shrink-0 flex-wrap gap-2">
                     {!orderHasVehicleNumber(orderInfo.vehicle_number) ? (
                       <button
                         type="button"
                         onClick={openPassModal}
-                        className="inline-flex items-center justify-center rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 shadow-sm transition hover:bg-amber-100"
+                        className="inline-flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 shadow-sm transition hover:bg-amber-100 sm:text-sm"
                       >
                         Add pass
                       </button>
@@ -1431,7 +1492,7 @@ const OrderDetails = ({ onLogout }) => {
                       <button
                         type="button"
                         onClick={() => setViewPassModalOpen(true)}
-                        className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 sm:text-sm"
                       >
                         <FaEye className="text-slate-600" />
                         View pass
@@ -1441,16 +1502,16 @@ const OrderDetails = ({ onLogout }) => {
                 </div>
               </div>
 
-              <div className="mt-4 border-t border-gray-200 pt-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <div className="mt-3 border-t border-slate-200 pt-3">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   Order actions
                 </p>
-                <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+                <div className="flex flex-wrap items-center gap-2">
                   {(orderLevelStatus || "").toUpperCase() === "RESERVED" && (
                     <button
                       type="button"
                       onClick={openInitiatedModal}
-                      className="inline-flex items-center justify-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-900 shadow-sm transition hover:bg-emerald-100"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-900 shadow-sm transition hover:bg-emerald-100 sm:text-sm"
                     >
                       Move to initiated
                     </button>
@@ -1459,42 +1520,43 @@ const OrderDetails = ({ onLogout }) => {
                     <button
                       type="button"
                       onClick={() => setGuaranteeGalleryOpen(true)}
-                      className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 sm:text-sm"
                     >
                       <FaEye className="text-slate-600" />
-                      View guarantee images ({guaranteeImageUrls.length})
+                      Guarantee ({guaranteeImageUrls.length})
                     </button>
                   ) : (
-                    <span className="text-xs text-gray-500 sm:self-center">
-                      No guarantee images on file yet.
-                    </span>
+                    <span className="text-[11px] text-slate-500">No guarantee images on file.</span>
                   )}
                 </div>
               </div>
             </div>
           )}
 
-          <h3 className="mb-2 text-lg font-semibold text-gray-900">Items in Order</h3>
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50 text-gray-600">
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+            <h3 className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Items in order
+            </h3>
+            <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
+            <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
+              <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-slate-600 shadow-sm">
                 <tr>
-                  <th className="px-4 py-2 text-left">S.No</th>
-                  <th className="px-4 py-2 text-left">Item Code</th>
-                  <th className="px-4 py-2 text-left">Invoice ID</th>
-                  <th className="px-4 py-2 text-left">Item Name</th>
-                  <th className="px-4 py-2 text-left">Rent Amount</th>
-                  <th className="px-4 py-2 text-left">Current Amount</th>
-                  <th className="px-4 py-2 text-left">Generated Amount</th>
-                  <th className="px-4 py-2 text-left">Status</th>
-                  <th className="px-4 py-2 text-left whitespace-nowrap">Move to damage</th>
-                  <th className="px-4 py-2 text-left">Placed At</th>
-                  <th className="px-4 py-2 text-left">Returned At</th>
-                  <th className="px-4 py-2 text-left">Before Images</th>
-                  <th className="px-4 py-2 text-left">After Images</th>
+                  <th className="w-10 whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">S.No</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Item code</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Invoice ID</th>
+                  <th className="min-w-[8rem] px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Item name</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Rent</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Current</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Generated</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Status</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Damage</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Placed</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Returned</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Before</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">After</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100 bg-white">
                 {orderItems.map((item, idx) => {
                   const cleanAfterUrl = item.after_images
                     ? item.after_images.replace(/[{}]/g, "").trim()
@@ -1508,19 +1570,19 @@ const OrderDetails = ({ onLogout }) => {
                   const lineStatusEditable = LINE_ITEM_STATUS_EDIT_OPTIONS.includes(lineStatusUpper);
 
                   return (
-                    <tr key={`${item.delivery_item_id}-${idx}`} className="hover:bg-yellow-50/40">
-                      <td className="px-4 py-2">{idx + 1}</td>
-                      <td className="px-4 py-2">{item.item_code || 'N/A'}</td>
-                      <td className="px-4 py-2 font-mono text-xs text-gray-800">
+                    <tr key={`${item.delivery_item_id}-${idx}`} className="transition-colors hover:bg-amber-50/50">
+                      <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-600 sm:px-3">{idx + 1}</td>
+                      <td className="max-w-[7rem] truncate px-2 py-1.5 font-medium text-slate-900 sm:px-3">{item.item_code || "N/A"}</td>
+                      <td className="max-w-[6rem] truncate px-2 py-1.5 font-mono text-[11px] text-slate-800 sm:px-3">
                         {pickInvoiceIdFromRow(item, orderInfo) || "—"}
                       </td>
-                      <td className="px-4 py-2">{item.item_name || 'N/A'}</td>
-                      <td className="px-4 py-2">₹{item.rent_amount}</td>
-                      <td className="px-4 py-2">₹{currentAmount}</td>
-                      <td className="px-4 py-2 font-semibold text-blue-600">₹{generatedAmount}</td>
-                      <td className="px-4 py-2">
+                      <td className="max-w-[12rem] truncate px-2 py-1.5 text-slate-900 sm:max-w-none sm:px-3">{item.item_name || "N/A"}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5 tabular-nums sm:px-3">₹{item.rent_amount}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5 tabular-nums sm:px-3">₹{currentAmount}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5 font-semibold tabular-nums text-blue-600 sm:px-3">₹{generatedAmount}</td>
+                      <td className="px-2 py-1.5 sm:px-3">
                         {(item.status || "").toUpperCase() === "DAMAGED" ? (
-                          <span className="inline-flex rounded-md bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-800 ring-1 ring-rose-200">
+                          <span className="inline-flex rounded-md bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-rose-800 ring-1 ring-rose-200 sm:text-xs">
                             DAMAGED
                           </span>
                         ) : (
@@ -1530,7 +1592,7 @@ const OrderDetails = ({ onLogout }) => {
                               const v = e.target.value;
                               if (v) handleInlineStatusChange(item, v);
                             }}
-                            className="min-w-[7.5rem] rounded-md border border-gray-300 bg-white px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                            className="min-w-[6.5rem] max-w-full rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 sm:min-w-[7.5rem] sm:text-xs"
                           >
                             {!lineStatusEditable ? (
                               <option value="" disabled>
@@ -1545,7 +1607,7 @@ const OrderDetails = ({ onLogout }) => {
                           </select>
                         )}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-2 py-1.5 sm:px-3">
                         <button
                           type="button"
                           disabled={
@@ -1556,22 +1618,28 @@ const OrderDetails = ({ onLogout }) => {
                             e.stopPropagation();
                             openDamageModal(item);
                           }}
-                          className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex max-w-full items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold leading-tight text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
                         >
-                          <FaExclamationTriangle className="text-rose-600" />
-                          Move to damage
+                          <FaExclamationTriangle className="shrink-0 text-rose-600" />
+                          <span className="hidden sm:inline">Move to damage</span>
+                          <span className="sm:hidden">Damage</span>
                         </button>
                       </td>
-                      <td className="px-4 py-2">{item.placed_at}</td>
-                      <td className="px-4 py-2">{item.returned_at}</td>
-                      <td className="px-4 py-2">{renderBeforeImage(item.before_images, item)}</td>
-                      <td className="px-4 py-2">
+                      <td className="max-w-[5rem] truncate px-2 py-1.5 text-[11px] text-slate-700 sm:max-w-none sm:px-3 sm:text-sm">{item.placed_at}</td>
+                      <td className="max-w-[5rem] truncate px-2 py-1.5 text-[11px] text-slate-700 sm:max-w-none sm:px-3 sm:text-sm">{item.returned_at}</td>
+                      <td className="px-2 py-1.5 sm:px-3">{renderBeforeImage(item.before_images, item)}</td>
+                      <td className="px-2 py-1.5 sm:px-3">
                         {cleanAfterUrl ? (
-                          <a className="text-blue-600 hover:underline" href={cleanAfterUrl} target="_blank" rel="noreferrer">
-                            View After Image
+                          <a
+                            className="font-medium text-blue-600 underline-offset-2 hover:text-blue-700 hover:underline"
+                            href={cleanAfterUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            View
                           </a>
                         ) : (
-                          "Not Uploaded"
+                          <span className="text-[11px] text-slate-400">—</span>
                         )}
                       </td>
                     </tr>
@@ -1580,6 +1648,7 @@ const OrderDetails = ({ onLogout }) => {
               </tbody>
             </table>
           </div>
+        </div>
         </div>
       </div>
 
@@ -1989,12 +2058,12 @@ const OrderDetails = ({ onLogout }) => {
             <h3 className="mb-4 text-lg font-semibold text-gray-900">Pass details</h3>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between gap-4 border-b border-gray-100 py-2">
-                <dt className="text-gray-600">Order ID</dt>
-                <dd className="font-mono text-gray-900">{delivery_id}</dd>
-              </div>
-              <div className="flex justify-between gap-4 border-b border-gray-100 py-2">
                 <dt className="text-gray-600">Vehicle number</dt>
-                <dd className="font-medium text-gray-900">{orderInfo.vehicle_number || "—"}</dd>
+                <dd className="font-medium text-gray-900">
+                  {orderHasVehicleNumber(orderInfo.vehicle_number)
+                    ? orderInfo.vehicle_number
+                    : "—"}
+                </dd>
               </div>
               <div className="flex justify-between gap-4 border-b border-gray-100 py-2">
                 <dt className="text-gray-600">Pass entry date</dt>

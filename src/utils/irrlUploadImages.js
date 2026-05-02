@@ -12,6 +12,27 @@ function normalizeIrrlPublicUrl(pathOrUrl) {
 }
 
 /**
+ * Preferred shape: `{ data: [{ url, name }] }` from POST /irrl/upload.
+ * @param {object|unknown} resData - axios res.data
+ * @returns {{ url: string, name: string }[]|null}
+ */
+function parseNamedUploadResults(resData) {
+  const inner = resData?.data;
+  if (!Array.isArray(inner) || inner.length === 0) return null;
+  const out = [];
+  for (const item of inner) {
+    if (typeof item === "string") {
+      const u = normalizeIrrlPublicUrl(item);
+      if (u) out.push({ url: u, name: "" });
+    } else if (item && typeof item === "object") {
+      const u = normalizeIrrlPublicUrl(item.url ?? item.filePath ?? item.file_url ?? "");
+      if (u) out.push({ url: u, name: String(item.name ?? item.filename ?? "") });
+    }
+  }
+  return out.length ? out : null;
+}
+
+/**
  * IRRL POST /irrl/upload may return urls in several shapes.
  * @param {object|unknown} resData - axios res.data
  * @returns {string[]}
@@ -23,6 +44,11 @@ export function extractUrlsFromIrrlUploadResponse(resData) {
   }
   const root = typeof resData === "object" && !Array.isArray(resData) && resData.data !== undefined ? resData.data : resData;
   if (root == null) return [];
+  if (Array.isArray(root) && root.length && typeof root[0] === "object" && root[0] !== null) {
+    return root
+      .map((o) => normalizeIrrlPublicUrl(o.url ?? o.filePath ?? o.file_url ?? ""))
+      .filter(Boolean);
+  }
   if (Array.isArray(root) && root.length && typeof root[0] === "string") {
     return root.map((u) => normalizeIrrlPublicUrl(u)).filter(Boolean);
   }
@@ -56,13 +82,17 @@ function toFileArray(pickedFiles) {
 }
 
 /**
- * Upload images to IRRL — same flow as OrderForm handleUploadImages:
- * normalize picked files, POST multipart "images", map urls to { url, name }.
+ * Upload images to IRRL — multipart field defaults to `"images"` (OrderForm / orders).
+ * Pass `{ formField: "files" }` when the API expects `files` instead.
+ *
  * @param {File[]|FileList|unknown} pickedFiles
+ * @param {{ formField?: string }} [options]
  * @returns {Promise<{ url: string, name: string }[]>}
  * @throws {Error} message "Select images first" when no usable files, or "No image URLs in response" when server returns nothing usable
  */
-export async function uploadIrrlOrderImages(pickedFiles) {
+export async function uploadIrrlOrderImages(pickedFiles, options = {}) {
+  const formField = options.formField ?? "images";
+
   const files = toFileArray(pickedFiles);
 
   if (files.length === 0) {
@@ -70,11 +100,14 @@ export async function uploadIrrlOrderImages(pickedFiles) {
   }
 
   const form = new FormData();
-  files.forEach((file) => form.append("images", file));
+  files.forEach((file) => form.append(formField, file));
 
   const res = await axios.post(IRRL_UPLOAD_URL, form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
+
+  const named = parseNamedUploadResults(res.data);
+  if (named?.length) return named;
 
   const urls = extractUrlsFromIrrlUploadResponse(res.data);
   if (urls.length === 0) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
   Chart as ChartJS,
@@ -6,20 +6,38 @@ import {
   LinearScale,
   BarElement,
   ArcElement,
+  PointElement,
+  LineElement,
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from "chart.js";
-import { Bar, Doughnut } from "react-chartjs-2";
+import { Bar, Doughnut, Line } from "react-chartjs-2";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import { AlertCircle, RefreshCw } from "lucide-react";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
-const API_ITEM_DAMAGE = "https://ems.binlaundry.com/irrl/analytics/item-damage";
-const API_ITEM_RENTAL = "https://ems.binlaundry.com/irrl/analytics/item-rental";
-const API_ORDER_STATUS = "https://ems.binlaundry.com/irrl/analytics/order-status";
+const API_BASE = "https://ems.binlaundry.com/irrl/analytics";
+const API_ITEM_DAMAGE = `${API_BASE}/item-damage`;
+const API_ITEM_RENTAL = `${API_BASE}/item-rental`;
+const API_ORDER_STATUS = `${API_BASE}/order-status`;
+const API_COST_SUMMARY = `${API_BASE}/cost/summary`;
+const API_COST_REPAIR = `${API_BASE}/cost/repair-costs`;
+const API_COST_OUTSTANDING = `${API_BASE}/cost/outstanding-balances`;
 
 /** Bar chart outer wrapper (relative + flex-1 + min-h-0 so grid cells split height) */
 const chartFillClass = "relative min-h-0 w-full flex-1";
@@ -91,6 +109,102 @@ function statusCount(row) {
   return Number(row.count ?? row.order_count ?? row.total ?? row.orders ?? 0) || 0;
 }
 
+function num(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function normalizeCostSummary(payload) {
+  const root = payload?.data ?? payload ?? {};
+  const d = typeof root === "object" && root !== null && !Array.isArray(root) ? root : {};
+  return {
+    total_revenue: num(d.total_revenue ?? d.totalRevenue ?? d.revenue ?? d.generated_amount),
+    total_orders: num(d.total_orders ?? d.totalOrders ?? d.order_count ?? d.orders),
+    avg_order_value: num(d.avg_order_value ?? d.average_order_value ?? d.aov ?? d.avgOrderValue),
+    advance_collected: num(d.advance_collected ?? d.advanceCollected ?? d.advance ?? d.total_advance),
+    outstanding_dues: num(d.outstanding_dues ?? d.outstandingDues ?? d.outstanding ?? d.dues),
+    repair_costs: num(d.repair_costs ?? d.repairCosts ?? d.damage_cost ?? d.total_repair_cost),
+    discounts: num(d.discounts ?? d.total_discounts ?? d.discount_amount),
+  };
+}
+
+function normalizeCostTrendRows(payload) {
+  const raw = payload?.data ?? payload;
+  let arr = [];
+  if (Array.isArray(raw)) arr = raw;
+  else if (Array.isArray(raw?.items)) arr = raw.items;
+  else if (Array.isArray(raw?.series)) arr = raw.series;
+  else if (Array.isArray(raw?.data)) arr = raw.data;
+  if (!Array.isArray(arr)) return [];
+  return arr.map((row, i) => {
+    const period =
+      row.period ??
+      row.label ??
+      row.month ??
+      row.week ??
+      row.date ??
+      row.bucket ??
+      row.time_period ??
+      `P${i + 1}`;
+    const revenue = num(
+      row.revenue ??
+        row.total_revenue ??
+        row.amount ??
+        row.value ??
+        row.generated ??
+        row.total ??
+        0
+    );
+    return { period: String(period), revenue };
+  });
+}
+
+function repairItemLabel(row) {
+  return String(
+    row.item_type ??
+      row.itemType ??
+      row.type ??
+      row.category ??
+      row.item_name ??
+      row.name ??
+      "—"
+  );
+}
+
+function repairCostAmount(row) {
+  return num(
+    row.repair_cost ??
+      row.repairCost ??
+      row.cost ??
+      row.total_cost ??
+      row.amount ??
+      row.damage_cost ??
+      0
+  );
+}
+
+function outstandingOrderLabel(row, i) {
+  const id = row.order_id ?? row.orderId ?? row.order_no ?? row.order_number ?? row.id;
+  if (id != null && id !== "") return String(id);
+  return `#${i + 1}`;
+}
+
+function outstandingGenerated(row) {
+  return num(row.generated_amount ?? row.generatedAmount ?? row.generated ?? row.total ?? row.invoice_amount);
+}
+
+function outstandingAdvance(row) {
+  return num(row.advance ?? row.advance_collected ?? row.advanceCollected ?? row.paid ?? row.advance_amount);
+}
+
+function outstandingBalance(row) {
+  const bal = row.outstanding ?? row.balance ?? row.due ?? row.outstanding_balance ?? row.outstandingBalance;
+  if (bal != null && bal !== "") return num(bal);
+  const gen = outstandingGenerated(row);
+  const adv = outstandingAdvance(row);
+  return Math.max(0, gen - adv);
+}
+
 const STATUS_COLORS = [
   "rgba(245, 158, 11, 0.85)",
   "rgba(59, 130, 246, 0.85)",
@@ -105,28 +219,127 @@ const STATUS_COLORS = [
 const OrderAnalytics = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [mainTab, setMainTab] = useState("orders");
   const [itemDamageRows, setItemDamageRows] = useState([]);
   const [itemRentalRows, setItemRentalRows] = useState([]);
   const [orderStatusRows, setOrderStatusRows] = useState([]);
+  const [costSummary, setCostSummary] = useState(null);
+  const [revenueTrendRows, setRevenueTrendRows] = useState([]);
+  const [repairCostRows, setRepairCostRows] = useState([]);
+  const [outstandingRows, setOutstandingRows] = useState([]);
+  const [trendPeriod, setTrendPeriod] = useState("monthly");
+  const [trendLimit, setTrendLimit] = useState(12);
+  const [costErrors, setCostErrors] = useState({});
+  const [trendLoading, setTrendLoading] = useState(false);
+  const trendBoot = useRef(false);
+
+  const loadRevenueTrendOnly = useCallback(async () => {
+    const url = `${API_BASE}/cost/revenue-trend?period=${encodeURIComponent(trendPeriod)}&limit=${encodeURIComponent(String(trendLimit))}`;
+    setTrendLoading(true);
+    try {
+      const tr = await axios.get(url);
+      setRevenueTrendRows(normalizeCostTrendRows(tr.data));
+      setCostErrors((prev) => {
+        const next = { ...prev };
+        delete next.trend;
+        return next;
+      });
+    } catch (e) {
+      console.error(e);
+      setRevenueTrendRows([]);
+      setCostErrors((prev) => ({
+        ...prev,
+        trend: e.response?.data?.msg || e.message || "Failed to load trend",
+      }));
+    } finally {
+      setTrendLoading(false);
+    }
+  }, [trendPeriod, trendLimit]);
 
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [dmg, rent, st] = await Promise.all([
+      const trendUrl = `${API_BASE}/cost/revenue-trend?period=${encodeURIComponent(trendPeriod)}&limit=${encodeURIComponent(String(trendLimit))}`;
+      const settled = await Promise.allSettled([
         axios.get(API_ITEM_DAMAGE),
         axios.get(API_ITEM_RENTAL),
         axios.get(API_ORDER_STATUS),
+        axios.get(API_COST_SUMMARY),
+        axios.get(trendUrl),
+        axios.get(API_COST_REPAIR),
+        axios.get(API_COST_OUTSTANDING),
       ]);
-      setItemDamageRows(Array.isArray(dmg.data?.data) ? dmg.data.data : []);
-      setItemRentalRows(Array.isArray(rent.data?.data) ? rent.data.data : []);
-      setOrderStatusRows(Array.isArray(st.data?.data) ? st.data.data : []);
+
+      const nextCostErrors = {};
+
+      const failMsg = (r) =>
+        r.status === "rejected"
+          ? r.reason?.response?.data?.msg || r.reason?.message || "Failed"
+          : null;
+
+      if (settled[0].status === "fulfilled") {
+        const dmg = settled[0].value;
+        setItemDamageRows(Array.isArray(dmg.data?.data) ? dmg.data.data : []);
+      } else {
+        setItemDamageRows([]);
+        nextCostErrors.damage = failMsg(settled[0]);
+      }
+
+      if (settled[1].status === "fulfilled") {
+        const rent = settled[1].value;
+        setItemRentalRows(Array.isArray(rent.data?.data) ? rent.data.data : []);
+      } else {
+        setItemRentalRows([]);
+        nextCostErrors.rental = failMsg(settled[1]);
+      }
+
+      if (settled[2].status === "fulfilled") {
+        const st = settled[2].value;
+        setOrderStatusRows(Array.isArray(st.data?.data) ? st.data.data : []);
+      } else {
+        setOrderStatusRows([]);
+        nextCostErrors.status = failMsg(settled[2]);
+      }
+
+      if (settled[3].status === "fulfilled") {
+        setCostSummary(normalizeCostSummary(settled[3].value.data));
+      } else {
+        setCostSummary(null);
+        nextCostErrors.summary = failMsg(settled[3]);
+      }
+
+      if (settled[4].status === "fulfilled") {
+        setRevenueTrendRows(normalizeCostTrendRows(settled[4].value.data));
+      } else {
+        setRevenueTrendRows([]);
+        nextCostErrors.trend = failMsg(settled[4]);
+      }
+
+      if (settled[5].status === "fulfilled") {
+        const raw = settled[5].value.data?.data ?? settled[5].value.data;
+        setRepairCostRows(Array.isArray(raw) ? raw : []);
+      } else {
+        setRepairCostRows([]);
+        nextCostErrors.repair = failMsg(settled[5]);
+      }
+
+      if (settled[6].status === "fulfilled") {
+        const raw = settled[6].value.data?.data ?? settled[6].value.data;
+        setOutstandingRows(Array.isArray(raw) ? raw : []);
+      } else {
+        setOutstandingRows([]);
+        nextCostErrors.outstanding = failMsg(settled[6]);
+      }
+
+      setCostErrors(nextCostErrors);
+      const allFailed = settled.every((s) => s.status === "rejected");
+      if (allFailed) {
+        setError("Failed to load analytics");
+      }
     } catch (e) {
       console.error(e);
       setError(e.response?.data?.msg || e.message || "Failed to load analytics");
-      setItemDamageRows([]);
-      setItemRentalRows([]);
-      setOrderStatusRows([]);
     } finally {
       setLoading(false);
     }
@@ -135,6 +348,14 @@ const OrderAnalytics = ({ onLogout }) => {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!trendBoot.current) {
+      trendBoot.current = true;
+      return;
+    }
+    loadRevenueTrendOnly();
+  }, [trendPeriod, trendLimit, loadRevenueTrendOnly]);
 
   const itemDamageChart = useMemo(() => {
     const labels = itemDamageRows.map((r) => truncateLabel(itemDisplayName(r)));
@@ -198,6 +419,113 @@ const OrderAnalytics = ({ onLogout }) => {
       ],
     };
   }, [orderStatusRows]);
+
+  const revenueTrendChart = useMemo(() => {
+    const labels = revenueTrendRows.map((r) => truncateLabel(r.period, 14));
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Revenue (₹)",
+          data: revenueTrendRows.map((r) => r.revenue),
+          borderColor: "rgb(217, 119, 6)",
+          backgroundColor: "rgba(245, 158, 11, 0.18)",
+          fill: true,
+          tension: 0.28,
+          borderWidth: 2,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+        },
+      ],
+    };
+  }, [revenueTrendRows]);
+
+  const revenueTrendOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: "top",
+          labels: { boxWidth: 10, font: { size: 9 }, padding: 4 },
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.dataset.label}: ${rupee(ctx.raw)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 9 }, maxRotation: 45 },
+          grid: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (v) =>
+              Number(v) >= 1e5 ? `${(v / 1e5).toFixed(1)}L` : Number(v).toLocaleString("en-IN"),
+          },
+          grid: { color: "rgba(148, 163, 184, 0.2)" },
+        },
+      },
+    }),
+    []
+  );
+
+  const repairCostChartData = useMemo(() => {
+    const labels = repairCostRows.map((r) => truncateLabel(repairItemLabel(r)));
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Repair cost (₹)",
+          data: repairCostRows.map((r) => repairCostAmount(r)),
+          backgroundColor: repairCostRows.map((_, i) =>
+            `hsla(${8 + (i * 37) % 72}, 70%, 46%, 0.82)`
+          ),
+          borderColor: repairCostRows.map((_, i) => `hsla(${8 + (i * 37) % 72}, 70%, 34%, 1)`),
+          borderWidth: 1,
+          borderRadius: 5,
+        },
+      ],
+    };
+  }, [repairCostRows]);
+
+  const repairCostBarOptions = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              const i = items[0]?.dataIndex;
+              return String(repairItemLabel(repairCostRows[i]));
+            },
+            label: (ctx) => ` ${rupee(ctx.raw)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 9 }, maxRotation: 55 },
+          grid: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (v) =>
+              Number(v) >= 1e5 ? `${(v / 1e5).toFixed(1)}L` : Number(v).toLocaleString("en-IN"),
+          },
+          grid: { color: "rgba(148, 163, 184, 0.2)" },
+        },
+      },
+    }),
+    [repairCostRows]
+  );
 
   const barOptionsBase = useMemo(
     () => ({
@@ -330,7 +658,7 @@ const OrderAnalytics = ({ onLogout }) => {
                   Order analytics
                 </h1>
                 <p className="truncate text-[10px] text-slate-500 sm:text-[11px]">
-                  Damage · rentals & revenue · status — IRRL
+                  Inventory · cost summary · revenue trend — IRRL
                 </p>
               </div>
               <button
@@ -359,7 +687,57 @@ const OrderAnalytics = ({ onLogout }) => {
                 <p className="mt-2 text-xs font-medium text-slate-500">Loading analytics…</p>
               </div>
             ) : (
-              <div className="mx-auto grid min-h-0 w-full max-w-[1800px] flex-1 grid-cols-1 gap-2 lg:grid-cols-2 lg:grid-rows-2 lg:gap-3 lg:[grid-template-rows:minmax(0,1fr)_minmax(0,1fr)]">
+              <>
+                <div className="mb-2 shrink-0 grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-7">
+                  {[
+                    { key: "rev", label: "Total revenue", val: !costErrors.summary && costSummary ? rupee(costSummary.total_revenue) : "—" },
+                    { key: "ord", label: "Orders", val: !costErrors.summary && costSummary ? String(Math.round(costSummary.total_orders || 0).toLocaleString("en-IN")) : "—" },
+                    { key: "aov", label: "Avg order value", val: !costErrors.summary && costSummary ? rupee(costSummary.avg_order_value) : "—" },
+                    { key: "adv", label: "Advance collected", val: !costErrors.summary && costSummary ? rupee(costSummary.advance_collected) : "—" },
+                    { key: "out", label: "Outstanding", val: !costErrors.summary && costSummary ? rupee(costSummary.outstanding_dues) : "—" },
+                    { key: "rep", label: "Repair costs", val: !costErrors.summary && costSummary ? rupee(costSummary.repair_costs) : "—" },
+                    { key: "disc", label: "Discounts", val: !costErrors.summary && costSummary ? rupee(costSummary.discounts) : "—" },
+                  ].map((m) => (
+                    <div
+                      key={m.key}
+                      className="rounded-lg border border-slate-100 bg-white px-2 py-1.5 shadow-sm ring-1 ring-slate-50"
+                    >
+                      <div className="text-[9px] font-semibold uppercase leading-tight tracking-wide text-slate-500">
+                        {m.label}
+                      </div>
+                      <div className="truncate text-[11px] font-bold tabular-nums text-slate-900 sm:text-xs">{m.val}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mb-2 flex shrink-0 gap-1 rounded-lg border border-slate-200 bg-slate-100/90 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setMainTab("orders")}
+                    className={`flex-1 rounded-md px-2 py-1.5 text-center text-[11px] font-semibold transition ${
+                      mainTab === "orders"
+                        ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Orders & items
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMainTab("cost")}
+                    className={`flex-1 rounded-md px-2 py-1.5 text-center text-[11px] font-semibold transition ${
+                      mainTab === "cost"
+                        ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Cost & collections
+                  </button>
+                </div>
+
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  {mainTab === "orders" ? (
+                    <div className="mx-auto grid min-h-0 h-full w-full max-w-[1800px] flex-1 grid-cols-1 gap-2 lg:grid-cols-2 lg:grid-rows-2 lg:gap-3 lg:[grid-template-rows:minmax(0,1fr)_minmax(0,1fr)]">
                 {/* Item damage */}
                 <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
                   <div className="shrink-0 border-b border-slate-100 bg-gradient-to-r from-orange-50/90 to-white px-2.5 py-1.5">
@@ -500,7 +878,158 @@ const OrderAnalytics = ({ onLogout }) => {
                     </>
                   )}
                 </section>
-              </div>
+                    </div>
+                  ) : (
+                    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+                      <section className="flex min-h-0 flex-[1.1] flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
+                        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-gradient-to-r from-amber-50/60 to-white px-2.5 py-1.5">
+                          <div className="min-w-0">
+                            <h2 className="text-xs font-bold text-slate-900">Revenue trend</h2>
+                            <p className="text-[10px] leading-tight text-slate-500">
+                              Period & limit refresh the chart below
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <select
+                              value={trendPeriod}
+                              onChange={(e) => setTrendPeriod(e.target.value)}
+                              className="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] font-medium text-slate-800 shadow-sm"
+                              aria-label="Trend period"
+                            >
+                              <option value="monthly">Monthly</option>
+                              <option value="weekly">Weekly</option>
+                              <option value="daily">Daily</option>
+                            </select>
+                            <select
+                              value={trendLimit}
+                              onChange={(e) => setTrendLimit(Number(e.target.value))}
+                              className="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] font-medium text-slate-800 shadow-sm"
+                              aria-label="Number of periods"
+                            >
+                              <option value={6}>6 periods</option>
+                              <option value={12}>12 periods</option>
+                              <option value={24}>24 periods</option>
+                              <option value={36}>36 periods</option>
+                            </select>
+                            {trendLoading && (
+                              <span className="text-[10px] text-slate-400">Updating…</span>
+                            )}
+                          </div>
+                        </div>
+                        {costErrors.trend && (
+                          <p className="shrink-0 px-2 py-1 text-[10px] text-red-600">{costErrors.trend}</p>
+                        )}
+                        {revenueTrendRows.length === 0 && !trendLoading ? (
+                          <p className="flex flex-1 items-center justify-center py-8 text-xs text-slate-500">
+                            No trend data
+                          </p>
+                        ) : (
+                          <div className={`${chartFillClass} px-2 pt-1`}>
+                            <div className="absolute bottom-2 left-2 right-2 top-1">
+                              <Line data={revenueTrendChart} options={revenueTrendOptions} />
+                            </div>
+                          </div>
+                        )}
+                      </section>
+
+                      <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-2 lg:gap-3">
+                        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
+                          <div className="shrink-0 border-b border-slate-100 bg-gradient-to-r from-red-50/70 to-white px-2.5 py-1.5">
+                            <h2 className="text-xs font-bold text-slate-900">Repair costs by item type</h2>
+                            <p className="text-[10px] leading-tight text-slate-500">
+                              By item type · highest repair cost first
+                            </p>
+                          </div>
+                          {costErrors.repair && (
+                            <p className="shrink-0 px-2 py-1 text-[10px] text-red-600">{costErrors.repair}</p>
+                          )}
+                          {repairCostRows.length === 0 ? (
+                            <p className="flex flex-1 items-center justify-center py-6 text-xs text-slate-500">
+                              No data
+                            </p>
+                          ) : (
+                            <>
+                              <div className={`${chartFillClass} px-2 pt-1`}>
+                                <div className="absolute bottom-2 left-2 right-2 top-1">
+                                  <Bar data={repairCostChartData} options={repairCostBarOptions} />
+                                </div>
+                              </div>
+                              <div className="max-h-[min(20vh,120px)] shrink-0 overflow-auto rounded border border-slate-100 mx-2 mb-2">
+                                <table className="min-w-full border-collapse text-left">
+                                  <thead className="sticky top-0 bg-slate-50/95">
+                                    <tr className="border-b border-slate-100">
+                                      <th className={th}>#</th>
+                                      <th className={th}>Item type</th>
+                                      <th className={`${th} text-right`}>Repair</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                    {repairCostRows.map((row, i) => (
+                                      <tr key={`${repairItemLabel(row)}-${i}`} className="hover:bg-red-50/40">
+                                        <td className={`${td} py-1 font-mono text-slate-500`}>{i + 1}</td>
+                                        <td className={`${td} py-1 font-medium`}>{repairItemLabel(row)}</td>
+                                        <td className={`${td} py-1 text-right tabular-nums font-semibold text-red-800`}>
+                                          {rupee(repairCostAmount(row))}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </>
+                          )}
+                        </section>
+
+                        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
+                          <div className="shrink-0 border-b border-slate-100 bg-gradient-to-r from-teal-50/70 to-white px-2.5 py-1.5">
+                            <h2 className="text-xs font-bold text-slate-900">Outstanding balances</h2>
+                            <p className="text-[10px] leading-tight text-slate-500">
+                              Active orders · highest outstanding first
+                            </p>
+                          </div>
+                          {costErrors.outstanding && (
+                            <p className="shrink-0 px-2 py-1 text-[10px] text-red-600">{costErrors.outstanding}</p>
+                          )}
+                          <div className="min-h-0 flex-1 overflow-auto px-2 pb-2 pt-1">
+                            {outstandingRows.length === 0 ? (
+                              <p className="py-8 text-center text-xs text-slate-500">No data</p>
+                            ) : (
+                              <table className="min-w-full border-collapse text-left">
+                                <thead className="sticky top-0 bg-slate-50/95">
+                                  <tr className="border-b border-slate-100">
+                                    <th className={th}>Order</th>
+                                    <th className={`${th} text-right`}>Generated</th>
+                                    <th className={`${th} text-right`}>Advance</th>
+                                    <th className={`${th} text-right`}>Outstanding</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {outstandingRows.map((row, i) => (
+                                    <tr key={outstandingOrderLabel(row, i)} className="hover:bg-teal-50/40">
+                                      <td className={`${td} py-1 font-mono font-semibold text-slate-800`}>
+                                        {outstandingOrderLabel(row, i)}
+                                      </td>
+                                      <td className={`${td} py-1 text-right tabular-nums text-slate-700`}>
+                                        {rupee(outstandingGenerated(row))}
+                                      </td>
+                                      <td className={`${td} py-1 text-right tabular-nums text-slate-700`}>
+                                        {rupee(outstandingAdvance(row))}
+                                      </td>
+                                      <td className={`${td} py-1 text-right tabular-nums font-semibold text-teal-900`}>
+                                        {rupee(outstandingBalance(row))}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        </section>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </main>
