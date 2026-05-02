@@ -224,11 +224,9 @@ const Orders = ({ onLogout }) => {
                       <tr>
                         <th className={thClass}>#</th>
                         <th className={thClass}>Customer</th>
-                        <th className={thClass}>Cust. ID</th>
                         <th className={thClass}>Contact</th>
                         <th className={thClass}>Phone</th>
                         <th className={thClass}>Address</th>
-                        <th className={thClass}>Inventory</th>
                         <th className={thClass}>Invoice ID</th>
                         <th className={thClass}>Gen. amt</th>
                         <th className={thClass}>Current</th>
@@ -243,7 +241,7 @@ const Orders = ({ onLogout }) => {
                     <tbody className="divide-y divide-slate-100">
                       {currentRows.length === 0 ? (
                         <tr>
-                          <td colSpan={16} className="px-6 py-16 text-center">
+                          <td colSpan={14} className="px-6 py-16 text-center">
                             <div className="mx-auto max-w-sm">
                               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
                                 <Search className="h-7 w-7" />
@@ -285,11 +283,9 @@ const Orders = ({ onLogout }) => {
                           >
                             <td className="whitespace-nowrap px-2 py-2 font-mono text-slate-500">{indexOfFirstRow + i + 1}</td>
                             <td className="max-w-[120px] truncate px-2 py-2 font-medium text-slate-900" title={o.customer_name}>{o.customer_name || "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 text-slate-700">{o.customer_id || "—"}</td>
                             <td className="whitespace-nowrap px-2 py-2 text-slate-700">{o.contact_name || "—"}</td>
                             <td className="whitespace-nowrap px-2 py-2 text-slate-700">{o.contact_number || "—"}</td>
                             <td className="max-w-[140px] truncate px-2 py-2 text-slate-600" title={o.shipping_address}>{o.shipping_address || "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-slate-600">{o.inventory_id || "—"}</td>
                             <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-slate-700" title={String(pickInvoiceId(o))}>
                               {pickInvoiceId(o) || "—"}
                             </td>

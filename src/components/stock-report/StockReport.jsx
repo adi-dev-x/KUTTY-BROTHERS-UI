@@ -18,6 +18,24 @@ import * as XLSX from "xlsx";
 const autocompleteInputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20";
 
+const NumCell = ({ value }) => {
+  const n = Number(value);
+  const isZero = value === null || value === undefined
+    ? true
+    : Number.isFinite(n)
+      ? n === 0
+      : true;
+  return (
+    <td
+      className={`whitespace-nowrap px-3 py-2.5 text-right tabular-nums ${
+        isZero ? "text-slate-300" : "text-slate-800"
+      }`}
+    >
+      {value ?? 0}
+    </td>
+  );
+};
+
 // ===================== AutocompleteInput =====================
 const AutocompleteInput = ({ list = [], value = "", setValue, keyName }) => {
   const [showList, setShowList] = useState(false);
@@ -299,7 +317,9 @@ const StockReport = ({ onLogout }) => {
     "mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20";
 
   const thClass =
-    "whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-600";
+    "whitespace-nowrap px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500";
+  const thNumClass =
+    "whitespace-nowrap px-3 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500";
 
   return (
     <div className="relative flex h-[100dvh] max-h-screen flex-col overflow-hidden bg-[#f4f6fb]">
@@ -537,77 +557,104 @@ const StockReport = ({ onLogout }) => {
                 <p className="mt-4 text-sm font-medium text-slate-500">Loading stock…</p>
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white/95 shadow-xl shadow-slate-900/[0.06] ring-1 ring-slate-200/60 backdrop-blur-sm">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg shadow-slate-900/[0.04] ring-1 ring-slate-100">
                 <div className="min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable]">
-                  <table className="min-w-full border-collapse text-xs [&_td]:border-r [&_td]:border-slate-100 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-slate-100 [&_th:last-child]:border-r-0">
-                    <thead className="sticky top-0 z-10 border-b border-slate-200/90 bg-gradient-to-b from-slate-100 to-slate-50/95 shadow-sm">
-                      <tr>
-                        <th className={thClass}>#</th>
-                        <th className={thClass}>Item</th>
-                        <th className={thClass}>Brand</th>
-                        <th className={thClass}>Main type</th>
-                        <th className={thClass}>Sub type</th>
-                        <th className={thClass}>Description</th>
-                        <th className={thClass}>Main code</th>
-                        <th className={thClass}>Sub code</th>
-                        <th className={thClass}>HSN code</th>
-                        <th className={thClass}>Avail.</th>
-                        <th className={thClass}>Rented</th>
-                        <th className={thClass}>Damaged</th>
-                        <th className={thClass}>Repair</th>
-                        <th className={thClass}>Expired</th>
-                        <th className={thClass}>Blocked</th>
-                        <th className={thClass}>Reserved</th>
-                        <th className={thClass}>Pending</th>
-                        <th className={thClass}>Total</th>
+                  <table className="min-w-full border-separate border-spacing-0 text-[12px]">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="bg-slate-50/95 backdrop-blur-sm">
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>#</th>
+                        <th className={`${thClass} border-b border-slate-200/70`}>Item</th>
+                        <th className={`${thClass} border-b border-slate-200/70`}>Brand</th>
+                        <th className={`${thClass} border-b border-slate-200/70`}>Main type</th>
+                        <th className={`${thClass} border-b border-slate-200/70`}>Sub type</th>
+                        <th className={`${thClass} border-b border-slate-200/70`}>Description</th>
+                        <th className={`${thClass} border-b border-slate-200/70`}>Main code</th>
+                        <th className={`${thClass} border-b border-slate-200/70`}>Sub code</th>
+                        <th className={`${thClass} border-b border-slate-200/70`}>HSN code</th>
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>Avail.</th>
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>Rented</th>
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>Damaged</th>
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>Repair</th>
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>Expired</th>
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>Blocked</th>
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>Reserved</th>
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>Pending</th>
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>Total</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody>
                       {currentItems.length === 0 ? (
                         <tr>
-                          <td colSpan={18} className="px-6 py-16 text-center text-sm text-slate-500">
+                          <td colSpan={18} className="px-6 py-20 text-center text-sm text-slate-400">
                             No results
                           </td>
                         </tr>
                       ) : (
-                        currentItems.map((item, index) => (
-                          <tr
-                            key={`${item.sub_code || "no-sub"}-${index}`}
-                            onClick={() => handleRowClick(item)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                handleRowClick(item);
-                              }
-                            }}
-                            className={`cursor-pointer transition-colors hover:bg-amber-50/60 focus:bg-amber-50/60 focus:outline-none ${(indexOfFirst + index) % 2 === 1 ? "bg-slate-50/60" : "bg-white"}`}
-                          >
-                            <td className="whitespace-nowrap px-2 py-2 font-mono text-slate-500">{indexOfFirst + index + 1}</td>
-                            <td className="max-w-[140px] truncate px-2 py-2 font-medium text-slate-900" title={item.item_name}>
-                              {item.item_name}
-                            </td>
-                            <td className="whitespace-nowrap px-2 py-2 text-slate-700">{item.brand || "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 text-slate-600">{item.item_main_type || "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 text-slate-600">{item.item_sub_type || "—"}</td>
-                            <td className="max-w-[120px] truncate px-2 py-2 text-slate-600" title={item.description}>
-                              {item.description || "—"}
-                            </td>
-                            <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-slate-600">{item.main_code || "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] font-medium text-amber-800">{item.sub_code || "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-slate-700">{item.hsn_code || "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.available_count ?? "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.rented_count ?? "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.damaged_count ?? "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.not_initiated_count ?? "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.worn_out_count ?? "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.blocked_count ?? "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.reserved_count ?? "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 tabular-nums text-slate-800">{item.pending_count ?? "—"}</td>
-                            <td className="whitespace-nowrap px-2 py-2 font-semibold tabular-nums text-slate-900">{calculateTotalSum(item)}</td>
-                          </tr>
-                        ))
+                        currentItems.map((item, index) => {
+                          const total = calculateTotalSum(item);
+                          return (
+                            <tr
+                              key={`${item.sub_code || "no-sub"}-${index}`}
+                              onClick={() => handleRowClick(item)}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  handleRowClick(item);
+                                }
+                              }}
+                              className="group cursor-pointer transition-colors hover:bg-amber-50/40 focus:bg-amber-50/50 focus:outline-none [&>td]:border-b [&>td]:border-slate-100/80"
+                            >
+                              <td className="whitespace-nowrap px-3 py-2.5 text-right text-[11px] font-medium tabular-nums text-slate-400">
+                                {indexOfFirst + index + 1}
+                              </td>
+                              <td className="max-w-[180px] truncate px-3 py-2.5 font-semibold text-slate-900" title={item.item_name}>
+                                {item.item_name}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">{item.brand || "—"}</td>
+                              <td className="whitespace-nowrap px-3 py-2.5 text-slate-600">{item.item_main_type || "—"}</td>
+                              <td className="whitespace-nowrap px-3 py-2.5 text-slate-600">{item.item_sub_type || "—"}</td>
+                              <td className="max-w-[140px] truncate px-3 py-2.5 text-slate-500" title={item.description}>
+                                {item.description || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2.5 font-mono text-[11px] text-slate-500">
+                                {item.main_code || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2.5">
+                                {item.sub_code ? (
+                                  <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-200/70">
+                                    {item.sub_code}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300">—</span>
+                                )}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2.5 font-mono text-[11px] text-slate-500">
+                                {item.hsn_code || "—"}
+                              </td>
+                              <NumCell value={item.available_count} />
+                              <NumCell value={item.rented_count} />
+                              <NumCell value={item.damaged_count} />
+                              <NumCell value={item.not_initiated_count} />
+                              <NumCell value={item.worn_out_count} />
+                              <NumCell value={item.blocked_count} />
+                              <NumCell value={item.reserved_count} />
+                              <NumCell value={item.pending_count} />
+                              <td className="whitespace-nowrap px-3 py-2.5 text-right">
+                                <span
+                                  className={`inline-flex min-w-[2rem] justify-end rounded-md px-1.5 py-0.5 font-semibold tabular-nums ${
+                                    total > 0
+                                      ? "bg-slate-900/[0.04] text-slate-900 ring-1 ring-inset ring-slate-200/80"
+                                      : "text-slate-300"
+                                  }`}
+                                >
+                                  {total}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
