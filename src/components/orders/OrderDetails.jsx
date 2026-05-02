@@ -190,6 +190,37 @@ function pickInvoiceIdFromRow(item, orderFallback) {
   );
 }
 
+/** HSN / SAC from order line (same keys as stock/product APIs) */
+function pickHsnFromOrderItem(item) {
+  if (!item || typeof item !== "object") return "";
+  const v =
+    item.hsn_code ??
+    item.hsnCode ??
+    item.HSN_Code ??
+    item.HSNCode ??
+    item.hsn ??
+    item.HSN ??
+    item.gst_hsn ??
+    item.gst_hsn_code ??
+    item.item_hsn_code ??
+    item.Item_HSN_Code ??
+    "";
+  return v === null || v === undefined ? "" : String(v).trim();
+}
+
+/** Invoice no. on PDF: order/API invoice id when present, else INV-style fallback from order number */
+function resolveInvoiceNumberForPrint(orderItems, orderInfo, invoiceIdFromNav, deliveryIdFallback) {
+  const rawOrderNo = orderInfo?.order_number || deliveryIdFallback || "";
+  const fromApi = String(
+    (orderItems?.length && orderInfo
+      ? pickInvoiceIdFromRow(orderItems[0], orderInfo)
+      : "") ||
+      resolveOrderLevelInvoiceId(orderItems || [], invoiceIdFromNav) ||
+      ""
+  ).trim();
+  return fromApi || rawOrderNo.replace(/ORD/i, "INV");
+}
+
 /** Treats null, empty, and string "null" / "undefined" as no vehicle (API quirk) */
 function normalizeVehicleValue(v) {
   if (v === false || v == null) return "";
@@ -271,6 +302,18 @@ const OrderDetails = ({ onLogout }) => {
   const guaranteeImageUrls = useMemo(
     () => collectGuaranteeImagesFromItems(orderItems),
     [orderItems]
+  );
+
+  const previewInvoiceIdDisplay = useMemo(
+    () =>
+      String(
+        (orderItems.length && orderInfo
+          ? pickInvoiceIdFromRow(orderItems[0], orderInfo)
+          : "") ||
+          resolveOrderLevelInvoiceId(orderItems, invoiceIdFromOrdersPage) ||
+          ""
+      ).trim(),
+    [orderItems, orderInfo, invoiceIdFromOrdersPage]
   );
 
   const [selectedItem, setSelectedItem] = useState(null);
@@ -409,7 +452,12 @@ const OrderDetails = ({ onLogout }) => {
       setOrderItems(data);
       if (data.length > 0) {
         setOrderLevelStatus(resolveOrderLevelStatus(data, orderStatusFromOrdersList));
-        setOrderInfo(buildOrderDetailsFromItems(data, delivery_id, invoiceIdFromOrdersPage));
+        const od = buildOrderDetailsFromItems(data, delivery_id, invoiceIdFromOrdersPage);
+        setOrderInfo(od);
+        setDCFormData((prev) => ({
+          ...prev,
+          vehicleNumber: normalizeVehicleValue(od.vehicle_number).toUpperCase(),
+        }));
       }
       closePassModal();
     } catch (err) {
@@ -584,9 +632,9 @@ const OrderDetails = ({ onLogout }) => {
           const orderDetails = buildOrderDetailsFromItems(data, delivery_id, invoiceIdFromOrdersPage);
           setOrderInfo(orderDetails);
 
-          // Pre-populate DC form with API data
+          // Pre-populate DC form with API data (vehicle from order lines / pass)
           setDCFormData({
-            vehicleNumber: "",
+            vehicleNumber: normalizeVehicleValue(orderDetails.vehicle_number).toUpperCase(),
             partyGSTIN: orderDetails.customer_gst,
             customerName: orderDetails.customer_name,
             remarks: "",
@@ -967,8 +1015,12 @@ const OrderDetails = ({ onLogout }) => {
     };
 
     const amountInWords = numberToWords(Math.round(totalAmount));
-    const rawOrderNo = orderInfo?.order_number || delivery_id || '';
-    const invoiceNo = rawOrderNo.replace(/ORD/i, 'INV');
+    const invoiceNo = resolveInvoiceNumberForPrint(
+      orderItems,
+      orderInfo,
+      invoiceIdFromOrdersPage,
+      delivery_id
+    );
 
     const invoiceHTML = `
       <!DOCTYPE html>
@@ -1131,11 +1183,12 @@ const OrderDetails = ({ onLogout }) => {
               <tbody>
                 ${orderItems.map((item, index) => {
       const { days, total } = getDaysAndTotal(item);
+      const hsn = pickHsnFromOrderItem(item) || "—";
       return `
                     <tr>
                       <td class="text-center">${index + 1}</td>
                       <td>${item.item_name || 'Item'}</td>
-                      <td class="text-center">9973</td>
+                      <td class="text-center">${hsn}</td>
                       <td class="text-center">${days}</td>
                       <td class="text-right">${item.rent_amount}</td>
                       <td class="text-right">${Math.round(total)}</td>
@@ -1407,7 +1460,17 @@ const OrderDetails = ({ onLogout }) => {
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => setShowDCPreview(true)}
+                onClick={() => {
+                  setDCFormData((prev) => ({
+                    ...prev,
+                    vehicleNumber:
+                      String(prev.vehicleNumber ?? "").trim() ||
+                      (orderInfo?.vehicle_number
+                        ? normalizeVehicleValue(orderInfo.vehicle_number).toUpperCase()
+                        : ""),
+                  }));
+                  setShowDCPreview(true);
+                }}
                 disabled={downloadingDC}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 sm:px-3 sm:text-sm"
               >
@@ -1774,6 +1837,20 @@ const OrderDetails = ({ onLogout }) => {
             <h3 className="mb-4 text-center text-lg font-semibold text-gray-900">
               Invoice Details
             </h3>
+
+            {orderItems.length > 0 && orderInfo ? (
+              <div className="mb-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-center text-sm">
+                <span className="text-slate-600">Invoice no. (from order / API)</span>
+                <div className="mt-0.5 font-mono text-base font-semibold text-slate-900">
+                  {previewInvoiceIdDisplay || "—"}
+                </div>
+                {!previewInvoiceIdDisplay ? (
+                  <p className="mt-1 text-[11px] text-amber-800">
+                    No invoice id on the order yet — printed invoice will use the order reference as invoice no.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
 
             <form
               onSubmit={(e) => { e.preventDefault(); printInvoice(); }}
