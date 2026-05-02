@@ -23,6 +23,9 @@ const INITIATE_ORDER_URL = "https://ems.binlaundry.com/irrl/initiateOrder";
 
 const DAMAGE_RESTRICTED_STATUSES = ["INITIATED", "RESERVED"];
 
+/** Same as Orders list: line-item Status dropdown only allows these values */
+const LINE_ITEM_STATUS_EDIT_OPTIONS = ["COMPLETED", "BLOCKED"];
+
 /** If every line shares the same `status`, treat it as order-level (detail payload quirks). */
 function uniformLineItemStatus(items) {
   if (!items?.length) return "";
@@ -132,6 +135,19 @@ function normalizeBeforeImageModalStatus(status) {
   if (u === "BLOCKED") return "BLOCKED";
   if (u === "COMPLETED") return "COMPLETED";
   return "COMPLETED";
+}
+
+/** Order line may expose `damage: true` before or alongside status DAMAGED */
+function isItemDamageFlagTrue(item) {
+  if (!item || typeof item !== "object") return false;
+  const v = item.damage ?? item.Damage ?? item.is_damage ?? item.isDamaged;
+  if (v === true) return true;
+  if (v === 1) return true;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes";
+  }
+  return false;
 }
 
 /** Same resolution as Orders list `pickInvoiceId` */
@@ -357,20 +373,30 @@ const OrderDetails = ({ onLogout }) => {
         damageImages.push(...uploadedFiles.map((f) => f.url));
       }
 
-      const deliveryItemId = String(damageModalItem.delivery_item_id ?? "").trim();
-      const itemId = String(
-        damageModalItem.delivery_item_id ??
-          damageModalItem.item_newid ??
+      const deliveryItemId = String(
+        damageModalItem.delivery_item_id ?? damageModalItem.delivery_itemId ?? ""
+      ).trim();
+
+      /** Inventory / SKU id for markDamage — not the delivery line id */
+      const catalogItemId = String(
+        damageModalItem.item_newid ??
           damageModalItem.item_id ??
+          damageModalItem.inventory_id ??
+          damageModalItem.Item_Id ??
           ""
       ).trim();
-      if (!itemId) {
-        alert("Missing item id for this line.");
+
+      if (!deliveryItemId) {
+        alert("Missing delivery item id for this line.");
+        return;
+      }
+      if (!catalogItemId) {
+        alert("Missing inventory item id for this line.");
         return;
       }
 
       const payload = {
-        item_id: itemId,
+        item_id: catalogItemId,
         delivery_item_id: deliveryItemId,
         damage_images: damageImages.filter(Boolean),
         clear: false,
@@ -1341,6 +1367,10 @@ const OrderDetails = ({ onLogout }) => {
                   const currentAmount = parseInt(item.current_amount) || 0;
                   const generatedAmount = Math.round(item.generated_amount);
 
+                  const normalizedLineStatus = normalizeLineItemStatusForSelect(item.status);
+                  const lineStatusUpper = String(normalizedLineStatus || "").toUpperCase();
+                  const lineStatusEditable = LINE_ITEM_STATUS_EDIT_OPTIONS.includes(lineStatusUpper);
+
                   return (
                     <tr key={`${item.delivery_item_id}-${idx}`} className="hover:bg-yellow-50/40">
                       <td className="px-4 py-2">{idx + 1}</td>
@@ -1359,21 +1389,33 @@ const OrderDetails = ({ onLogout }) => {
                           </span>
                         ) : (
                           <select
-                            value={normalizeLineItemStatusForSelect(item.status)}
-                            onChange={(e) => handleInlineStatusChange(item, e.target.value)}
-                            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                            value={lineStatusEditable ? lineStatusUpper : ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v) handleInlineStatusChange(item, v);
+                            }}
+                            className="min-w-[7.5rem] rounded-md border border-gray-300 bg-white px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
                           >
-                            <option value="INITIATED">INITIATED</option>
-                            <option value="RESERVED">RESERVED</option>
-                            <option value="BLOCKED">BLOCKED</option>
-                            <option value="COMPLETED">COMPLETED</option>
+                            {!lineStatusEditable ? (
+                              <option value="" disabled>
+                                {normalizedLineStatus || item.status || "—"}
+                              </option>
+                            ) : null}
+                            {LINE_ITEM_STATUS_EDIT_OPTIONS.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
                           </select>
                         )}
                       </td>
                       <td className="px-4 py-2">
                         <button
                           type="button"
-                          disabled={(item.status || "").toUpperCase() === "DAMAGED"}
+                          disabled={
+                            (item.status || "").toUpperCase() === "DAMAGED" ||
+                            isItemDamageFlagTrue(item)
+                          }
                           onClick={(e) => {
                             e.stopPropagation();
                             openDamageModal(item);

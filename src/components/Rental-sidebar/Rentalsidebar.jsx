@@ -13,6 +13,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   Sparkles,
+  AlertTriangle,
+  Wrench,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -206,6 +208,12 @@ const Rentalsidebar = () => {
           {sectionLabel("Fulfillment")}
           <NavItem to="/stock-report" title="Stock Report" Icon={FileText}>
             Stock Report
+          </NavItem>
+          <NavItem to="/damage-report" title="Damage report" Icon={AlertTriangle}>
+            Damage report
+          </NavItem>
+          <NavItem to="/repaired-report" title="Repaired report" Icon={Wrench}>
+            Repaired report
           </NavItem>
           <NavItem to="/orders" title="Orders" Icon={ShoppingCart}>
             Orders

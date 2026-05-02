@@ -20,6 +20,9 @@ const fieldSelect =
 const thClass =
   "whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-600";
 
+/** Status values allowed when changing an order from the Orders table */
+const ORDER_STATUS_EDIT_OPTIONS = ["COMPLETED", "BLOCKED"];
+
 function pickInvoiceId(o) {
   return (
     o?.invoice_id ??
@@ -36,7 +39,6 @@ const Orders = ({ onLogout }) => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [statuses, setStatuses] = useState(["COMPLETED", "BLOCKED", "INITIATED", "RESERVED"]);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 8;
   const navigate = useNavigate();
@@ -55,20 +57,7 @@ const Orders = ({ onLogout }) => {
       }
     };
 
-    const fetchStatuses = async () => {
-      try {
-        const res = await axios.get(
-          "https://ems.binlaundry.com/irrl/genericApiUnjoin/statusOptions"
-        );
-        const apiStatuses = res.data?.data || [];
-        setStatuses(apiStatuses.filter((s) => ["COMPLETED", "BLOCKED", "INITIATED"].includes(s)));
-      } catch (err) {
-        console.error("Failed to fetch status options, using defaults", err);
-      }
-    };
-
     fetchOrders();
-    fetchStatuses();
   }, []);
 
   const handleAddOrder = (newOrder) => {
@@ -265,7 +254,10 @@ const Orders = ({ onLogout }) => {
                           </td>
                         </tr>
                       ) : (
-                        currentRows.map((o, i) => (
+                        currentRows.map((o, i) => {
+                          const statusUpper = String(o.status || "").toUpperCase();
+                          const statusEditable = ORDER_STATUS_EDIT_OPTIONS.includes(statusUpper);
+                          return (
                           <tr
                             key={o.delivery_id}
                             onClick={() =>
@@ -322,13 +314,19 @@ const Orders = ({ onLogout }) => {
                             </td>
                             <td className="whitespace-nowrap px-2 py-2" onClick={(e) => e.stopPropagation()}>
                               <select
-                                className={fieldSelect}
-                                value={o.status}
-                                onChange={(e) =>
-                                  handleStatusChange(o.delivery_id, e.target.value)
-                                }
+                                className={`${fieldSelect} min-w-[7.5rem]`}
+                                value={statusEditable ? statusUpper : ""}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  if (v) handleStatusChange(o.delivery_id, v);
+                                }}
                               >
-                                {statuses.map((s) => (
+                                {!statusEditable ? (
+                                  <option value="" disabled>
+                                    {o.status || "—"}
+                                  </option>
+                                ) : null}
+                                {ORDER_STATUS_EDIT_OPTIONS.map((s) => (
                                   <option key={s} value={s}>
                                     {s}
                                   </option>
@@ -349,7 +347,8 @@ const Orders = ({ onLogout }) => {
                               </button>
                             </td>
                           </tr>
-                        ))
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

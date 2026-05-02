@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import { uploadIrrlOrderImages } from "../../utils/irrlUploadImages";
 
@@ -39,11 +39,29 @@ function findItemInOptions(options, partial) {
   return null;
 }
 
+function resolveCustomerFromList(customers, customerName) {
+  if (!Array.isArray(customers) || customerName == null) return null;
+  const q = String(customerName).trim();
+  if (!q) return null;
+  const exact = customers.find((c) => (c.name || "").trim() === q);
+  if (exact) return exact;
+  const lower = q.toLowerCase();
+  return customers.find((c) => (c.name || "").trim().toLowerCase() === lower) || null;
+}
+
+const ADD_ORDER_URL = "https://ems.binlaundry.com/irrl/addOrder";
+
+/** Order-level status for new orders created from this form (quotation). */
+const ORDER_STATUS_QUOTATION = "RESERVED";
+
 const OrderForm = ({ onAddOrder, onClose }) => {
   const [customers, setCustomers] = useState([]);
   const [itemOptions, setItemOptions] = useState([]);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const beforePhotosInputRef = useRef(null);
+  const pendingImageFilesRef = useRef([]);
 
   const [formData, setFormData] = useState({
     customer_id: "",
@@ -55,7 +73,6 @@ const OrderForm = ({ onAddOrder, onClose }) => {
     advance_amount: "",
     discount: "",
     returned_at: "",
-    status: "INITIATED",
     items: [],
   });
 
@@ -92,18 +109,33 @@ const OrderForm = ({ onAddOrder, onClose }) => {
       .catch((err) => console.error(err));
   }, []);
 
+  useEffect(() => {
+    if (!customers.length) return;
+    const name = String(formData.customer_name ?? "").trim();
+    if (!name) return;
+    const match = resolveCustomerFromList(customers, name);
+    const id = match?.customer_id != null ? String(match.customer_id).trim() : "";
+    if (!id) return;
+    setFormData((prev) => {
+      const prevId = String(prev.customer_id ?? "").trim();
+      if (prevId === id) return prev;
+      return { ...prev, customer_id: id };
+    });
+  }, [customers, formData.customer_name]);
+
   const showMessage = (type, text) => {
     setMessage({ type, text });
     setTimeout(() => setMessage({ type: "", text: "" }), 3000);
   };
 
   const handleCustomerSelect = (name) => {
-    const customer = customers.find((c) => c.name === name);
-    setFormData({
-      ...formData,
+    const match = resolveCustomerFromList(customers, name);
+    const id = match?.customer_id != null ? String(match.customer_id).trim() : "";
+    setFormData((prev) => ({
+      ...prev,
       customer_name: name,
-      customer_id: customer ? customer.customer_id : "",
-    });
+      customer_id: id,
+    }));
   };
 
   const handleItemSelect = (name) => {
@@ -119,21 +151,35 @@ const OrderForm = ({ onAddOrder, onClose }) => {
     });
   };
 
-  const handleUploadImages = async (pickedFiles) => {
+  const handleUploadImages = async (filesOverride) => {
+    const files =
+      filesOverride !== undefined && filesOverride !== null
+        ? Array.from(filesOverride)
+        : pendingImageFilesRef.current.length
+          ? [...pendingImageFilesRef.current]
+          : [...(itemData.tempImages || [])];
+
+    if (files.length === 0) {
+      showMessage("error", "Select images first");
+      return;
+    }
+
     try {
       setUploading(true);
-      const uploadedFiles = await uploadIrrlOrderImages(
-        pickedFiles !== undefined && pickedFiles !== null ? pickedFiles : itemData.tempImages
-      );
+      const uploadedFiles = await uploadIrrlOrderImages(files);
       setItemData((prev) => ({
         ...prev,
         images: [...prev.images, ...uploadedFiles],
         tempImages: [],
       }));
+      pendingImageFilesRef.current = [];
+      if (beforePhotosInputRef.current) beforePhotosInputRef.current.value = "";
       showMessage("success", "Images uploaded successfully!");
     } catch (err) {
       if (err.message === "Select images first") {
         showMessage("error", "Select images first");
+      } else if (err.message === "No image URLs in response") {
+        showMessage("error", "Upload did not return image links. Try again or check the server.");
       } else {
         console.error("Upload failed", err.response?.data || err.message);
         showMessage("error", "Upload failed! Check console.");
@@ -189,39 +235,70 @@ const OrderForm = ({ onAddOrder, onClose }) => {
   };
 
   const handleSaveOrder = async () => {
+    const matchedCustomer = resolveCustomerFromList(customers, formData.customer_name);
+    const customerId =
+      String(formData.customer_id ?? "").trim() ||
+      (matchedCustomer?.customer_id != null ? String(matchedCustomer.customer_id).trim() : "");
+
+    if (!customerId) {
+      showMessage(
+        "error",
+        "Pick a customer from the suggestions list (exact name) before saving."
+      );
+      return;
+    }
+    if (formData.items.length === 0) {
+      showMessage("error", "Add at least one line item before saving.");
+      return;
+    }
+
+    const discount = Math.max(0, parseInt(formData.discount, 10) || 0);
+
+    const itemsPayload = formData.items.map((it) => ({
+      item_newid: it.item_id,
+      rent_amount: parseInt(it.amount, 10) || 0,
+      before_images: (it.images || []).map((img) => img.url),
+      returned_str: it.expired_at || "",
+      status: "INITIATED",
+    }));
+
+    const orderPayload = {
+      customer_id: customerId,
+      inventory_id: formData.inventory_id,
+      advance_amount: parseInt(formData.advance_amount, 10) || 0,
+      discount,
+      discount_amount: discount,
+      status: ORDER_STATUS_QUOTATION,
+      contact_name: formData.contact_person,
+      contact_number: formData.contact_number,
+      shipping_address: formData.contact_address,
+      items: itemsPayload,
+    };
+
     try {
-      if (formData.customer_id && formData.items.length > 0) {
-        const itemsPayload = formData.items.map((it) => ({
-          item_newid: it.item_id,
-          rent_amount: parseInt(it.amount) || 0,
-          before_images: (it.images || []).map((img) => img.url), // ✅ pass URL, not name
-          returned_str: it.expired_at,
-          status: "INITIATED",
-        }));
+      setSaving(true);
+      await axios.post(ADD_ORDER_URL, orderPayload, {
+        headers: { "Content-Type": "application/json" },
+      });
 
-        const orderPayload = {
-          customer_id: formData.customer_id,
-          inventory_id: formData.inventory_id,
-          advance_amount: parseInt(formData.advance_amount) || 0,
-          discount_amount: discountAmount,
-          status: formData.status,
-          contact_name: formData.contact_person,
-          contact_number: formData.contact_number,
-          shipping_address: formData.contact_address,
-          items: itemsPayload,
-        };
-
-        await axios.post("https://ems.binlaundry.com/irrl/addOrder", orderPayload, {
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (onAddOrder) onAddOrder(orderPayload);
-        window.location.reload();
-      }
+      if (onAddOrder) onAddOrder(orderPayload);
+      showMessage("success", "Order saved successfully.");
+      if (onClose) onClose();
+      window.location.reload();
     } catch (err) {
       console.error("Save order failed", err.response?.data || err.message);
+      const data = err.response?.data;
+      const apiMsg =
+        (typeof data?.msg === "string" && data.msg) ||
+        (typeof data?.message === "string" && data.message) ||
+        (typeof data === "string" && data) ||
+        "";
+      showMessage(
+        "error",
+        apiMsg || err.message || "Could not save the order. Check required fields or network."
+      );
     } finally {
-      if (onClose) onClose();
+      setSaving(false);
     }
   };
 
@@ -398,18 +475,13 @@ const OrderForm = ({ onAddOrder, onClose }) => {
               />
             </div>
             <div>
-              <label htmlFor="order-status" className={labelCls}>
-                Status
-              </label>
-              <select
-                id="order-status"
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className={field}
+              <span className={labelCls}>Status</span>
+              <div
+                className={`${field} cursor-default bg-slate-50 text-slate-800`}
+                title={`Sent to API as ${ORDER_STATUS_QUOTATION}`}
               >
-                <option value="INITIATED">INITIATED</option>
-                <option value="RESERVED">Quotation</option>
-              </select>
+                Quotation
+              </div>
             </div>
           </div>
         </section>
@@ -491,11 +563,16 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                 <div className="sm:col-span-2">
                   <label className={labelCls}>Before photos</label>
                   <input
+                    ref={beforePhotosInputRef}
                     type="file"
+                    accept="image/*"
                     multiple
-                    onChange={(e) =>
-                      setItemData({ ...itemData, tempImages: Array.from(e.target.files) })
-                    }
+                    onChange={(e) => {
+                      const next = Array.from(e.target.files || []);
+                      pendingImageFilesRef.current = next;
+                      setItemData((prev) => ({ ...prev, tempImages: next }));
+                      if (next.length > 0) void handleUploadImages(next);
+                    }}
                     className="w-full cursor-pointer rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-3 py-3 text-sm text-slate-600 transition hover:border-amber-300 hover:bg-amber-50/30 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-gradient-to-r file:from-amber-500 file:to-amber-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white file:shadow-sm"
                   />
                 </div>
@@ -509,7 +586,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                     <button
                       type="button"
                       className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-amber-200 hover:bg-amber-50/80 hover:text-slate-900 sm:col-span-2 sm:w-fit"
-                      onClick={handleUploadImages}
+                      onClick={() => handleUploadImages()}
                     >
                       Upload images
                     </button>
@@ -626,10 +703,11 @@ const OrderForm = ({ onAddOrder, onClose }) => {
           <div className="ml-auto flex shrink-0 pb-0.5">
             <button
               type="button"
-              className="rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/30 transition hover:from-amber-600 hover:to-amber-700 hover:shadow-xl hover:shadow-amber-500/35 active:scale-[0.98] sm:px-8 sm:py-3"
+              disabled={saving}
+              className="rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/30 transition hover:from-amber-600 hover:to-amber-700 hover:shadow-xl hover:shadow-amber-500/35 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:px-8 sm:py-3"
               onClick={handleSaveOrder}
             >
-              Save order
+              {saving ? "Saving…" : "Save order"}
             </button>
           </div>
         </div>

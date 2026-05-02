@@ -14,6 +14,10 @@ import RentalDashboard from "./components/customer/Customer";
 import InvoicePage from "./components/invoice/InvoicePage";
 import StockReport from "./components/stock-report/StockReport";
 import StockDetail from "./components/stock-report/StockDetail";
+import DamageReport from "./components/damage-report/DamageReport";
+import DamagedListPage from "./components/damage-report/DamagedListPage";
+import RepairHistoryPage from "./components/damage-report/RepairHistoryPage";
+import RepairedReport from "./components/repaired-report/RepairedReport";
 import Brand from "./components/brand/brand";
 import Tools from "./components/tools/Tools";
 import Category from "./components/category/Category";
@@ -187,6 +191,22 @@ function App() {
         <Route
           path="/stock/:sub_code"
           element={isLoggedIn ? <StockDetail onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/damage-report"
+          element={isLoggedIn ? <DamageReport onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/damage-report/list"
+          element={isLoggedIn ? <DamagedListPage onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/repairHistory"
+          element={isLoggedIn ? <RepairHistoryPage onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/repaired-report"
+          element={isLoggedIn ? <RepairedReport onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
         {/* Invoice */}
