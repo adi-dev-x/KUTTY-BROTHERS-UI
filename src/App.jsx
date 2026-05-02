@@ -18,6 +18,8 @@ import DamageReport from "./components/damage-report/DamageReport";
 import DamagedListPage from "./components/damage-report/DamagedListPage";
 import RepairHistoryPage from "./components/damage-report/RepairHistoryPage";
 import RepairedReport from "./components/repaired-report/RepairedReport";
+import CustomerAnalytics from "./components/analytics/CustomerAnalytics";
+import OrderAnalytics from "./components/analytics/OrderAnalytics";
 import Brand from "./components/brand/brand";
 import Tools from "./components/tools/Tools";
 import Category from "./components/category/Category";
@@ -227,6 +229,16 @@ function App() {
         <Route
           path="/list-orders"
           element={isLoggedIn ? <ListOrders onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+
+        {/* Analytics */}
+        <Route
+          path="/analytics/customers"
+          element={isLoggedIn ? <CustomerAnalytics onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/analytics/orders"
+          element={isLoggedIn ? <OrderAnalytics onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
 
         {/* Transactions */}

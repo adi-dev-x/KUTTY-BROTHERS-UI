@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   Users,
-  Layers,
   FileText,
   ShoppingCart,
   Tag,
@@ -12,7 +11,7 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeft,
-  Sparkles,
+  Warehouse,
   AlertTriangle,
   Wrench,
 } from "lucide-react";
@@ -31,17 +30,6 @@ const Rentalsidebar = () => {
     setCollapsed(next);
     localStorage.setItem("rentalSidebarCollapsed", String(next));
   };
-
-  const sectionLabel = (text) =>
-    collapsed ? null : (
-      <li className="pointer-events-none px-3 pb-1 pt-3 first:pt-1">
-        <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-          <span className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent max-w-[2rem]" aria-hidden />
-          {text}
-          <span className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" aria-hidden />
-        </span>
-      </li>
-    );
 
   const navLinkClass = ({ isActive }) =>
     [
@@ -113,22 +101,19 @@ const Rentalsidebar = () => {
         {!collapsed && (
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 shadow-lg shadow-amber-500/25 ring-2 ring-white/80">
-              <Sparkles className="h-5 w-5 text-white drop-shadow-sm" strokeWidth={2} />
+              <Warehouse className="h-5 w-5 text-white drop-shadow-sm" strokeWidth={2} />
               <span className="absolute -right-0.5 -top-0.5 flex h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-white" aria-hidden />
             </div>
             <div className="min-w-0">
               <h2 className="truncate bg-gradient-to-r from-slate-900 via-slate-800 to-slate-600 bg-clip-text text-base font-bold tracking-tight text-transparent">
                 Rentals
               </h2>
-              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                Operations hub
-              </p>
             </div>
           </div>
         )}
         {collapsed && (
           <div className="relative mb-1 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-md shadow-amber-500/20 ring-1 ring-white/50">
-            <Sparkles className="h-5 w-5 text-white" strokeWidth={2} />
+            <Warehouse className="h-5 w-5 text-white" strokeWidth={2} />
           </div>
         )}
         <button
@@ -151,37 +136,12 @@ const Rentalsidebar = () => {
 
       <nav className="relative z-[1] flex min-h-0 flex-1 flex-col overflow-hidden">
         <ul className="scrollbar-thin flex-1 space-y-0.5 overflow-y-auto overscroll-contain px-2.5 py-3 pb-6 [scrollbar-color:rgba(148,163,184,0.5)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300/80 [&::-webkit-scrollbar-track]:bg-transparent">
-          {sectionLabel("Overview")}
           <NavItem end to="/irl-dashboard" title="Dashboard" Icon={LayoutDashboard}>
             Dashboard
           </NavItem>
           <NavItem to="/rental-dashboard" title="Customers" Icon={Users}>
             Customers
           </NavItem>
-
-          {!collapsed && (
-            <li className="px-2 pt-2">
-              <div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-200/90 bg-slate-50/60 px-2.5 py-2 text-slate-500">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-slate-400 shadow-sm ring-1 ring-slate-100">
-                  <Layers className="h-4 w-4" strokeWidth={2} />
-                </span>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                  Attributes
-                </span>
-              </div>
-            </li>
-          )}
-
-          {collapsed && (
-            <li className="flex justify-center py-1">
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100/80 text-slate-400"
-                title="Attributes"
-              >
-                <Layers className="h-4 w-4" strokeWidth={2} />
-              </span>
-            </li>
-          )}
 
           {!collapsed && (
             <ul className="ml-1 space-y-0.5 border-l border-amber-200/40 pl-2.5 pt-0.5">
@@ -205,7 +165,6 @@ const Rentalsidebar = () => {
             </>
           )}
 
-          {sectionLabel("Fulfillment")}
           <NavItem to="/stock-report" title="Stock Report" Icon={FileText}>
             Stock Report
           </NavItem>
@@ -220,6 +179,13 @@ const Rentalsidebar = () => {
           </NavItem>
           <NavItem to="/list-orders" title="List Orders" Icon={List}>
             List Orders
+          </NavItem>
+
+          <NavItem to="/analytics/customers" title="Customer analytics" Icon={Users}>
+            Customer analytics
+          </NavItem>
+          <NavItem to="/analytics/orders" title="Order analytics" Icon={ShoppingCart}>
+            Order analytics
           </NavItem>
         </ul>
 

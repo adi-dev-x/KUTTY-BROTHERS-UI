@@ -21,6 +21,9 @@ const ORDER_ITEM_DAMAGE_URL = "https://ems.binlaundry.com/irrl/markDamage";
 /** POST body: order_id, guarantee_images */
 const INITIATE_ORDER_URL = "https://ems.binlaundry.com/irrl/initiateOrder";
 
+/** POST body: OrderPassRequest */
+const UPDATE_ORDER_PASS_URL = "https://ems.binlaundry.com/irrl/updateOrderPass";
+
 const DAMAGE_RESTRICTED_STATUSES = ["INITIATED", "RESERVED"];
 
 /** Same as Orders list: line-item Status dropdown only allows these values */
@@ -187,6 +190,53 @@ function pickInvoiceIdFromRow(item, orderFallback) {
   );
 }
 
+function pickVehicleNumberFromOrderRow(row) {
+  if (!row || typeof row !== "object") return "";
+  const v = row.vehicle_number ?? row.vehicleNumber ?? row.Vehicle_Number ?? row.vehicle_no;
+  if (v === false || v == null) return "";
+  return String(v).trim();
+}
+
+function pickPassFieldsFromOrderRow(row) {
+  if (!row || typeof row !== "object") return {};
+  const g = (snake, camel) => row[snake] ?? row[camel];
+  return {
+    pass_entry_date: String(g("pass_entry_date", "passEntryDate") ?? "").trim(),
+    pass_entry_time: String(g("pass_entry_time", "passEntryTime") ?? "").trim(),
+    pass_exit_date: String(g("pass_exit_date", "passExitDate") ?? "").trim(),
+    pass_exit_time: String(g("pass_exit_time", "passExitTime") ?? "").trim(),
+  };
+}
+
+function orderHasVehicleNumber(vehicleVal) {
+  if (vehicleVal === false || vehicleVal == null) return false;
+  return String(vehicleVal).trim().length > 0;
+}
+
+function buildOrderDetailsFromItems(data, deliveryId, invoiceIdFallback) {
+  if (!data?.length) return null;
+  const calculateGeneratedTotal = (items) =>
+    items.reduce((sum, item) => sum + parseInt(item.generated_amount || 0), 0);
+  const invoiceIdResolved = resolveOrderLevelInvoiceId(data, invoiceIdFallback);
+  const passFields = pickPassFieldsFromOrderRow(data[0]);
+  return {
+    customer_name: data[0].customer_name || "N/A",
+    customer_gst: data[0].customer_gst || "",
+    delivery_chelan_number: data[0].delivery_chelan_number || "",
+    invoice_id: invoiceIdResolved,
+    invoice_number:
+      data[0].invoice_number ?? data[0].invoiceNumber ?? data[0].Invoice_Number ?? "",
+    order_number: data[0].order_number || deliveryId,
+    order_date: data[0].placed_at
+      ? new Date(data[0].placed_at).toLocaleDateString()
+      : new Date().toLocaleDateString(),
+    advance_amount: parseInt(data[0].advance_amount || 0),
+    total_value: calculateGeneratedTotal(data),
+    vehicle_number: pickVehicleNumberFromOrderRow(data[0]),
+    ...passFields,
+  };
+}
+
 const OrderDetails = ({ onLogout }) => {
   const { delivery_id } = useParams();
   const navigate = useNavigate();
@@ -246,6 +296,17 @@ const OrderDetails = ({ onLogout }) => {
   const [initiatedUploading, setInitiatedUploading] = useState(false);
   const [initiatedSaving, setInitiatedSaving] = useState(false);
 
+  const [passModalOpen, setPassModalOpen] = useState(false);
+  const [viewPassModalOpen, setViewPassModalOpen] = useState(false);
+  const [passSaving, setPassSaving] = useState(false);
+  const [passForm, setPassForm] = useState({
+    vehicle_number: "",
+    pass_entry_date: "",
+    pass_entry_time: "",
+    pass_exit_date: "",
+    pass_exit_time: "",
+  });
+
   const openDamageModal = (item) => {
     const s = (item?.status || "").toUpperCase();
     if (DAMAGE_RESTRICTED_STATUSES.includes(s)) {
@@ -279,6 +340,72 @@ const OrderDetails = ({ onLogout }) => {
     setInitiatedUploadedUrls([]);
     setInitiatedUploading(false);
     setInitiatedSaving(false);
+  };
+
+  const openPassModal = () => {
+    setPassForm({
+      vehicle_number: "",
+      pass_entry_date: "",
+      pass_entry_time: "",
+      pass_exit_date: "",
+      pass_exit_time: "",
+    });
+    setPassModalOpen(true);
+  };
+
+  const closePassModal = () => {
+    setPassModalOpen(false);
+    setPassSaving(false);
+  };
+
+  const handleSubmitOrderPass = async () => {
+    const orderId = String(delivery_id ?? "").trim();
+    if (!orderId) {
+      alert("Missing order id.");
+      return;
+    }
+    const vn = String(passForm.vehicle_number ?? "").trim();
+    if (!vn) {
+      alert("Enter vehicle number.");
+      return;
+    }
+
+    const payload = {
+      order_id: orderId,
+      vehicle_number: vn,
+      pass_entry_date: String(passForm.pass_entry_date ?? "").trim(),
+      pass_entry_time: String(passForm.pass_entry_time ?? "").trim(),
+      pass_exit_date: String(passForm.pass_exit_date ?? "").trim(),
+      pass_exit_time: String(passForm.pass_exit_time ?? "").trim(),
+    };
+
+    try {
+      setPassSaving(true);
+      await axios.post(UPDATE_ORDER_PASS_URL, payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const res = await axios.get(
+        `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+      );
+      const data = res.data?.data || [];
+      setOrderItems(data);
+      if (data.length > 0) {
+        setOrderLevelStatus(resolveOrderLevelStatus(data, orderStatusFromOrdersList));
+        setOrderInfo(buildOrderDetailsFromItems(data, delivery_id, invoiceIdFromOrdersPage));
+      }
+      closePassModal();
+    } catch (err) {
+      console.error("Update order pass failed:", err);
+      alert(
+        err.response?.data?.msg ||
+          err.response?.data?.message ||
+          err.message ||
+          "Could not save pass."
+      );
+    } finally {
+      setPassSaving(false);
+    }
   };
 
   const handleInitiatedUploadImages = async () => {
@@ -436,47 +563,26 @@ const OrderDetails = ({ onLogout }) => {
           setOrderLevelStatus(orderStatusFromOrdersList.toUpperCase());
         }
 
-        // Calculate total using generated amounts (with markup)
-        const calculateGeneratedTotal = (items) => {
-          return items.reduce((sum, item) => {
-            const generatedAmount = parseInt(item.generated_amount || 0);
-            return sum + generatedAmount;
-          }, 0);
-        };
-
-        // Extract order info from first item (assuming all items share same order details)
         if (data.length > 0) {
-          const invoiceIdResolved = resolveOrderLevelInvoiceId(data, invoiceIdFromOrdersPage);
-          const orderDetails = {
-            customer_name: data[0].customer_name || "N/A",
-            customer_gst: data[0].customer_gst || "",
-            delivery_chelan_number: data[0].delivery_chelan_number || "",
-            invoice_id: invoiceIdResolved,
-            invoice_number:
-              data[0].invoice_number ?? data[0].invoiceNumber ?? data[0].Invoice_Number ?? "",
-            order_number: data[0].order_number || delivery_id,
-            order_date: data[0].placed_at ? new Date(data[0].placed_at).toLocaleDateString() : new Date().toLocaleDateString(),
-            advance_amount: parseInt(data[0].advance_amount || 0),
-            total_value: calculateGeneratedTotal(data)
-          };
+          const orderDetails = buildOrderDetailsFromItems(data, delivery_id, invoiceIdFromOrdersPage);
           setOrderInfo(orderDetails);
 
           // Pre-populate DC form with API data
           setDCFormData({
-            vehicleNumber: '',
+            vehicleNumber: "",
             partyGSTIN: orderDetails.customer_gst,
             customerName: orderDetails.customer_name,
-            remarks: '',
-            deliveryChallanNumber: orderDetails.delivery_chelan_number
+            remarks: "",
+            deliveryChallanNumber: orderDetails.delivery_chelan_number,
           });
 
           setInvoiceFormData({
             customerName: orderDetails.customer_name,
-            customerAddress: '',
+            customerAddress: "",
             customerGSTIN: orderDetails.customer_gst,
-            invoiceDate: new Date().toISOString().split('T')[0],
-            returnDate: '',
-            modeOfPayment: 'Immediate'
+            invoiceDate: new Date().toISOString().split("T")[0],
+            returnDate: "",
+            modeOfPayment: "Immediate",
           });
         }
       } catch (err) {
@@ -1303,6 +1409,36 @@ const OrderDetails = ({ onLogout }) => {
                     {orderLevelStatus || "—"}
                   </div>
                 </div>
+                <div className="sm:col-span-3 flex flex-col gap-2 border-t border-gray-200 pt-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <div className="text-gray-600">Vehicle number</div>
+                    <div className="font-medium text-gray-900">
+                      {orderHasVehicleNumber(orderInfo.vehicle_number)
+                        ? orderInfo.vehicle_number
+                        : "—"}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    {!orderHasVehicleNumber(orderInfo.vehicle_number) ? (
+                      <button
+                        type="button"
+                        onClick={openPassModal}
+                        className="inline-flex items-center justify-center rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 shadow-sm transition hover:bg-amber-100"
+                      >
+                        Add pass
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setViewPassModalOpen(true)}
+                        className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                      >
+                        <FaEye className="text-slate-600" />
+                        View pass
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="mt-4 border-t border-gray-200 pt-4">
@@ -1749,6 +1885,141 @@ const OrderDetails = ({ onLogout }) => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {passModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+            <button
+              type="button"
+              className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100"
+              onClick={closePassModal}
+              aria-label="Close"
+            >
+              <FaTimes />
+            </button>
+            <h3 className="mb-1 text-lg font-semibold text-gray-900">Add pass</h3>
+            <p className="mb-4 font-mono text-xs text-gray-600">order_id · {delivery_id}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Vehicle number</label>
+                <input
+                  type="text"
+                  value={passForm.vehicle_number}
+                  onChange={(e) =>
+                    setPassForm((p) => ({ ...p, vehicle_number: e.target.value.toUpperCase() }))
+                  }
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  placeholder="e.g. TN01AB1234"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">Pass entry date</label>
+                  <input
+                    type="date"
+                    value={passForm.pass_entry_date}
+                    onChange={(e) => setPassForm((p) => ({ ...p, pass_entry_date: e.target.value }))}
+                    className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">Pass entry time</label>
+                  <input
+                    type="time"
+                    value={passForm.pass_entry_time}
+                    onChange={(e) => setPassForm((p) => ({ ...p, pass_entry_time: e.target.value }))}
+                    className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">Pass exit date</label>
+                  <input
+                    type="date"
+                    value={passForm.pass_exit_date}
+                    onChange={(e) => setPassForm((p) => ({ ...p, pass_exit_date: e.target.value }))}
+                    className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-gray-700">Pass exit time</label>
+                  <input
+                    type="time"
+                    value={passForm.pass_exit_time}
+                    onChange={(e) => setPassForm((p) => ({ ...p, pass_exit_time: e.target.value }))}
+                    className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
+                <button
+                  type="button"
+                  onClick={closePassModal}
+                  className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitOrderPass}
+                  disabled={passSaving}
+                  className="inline-flex items-center gap-2 rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <FaSave /> {passSaving ? "Saving…" : "Save pass"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewPassModalOpen && orderInfo && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+            <button
+              type="button"
+              className="absolute right-3 top-3 rounded-md p-1 text-gray-600 hover:bg-gray-100"
+              onClick={() => setViewPassModalOpen(false)}
+              aria-label="Close"
+            >
+              <FaTimes />
+            </button>
+            <h3 className="mb-4 text-lg font-semibold text-gray-900">Pass details</h3>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between gap-4 border-b border-gray-100 py-2">
+                <dt className="text-gray-600">Order ID</dt>
+                <dd className="font-mono text-gray-900">{delivery_id}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-gray-100 py-2">
+                <dt className="text-gray-600">Vehicle number</dt>
+                <dd className="font-medium text-gray-900">{orderInfo.vehicle_number || "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-gray-100 py-2">
+                <dt className="text-gray-600">Pass entry date</dt>
+                <dd className="text-gray-900">{orderInfo.pass_entry_date || "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-gray-100 py-2">
+                <dt className="text-gray-600">Pass entry time</dt>
+                <dd className="text-gray-900">{orderInfo.pass_entry_time || "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-gray-100 py-2">
+                <dt className="text-gray-600">Pass exit date</dt>
+                <dd className="text-gray-900">{orderInfo.pass_exit_date || "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4 py-2">
+                <dt className="text-gray-600">Pass exit time</dt>
+                <dd className="text-gray-900">{orderInfo.pass_exit_time || "—"}</dd>
+              </div>
+            </dl>
+            <button
+              type="button"
+              onClick={() => setViewPassModalOpen(false)}
+              className="mt-6 w-full rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
