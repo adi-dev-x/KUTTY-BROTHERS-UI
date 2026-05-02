@@ -186,7 +186,7 @@ const Customer = ({ onLogout }) => {
     if (!deleteTarget) return;
     const id = deleteTarget.customer_id;
     const idStr = String(id);
-    const label = deleteTarget.name || `Customer #${idStr}`;
+    const label = deleteTarget.name || "Customer";
 
     setDeleteError(null);
     setDeletingId(idStr);
@@ -263,8 +263,8 @@ const Customer = ({ onLogout }) => {
   };
 
   const handleDownloadExcel = () => {
-    const tableData = customers.map((c) => ({
-      "ID": c.customer_id,
+    const tableData = customers.map((c, i) => ({
+      "S.No": i + 1,
       "Name": c.name,
       "Phone": c.phone,
       "Type": c.type,
@@ -344,7 +344,7 @@ const Customer = ({ onLogout }) => {
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search name, ID, or phone…"
+                      placeholder="Search name or phone…"
                       className="w-full rounded-xl border border-slate-200/90 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 shadow-inner shadow-slate-900/5 placeholder:text-slate-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
@@ -383,7 +383,7 @@ const Customer = ({ onLogout }) => {
                   <table className="min-w-full border-collapse text-xs [&_td]:border-r [&_td]:border-slate-100 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-slate-100 [&_th:last-child]:border-r-0">
                     <thead className="sticky top-0 z-10 border-b border-slate-200/90 bg-gradient-to-b from-slate-100 to-slate-50/95 shadow-sm">
                       <tr>
-                        <th className={thClass}>ID</th>
+                        <th className={thClass}>S.No</th>
                         <th className={thClass}>Customer</th>
                         <th className={thClass}>Contact</th>
                         <th className={thClass}>Type</th>
@@ -413,8 +413,8 @@ const Customer = ({ onLogout }) => {
                             key={customer.customer_id}
                             className={`transition-colors hover:bg-amber-50/60 ${(indexOfFirst + idx) % 2 === 1 ? "bg-slate-50/60" : "bg-white"}`}
                           >
-                            <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-slate-500">
-                              #{customer.customer_id}
+                            <td className="whitespace-nowrap px-2 py-2 text-[11px] font-semibold tabular-nums text-slate-600">
+                              {indexOfFirst + idx + 1}
                             </td>
                             <td className="px-2 py-2">
                               <div className="flex items-center gap-2">
@@ -553,12 +553,9 @@ const Customer = ({ onLogout }) => {
                 <p id="delete-dialog-desc" className="mt-2 text-sm leading-relaxed text-slate-600">
                   This permanently removes{" "}
                   <span className="font-semibold text-slate-900">
-                    {deleteTarget.name || `Customer #${deleteTarget.customer_id}`}
+                    {deleteTarget.name || "this customer"}
                   </span>{" "}
                   from your directory. This action cannot be undone.
-                </p>
-                <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2 py-1 font-mono text-[11px] text-slate-500 ring-1 ring-slate-100">
-                  ID <span className="font-semibold text-slate-700">{deleteTarget.customer_id}</span>
                 </p>
                 {deleteError && (
                   <div className="mt-4 flex gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-800 ring-1 ring-rose-100">
