@@ -32,6 +32,8 @@ import SiteDetails from "./components/sites/SiteDetails";
 import Orders from "./components/orders/Orders";
 import OrderDetails from "./components/orders/OrderDetails";
 import ListOrders from "./components/listorders/ListOrders";
+import Qoatation from "./components/qoatation/Qoatation";
+import QoatationDetails from "./components/qoatation/QoatationDetails";
 
 // MainType & SubType
 import MainType from "./components/maintype/MainType";
@@ -226,6 +228,14 @@ function App() {
         <Route
           path="/orders"
           element={isLoggedIn ? <Orders onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/qoatation"
+          element={isLoggedIn ? <Qoatation onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/qoatation-details/:id"
+          element={isLoggedIn ? <QoatationDetails onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
         <Route
           path="/order-details/:delivery_id"

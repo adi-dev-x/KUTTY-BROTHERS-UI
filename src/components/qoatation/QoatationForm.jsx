@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
-import { uploadIrrlOrderImages } from "../../utils/irrlUploadImages";
 
-/** Match item row from itemRetrive — API keys vary (item_code, sub_code, item_id, etc.) */
 function findItemInOptions(options, partial) {
   if (!Array.isArray(options) || !partial) return null;
   const id = partial.item_id;
@@ -49,19 +47,15 @@ function resolveCustomerFromList(customers, customerName) {
   return customers.find((c) => (c.name || "").trim().toLowerCase() === lower) || null;
 }
 
-const ADD_ORDER_URL = "https://ems.binlaundry.com/irrl/addOrder";
+const ADD_ORDER_URL = "https://ems.binlaundry.com/irrl/quotation";
 
-/** Order-level status for new orders created from this form (quotation). */
 const ORDER_STATUS_QUOTATION = "RESERVED";
 
-const OrderForm = ({ onAddOrder, onClose }) => {
+const QoatationForm = ({ onAddOrder, onClose }) => {
   const [customers, setCustomers] = useState([]);
   const [itemOptions, setItemOptions] = useState([]);
   const [message, setMessage] = useState({ type: "", text: "" });
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const beforePhotosInputRef = useRef(null);
-  const pendingImageFilesRef = useRef([]);
 
   const [formData, setFormData] = useState({
     customer_id: "",
@@ -70,9 +64,6 @@ const OrderForm = ({ onAddOrder, onClose }) => {
     contact_number: "",
     contact_address: "",
     inventory_id: "550e8400-e29b-41d4-a716-446655440000",
-    advance_amount: "",
-    discount: "",
-    returned_at: "",
     items: [],
   });
 
@@ -81,11 +72,11 @@ const OrderForm = ({ onAddOrder, onClose }) => {
     item_id: "",
     item_code: "",
     item_name: "",
-    expired_at: "",
+    description: "",
+    start_date: "",
+    end_date: "",
     amount: "",
     status: "INITIATED",
-    images: [],
-    tempImages: [],
   });
 
   const itemsSubtotal = useMemo(
@@ -93,9 +84,6 @@ const OrderForm = ({ onAddOrder, onClose }) => {
       formData.items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0),
     [formData.items]
   );
-
-  const discountAmount = Math.max(0, parseInt(formData.discount, 10) || 0);
-  const totalAfterDiscount = Math.max(0, itemsSubtotal - discountAmount);
 
   useEffect(() => {
     axios
@@ -151,43 +139,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
     });
   };
 
-  const handleUploadImages = async (filesOverride) => {
-    const files =
-      filesOverride !== undefined && filesOverride !== null
-        ? Array.from(filesOverride)
-        : pendingImageFilesRef.current.length
-          ? [...pendingImageFilesRef.current]
-          : [...(itemData.tempImages || [])];
-
-    if (files.length === 0) {
-      showMessage("error", "Select images first");
-      return;
-    }
-
-    try {
-      setUploading(true);
-      const uploadedFiles = await uploadIrrlOrderImages(files);
-      setItemData((prev) => ({
-        ...prev,
-        images: [...prev.images, ...uploadedFiles],
-        tempImages: [],
-      }));
-      pendingImageFilesRef.current = [];
-      if (beforePhotosInputRef.current) beforePhotosInputRef.current.value = "";
-      showMessage("success", "Images uploaded successfully!");
-    } catch (err) {
-      if (err.message === "Select images first") {
-        showMessage("error", "Select images first");
-      } else if (err.message === "No image URLs in response") {
-        showMessage("error", "Upload did not return image links. Try again or check the server.");
-      } else {
-        console.error("Upload failed", err.response?.data || err.message);
-        showMessage("error", "Upload failed! Check console.");
-      }
-    } finally {
-      setUploading(false);
-    }
-  };
+  // Before-photos upload removed for Qoatation
 
   const handleAddItem = () => {
     const matched = findItemInOptions(itemOptions, itemData);
@@ -210,10 +162,12 @@ const OrderForm = ({ onAddOrder, onClose }) => {
       items: [
         ...formData.items,
         {
-          ...itemData,
           item_id: String(resolvedId),
           item_name: resolvedName,
           item_code: resolvedCode,
+          description: itemData.description || "",
+          start_date: itemData.start_date || "",
+          end_date: itemData.end_date || "",
           status: "INITIATED",
           amount: parseInt(itemData.amount, 10) || 0,
         },
@@ -224,14 +178,14 @@ const OrderForm = ({ onAddOrder, onClose }) => {
       item_id: "",
       item_code: "",
       item_name: "",
-      expired_at: "",
+      description: "",
+      start_date: "",
+      end_date: "",
       amount: "",
       status: "INITIATED",
-      images: [],
-      tempImages: [],
     });
     setShowItemForm(false);
-    showMessage("success", "Item added to order!");
+    showMessage("success", "Item added to qoatation!");
   };
 
   const handleSaveOrder = async () => {
@@ -252,23 +206,16 @@ const OrderForm = ({ onAddOrder, onClose }) => {
       return;
     }
 
-    const discount = Math.max(0, parseInt(formData.discount, 10) || 0);
-
     const itemsPayload = formData.items.map((it) => ({
-      item_newid: it.item_id,
+      item_name: it.item_name,
+      description: it.description || "",
       rent_amount: parseInt(it.amount, 10) || 0,
-      before_images: (it.images || []).map((img) => img.url),
-      returned_str: it.expired_at || "",
-      status: "INITIATED",
+      start_date: it.start_date || "",
+      end_date: it.end_date || "",
     }));
 
     const orderPayload = {
       customer_id: customerId,
-      inventory_id: formData.inventory_id,
-      advance_amount: parseInt(formData.advance_amount, 10) || 0,
-      discount,
-      discount_amount: discount,
-      status: ORDER_STATUS_QUOTATION,
       contact_name: formData.contact_person,
       contact_number: formData.contact_number,
       shipping_address: formData.contact_address,
@@ -282,11 +229,11 @@ const OrderForm = ({ onAddOrder, onClose }) => {
       });
 
       if (onAddOrder) onAddOrder(orderPayload);
-      showMessage("success", "Order saved successfully.");
+      showMessage("success", "Qoatation saved successfully.");
       if (onClose) onClose();
       window.location.reload();
     } catch (err) {
-      console.error("Save order failed", err.response?.data || err.message);
+      console.error("Save qoatation failed", err.response?.data || err.message);
       const data = err.response?.data;
       const apiMsg =
         (typeof data?.msg === "string" && data.msg) ||
@@ -295,7 +242,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
         "";
       showMessage(
         "error",
-        apiMsg || err.message || "Could not save the order. Check required fields or network."
+        apiMsg || err.message || "Could not save the qoatation. Check required fields or network."
       );
     } finally {
       setSaving(false);
@@ -331,7 +278,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-amber-100/90 bg-gradient-to-br from-amber-50 via-white to-orange-50/30 px-6 py-5 shadow-sm">
           <div className="min-w-0 pr-2">
             <h2 className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-xl font-bold tracking-tight text-transparent">
-              Create order
+              Create Qoatation
             </h2>
             <p className="mt-1 text-sm leading-relaxed text-slate-600">
               Customer, contact, and line items — all in one place.
@@ -446,46 +393,6 @@ const OrderForm = ({ onAddOrder, onClose }) => {
           </div>
         </section>
 
-        <section className="mt-5 rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100">
-          {sectionTitle("Order details")}
-          <div className="grid min-w-0 grid-cols-3 gap-2 sm:gap-4">
-            <div>
-              <label htmlFor="order-advance" className={labelCls}>
-                Advance (₹)
-              </label>
-              <input
-                id="order-advance"
-                type="number"
-                placeholder="0"
-                value={formData.advance_amount}
-                onChange={(e) => setFormData({ ...formData, advance_amount: e.target.value })}
-                className={field}
-              />
-            </div>
-            <div>
-              <label htmlFor="order-return-date" className={labelCls}>
-                Return date
-              </label>
-              <input
-                id="order-return-date"
-                type="date"
-                value={formData.returned_at}
-                onChange={(e) => setFormData({ ...formData, returned_at: e.target.value })}
-                className={field}
-              />
-            </div>
-            <div>
-              <span className={labelCls}>Status</span>
-              <div
-                className={`${field} cursor-default bg-slate-50 text-slate-800`}
-                title={`Sent to API as ${ORDER_STATUS_QUOTATION}`}
-              >
-                Reserved
-              </div>
-            </div>
-          </div>
-        </section>
-
         <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm ring-1 ring-slate-100">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
             {sectionTitle("Line items", "mb-0")}
@@ -518,35 +425,30 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                   </datalist>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className={labelCls}>Item code</label>
+                  <label className={labelCls}>Description</label>
                   <input
                     type="text"
-                    placeholder="Inventory code"
-                    value={itemData.item_code}
-                    onChange={(e) => {
-                      const code = e.target.value;
-                      const item = findItemInOptions(itemOptions, { item_code: code });
-                      const resolvedId =
-                        item?.item_id ?? item?.item_newid ?? item?.inventory_id ?? "";
-                      setItemData({
-                        ...itemData,
-                        item_code: code,
-                        item_id: resolvedId !== "" ? String(resolvedId) : "",
-                        item_name:
-                          item?.item_name != null || item?.name != null
-                            ? String(item.item_name ?? item.name)
-                            : itemData.item_name,
-                      });
-                    }}
+                    placeholder="Brief description"
+                    value={itemData.description}
+                    onChange={(e) => setItemData({ ...itemData, description: e.target.value })}
                     className={field}
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>Return / expiry</label>
+                  <label className={labelCls}>Start date</label>
                   <input
                     type="date"
-                    value={itemData.expired_at}
-                    onChange={(e) => setItemData({ ...itemData, expired_at: e.target.value })}
+                    value={itemData.start_date}
+                    onChange={(e) => setItemData({ ...itemData, start_date: e.target.value })}
+                    className={field}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>End date</label>
+                  <input
+                    type="date"
+                    value={itemData.end_date}
+                    onChange={(e) => setItemData({ ...itemData, end_date: e.target.value })}
                     className={field}
                   />
                 </div>
@@ -560,57 +462,9 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                     className={field}
                   />
                 </div>
-                <div className="sm:col-span-2">
-                  <label className={labelCls}>Before photos</label>
-                  <input
-                    ref={beforePhotosInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(e) => {
-                      const next = Array.from(e.target.files || []);
-                      pendingImageFilesRef.current = next;
-                      setItemData((prev) => ({ ...prev, tempImages: next }));
-                      if (next.length > 0) void handleUploadImages(next);
-                    }}
-                    className="w-full cursor-pointer rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-3 py-3 text-sm text-slate-600 transition hover:border-amber-300 hover:bg-amber-50/30 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-gradient-to-r file:from-amber-500 file:to-amber-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white file:shadow-sm"
-                  />
-                </div>
-                {itemData.tempImages.length > 0 && (
-                  uploading ? (
-                    <p className="flex items-center gap-2 text-sm font-medium text-amber-700 sm:col-span-2">
-                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
-                      Uploading…
-                    </p>
-                  ) : (
-                    <button
-                      type="button"
-                      className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-amber-200 hover:bg-amber-50/80 hover:text-slate-900 sm:col-span-2 sm:w-fit"
-                      onClick={() => handleUploadImages()}
-                    >
-                      Upload images
-                    </button>
-                  )
-                )}
+                {/* Before-photos removed for Qoatation */}
               </div>
-
-              {itemData.images.length > 0 && (
-                <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Uploaded
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {itemData.images.map((img, idx) => (
-                      <img
-                        key={`${img.name}-${idx}`}
-                        src={img.url}
-                        alt={img.name}
-                        className="h-16 w-16 rounded-xl object-cover shadow-sm ring-2 ring-white"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+              
 
               <div className="mt-5 flex justify-end border-t border-slate-100 pt-4">
                 <button
@@ -618,7 +472,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                   className="rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-600/25 transition hover:from-emerald-700 hover:to-emerald-800 hover:shadow-lg active:scale-[0.98]"
                   onClick={handleAddItem}
                 >
-                  Add to order
+                  Add to qoatation
                 </button>
               </div>
             </div>
@@ -639,12 +493,16 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                     </span>
                     <h4 className="truncate text-sm font-bold text-slate-900">{it.item_name}</h4>
                   </div>
-                  <p className="text-xs text-slate-500">
-                    Code <span className="font-mono font-medium text-slate-700">{it.item_code || "—"}</span>
-                  </p>
-                  {it.expired_at ? (
+                  {it.description ? (
                     <p className="text-xs text-slate-500">
-                      Return / expiry <span className="font-medium text-slate-700">{it.expired_at}</span>
+                      <span className="font-medium text-slate-700">{it.description}</span>
+                    </p>
+                  ) : null}
+                  {(it.start_date || it.end_date) ? (
+                    <p className="text-xs text-slate-500">
+                      {it.start_date && <span>{it.start_date}</span>}
+                      {it.start_date && it.end_date && <span> → </span>}
+                      {it.end_date && <span>{it.end_date}</span>}
                     </p>
                   ) : null}
                 </div>
@@ -652,18 +510,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                   <span className="inline-flex items-center rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/10 px-3 py-1.5 text-sm font-bold tabular-nums text-amber-900 ring-1 ring-amber-500/20">
                     ₹{Number(it.amount || 0).toLocaleString("en-IN")}
                   </span>
-                  {it.images.length > 0 && (
-                    <div className="flex flex-wrap justify-end gap-1.5">
-                      {it.images.map((img, jdx) => (
-                        <img
-                          key={`${img.name}-${jdx}`}
-                          src={img.url}
-                          alt={img.name}
-                          className="h-12 w-12 rounded-lg object-cover ring-2 ring-white shadow-sm"
-                        />
-                      ))}
-                    </div>
-                  )}
+                  {/* Images removed from qoatation items */}
                 </div>
               </div>
             ))}
@@ -673,27 +520,10 @@ const OrderForm = ({ onAddOrder, onClose }) => {
         <div className="mt-8 flex min-w-0 flex-nowrap items-end gap-3 overflow-x-auto border-t border-slate-200/80 bg-gradient-to-r from-transparent via-slate-50/80 to-transparent pb-1 pt-8 [-webkit-overflow-scrolling:touch] sm:gap-5">
           {formData.items.length > 0 ? (
             <>
-              <div className="flex shrink-0 flex-col gap-1">
-                <label htmlFor="order-discount" className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
-                  Discount ₹
-                </label>
-                <input
-                  id="order-discount"
-                  type="number"
-                  min={0}
-                  step={1}
-                  placeholder="0"
-                  value={formData.discount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, discount: e.target.value })
-                  }
-                  className={`${field} w-[5.5rem] shrink-0 px-2 py-2 sm:w-28 sm:px-3.5`}
-                />
-              </div>
               <div className="flex shrink-0 items-baseline gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-amber-50 to-orange-50/80 px-3 py-2 tabular-nums ring-1 ring-amber-100 sm:px-4 sm:py-2.5">
                 <span className="text-xs font-bold text-slate-800 sm:text-sm">Total</span>
                 <span className="text-base font-bold tracking-tight text-amber-800 sm:text-xl">
-                  ₹{totalAfterDiscount.toLocaleString("en-IN")}
+                  ₹{itemsSubtotal.toLocaleString("en-IN")}
                 </span>
               </div>
             </>
@@ -707,7 +537,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
               className="rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/30 transition hover:from-amber-600 hover:to-amber-700 hover:shadow-xl hover:shadow-amber-500/35 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:px-8 sm:py-3"
               onClick={handleSaveOrder}
             >
-              {saving ? "Saving…" : "Save order"}
+              {saving ? "Saving…" : "Save qoatation"}
             </button>
           </div>
         </div>
@@ -717,4 +547,4 @@ const OrderForm = ({ onAddOrder, onClose }) => {
   );
 };
 
-export default OrderForm;
+export default QoatationForm;

@@ -174,6 +174,9 @@ const Rentalsidebar = () => {
           <NavItem to="/repaired-report" title="Repaired report" Icon={Wrench}>
             Repaired report
           </NavItem>
+          <NavItem to="/qoatation" title="Qoatation" Icon={FileText}>
+            Qoatation
+          </NavItem>
           <NavItem to="/orders" title="Orders" Icon={ShoppingCart}>
             Orders
           </NavItem>
