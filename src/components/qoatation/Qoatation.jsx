@@ -214,13 +214,13 @@ const Qoatation = ({ onLogout }) => {
                         <th className={thClass}>Items</th>
                         <th className={thClass}>Placed</th>
                         <th className={`${thClass} text-right`}>Total (₹)</th>
-                        <th className={`${thClass} text-right`}>Actions</th>
+                        {/* <th className={`${thClass} text-right`}>Actions</th> */}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {currentRows.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="px-6 py-16 text-center">
+                          <td colSpan={7} className="px-6 py-16 text-center">
                             <div className="mx-auto max-w-sm">
                               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
                                 <Search className="h-7 w-7" />
@@ -261,7 +261,7 @@ const Qoatation = ({ onLogout }) => {
                             <td className="whitespace-nowrap px-2 py-2 text-right font-semibold tabular-nums text-slate-900">
                               {o.total_amount != null ? `₹${Number(o.total_amount).toLocaleString("en-IN")}` : "—"}
                             </td>
-                            <td className="whitespace-nowrap px-2 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                            {/* <td className="whitespace-nowrap px-2 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                               <button
                                 type="button"
                                 className="inline-flex items-center justify-center rounded-md border border-rose-200 bg-rose-50 p-1.5 text-rose-700 transition hover:bg-rose-100"
@@ -273,7 +273,7 @@ const Qoatation = ({ onLogout }) => {
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
-                            </td>
+                            </td> */}
                           </tr>
                           );
                         })

@@ -148,20 +148,20 @@ const Rentalsidebar = () => {
               <NavItem to="/brand" title="Brand" Icon={Tag}>
                 Brand
               </NavItem>
-              <NavItem to="/maintype" title="Main Type" Icon={Grid}>
+              {/* <NavItem to="/maintype" title="Main Type" Icon={Grid}>
                 Main Type
               </NavItem>
               <NavItem to="/subtype" title="Sub Type" Icon={Boxes}>
                 Sub Type
-              </NavItem>
+              </NavItem> */}
             </ul>
           )}
 
           {collapsed && (
             <>
               <NavItem to="/brand" title="Brand" Icon={Tag} />
-              <NavItem to="/maintype" title="Main Type" Icon={Grid} />
-              <NavItem to="/subtype" title="Sub Type" Icon={Boxes} />
+              {/* <NavItem to="/maintype" title="Main Type" Icon={Grid} />
+              <NavItem to="/subtype" title="Sub Type" Icon={Boxes} /> */}
             </>
           )}
 

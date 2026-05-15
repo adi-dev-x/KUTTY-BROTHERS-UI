@@ -442,25 +442,6 @@ const StockReport = ({ onLogout }) => {
                         />
                       </div>
 
-                      <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Main type</label>
-                        <AutocompleteInput
-                          list={mainTypes}
-                          value={formData.item_main_type}
-                          setValue={(val) => setFormData({ ...formData, item_main_type: val })}
-                          keyName="name"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sub type</label>
-                        <AutocompleteInput
-                          list={subTypes}
-                          value={formData.item_sub_type}
-                          setValue={(val) => setFormData({ ...formData, item_sub_type: val })}
-                          keyName="new_sub_code"
-                        />
-                      </div>
 
                       <div>
                         <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Main code</label>
@@ -565,8 +546,6 @@ const StockReport = ({ onLogout }) => {
                         <th className={`${thNumClass} border-b border-slate-200/70`}>#</th>
                         <th className={`${thClass} border-b border-slate-200/70`}>Item</th>
                         <th className={`${thClass} border-b border-slate-200/70`}>Brand</th>
-                        <th className={`${thClass} border-b border-slate-200/70`}>Main type</th>
-                        <th className={`${thClass} border-b border-slate-200/70`}>Sub type</th>
                         <th className={`${thClass} border-b border-slate-200/70`}>Description</th>
                         <th className={`${thClass} border-b border-slate-200/70`}>Main code</th>
                         <th className={`${thClass} border-b border-slate-200/70`}>Sub code</th>
@@ -585,7 +564,7 @@ const StockReport = ({ onLogout }) => {
                     <tbody>
                       {currentItems.length === 0 ? (
                         <tr>
-                          <td colSpan={18} className="px-6 py-20 text-center text-sm text-slate-400">
+                          <td colSpan={16} className="px-6 py-20 text-center text-sm text-slate-400">
                             No results
                           </td>
                         </tr>
@@ -613,8 +592,6 @@ const StockReport = ({ onLogout }) => {
                                 {item.item_name}
                               </td>
                               <td className="whitespace-nowrap px-3 py-2.5 text-slate-700">{item.brand || "—"}</td>
-                              <td className="whitespace-nowrap px-3 py-2.5 text-slate-600">{item.item_main_type || "—"}</td>
-                              <td className="whitespace-nowrap px-3 py-2.5 text-slate-600">{item.item_sub_type || "—"}</td>
                               <td className="max-w-[140px] truncate px-3 py-2.5 text-slate-500" title={item.description}>
                                 {item.description || "—"}
                               </td>
