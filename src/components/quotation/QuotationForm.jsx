@@ -51,7 +51,7 @@ const ADD_ORDER_URL = "https://ems.binlaundry.com/irrl/quotation";
 
 const ORDER_STATUS_QUOTATION = "RESERVED";
 
-const QoatationForm = ({ onAddOrder, onClose }) => {
+const QuotationForm = ({ onAddOrder, onClose }) => {
   const [customers, setCustomers] = useState([]);
   const [itemOptions, setItemOptions] = useState([]);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -139,7 +139,7 @@ const QoatationForm = ({ onAddOrder, onClose }) => {
     });
   };
 
-  // Before-photos upload removed for Qoatation
+  // Before-photos upload removed for quotation
 
   const handleAddItem = () => {
     const matched = findItemInOptions(itemOptions, itemData);
@@ -185,7 +185,7 @@ const QoatationForm = ({ onAddOrder, onClose }) => {
       status: "INITIATED",
     });
     setShowItemForm(false);
-    showMessage("success", "Item added to qoatation!");
+    showMessage("success", "Item added to quotation!");
   };
 
   const handleSaveOrder = async () => {
@@ -229,11 +229,11 @@ const QoatationForm = ({ onAddOrder, onClose }) => {
       });
 
       if (onAddOrder) onAddOrder(orderPayload);
-      showMessage("success", "Qoatation saved successfully.");
+      showMessage("success", "quotation saved successfully.");
       if (onClose) onClose();
       window.location.reload();
     } catch (err) {
-      console.error("Save qoatation failed", err.response?.data || err.message);
+      console.error("Save quotation failed", err.response?.data || err.message);
       const data = err.response?.data;
       const apiMsg =
         (typeof data?.msg === "string" && data.msg) ||
@@ -242,7 +242,7 @@ const QoatationForm = ({ onAddOrder, onClose }) => {
         "";
       showMessage(
         "error",
-        apiMsg || err.message || "Could not save the qoatation. Check required fields or network."
+        apiMsg || err.message || "Could not save the quotation. Check required fields or network."
       );
     } finally {
       setSaving(false);
@@ -278,7 +278,7 @@ const QoatationForm = ({ onAddOrder, onClose }) => {
         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-amber-100/90 bg-gradient-to-br from-amber-50 via-white to-orange-50/30 px-6 py-5 shadow-sm">
           <div className="min-w-0 pr-2">
             <h2 className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-xl font-bold tracking-tight text-transparent">
-              Create Qoatation
+              Create quotation
             </h2>
             <p className="mt-1 text-sm leading-relaxed text-slate-600">
               Customer, contact, and line items — all in one place.
@@ -462,7 +462,7 @@ const QoatationForm = ({ onAddOrder, onClose }) => {
                     className={field}
                   />
                 </div>
-                {/* Before-photos removed for Qoatation */}
+                {/* Before-photos removed for quotation */}
               </div>
               
 
@@ -472,7 +472,7 @@ const QoatationForm = ({ onAddOrder, onClose }) => {
                   className="rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-600/25 transition hover:from-emerald-700 hover:to-emerald-800 hover:shadow-lg active:scale-[0.98]"
                   onClick={handleAddItem}
                 >
-                  Add to qoatation
+                  Add to quotation
                 </button>
               </div>
             </div>
@@ -510,7 +510,7 @@ const QoatationForm = ({ onAddOrder, onClose }) => {
                   <span className="inline-flex items-center rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/10 px-3 py-1.5 text-sm font-bold tabular-nums text-amber-900 ring-1 ring-amber-500/20">
                     ₹{Number(it.amount || 0).toLocaleString("en-IN")}
                   </span>
-                  {/* Images removed from qoatation items */}
+                  {/* Images removed from quotation items */}
                 </div>
               </div>
             ))}
@@ -537,7 +537,7 @@ const QoatationForm = ({ onAddOrder, onClose }) => {
               className="rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-500/30 transition hover:from-amber-600 hover:to-amber-700 hover:shadow-xl hover:shadow-amber-500/35 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:px-8 sm:py-3"
               onClick={handleSaveOrder}
             >
-              {saving ? "Saving…" : "Save qoatation"}
+              {saving ? "Saving…" : "Save quotation"}
             </button>
           </div>
         </div>
@@ -547,4 +547,4 @@ const QoatationForm = ({ onAddOrder, onClose }) => {
   );
 };
 
-export default QoatationForm;
+export default QuotationForm;

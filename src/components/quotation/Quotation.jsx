@@ -12,7 +12,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
-import QoatationForm from "./QoatationForm";
+import QuotationForm from "./QuotationForm";
 
 const fieldSelect =
   "rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-800 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20";
@@ -21,7 +21,7 @@ const thClass =
   "whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-600";
 
 
-const Qoatation = ({ onLogout }) => {
+const Quotation = ({ onLogout }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -100,8 +100,8 @@ const Qoatation = ({ onLogout }) => {
 
     const worksheet = XLSX.utils.json_to_sheet(tableData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Qoatations");
-    XLSX.writeFile(workbook, "qoatations_report.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "quotations");
+    XLSX.writeFile(workbook, "quotations_report.xlsx");
   };
 
   const filteredOrders = useMemo(
@@ -148,7 +148,7 @@ const Qoatation = ({ onLogout }) => {
           <div className="flex min-h-0 flex-1 flex-col gap-2 p-2 sm:p-3">
             <div className="shrink-0 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
               <div className="px-3 py-1.5">
-                <h1 className="text-sm font-semibold text-slate-900">Qoatation</h1>
+                <h1 className="text-sm font-semibold text-slate-900">quotation</h1>
               </div>
               <div className="flex min-w-0 flex-nowrap items-center gap-x-4 overflow-x-auto px-3 py-1.5 [-webkit-overflow-scrolling:touch]">
                 <div className="flex shrink-0 flex-nowrap items-center gap-x-4 text-[11px] text-slate-600">
@@ -178,7 +178,7 @@ const Qoatation = ({ onLogout }) => {
                     className="inline-flex items-center gap-1 rounded-md bg-amber-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-amber-700"
                   >
                     <Plus className="h-3 w-3" strokeWidth={2.5} />
-                    Add Qoatation
+                    Add quotation
                   </button>
                   <button
                     type="button"
@@ -193,7 +193,7 @@ const Qoatation = ({ onLogout }) => {
             </div>
 
             {showForm && (
-              <QoatationForm onAddOrder={handleAddOrder} onClose={() => setShowForm(false)} />
+              <QuotationForm onAddOrder={handleAddOrder} onClose={() => setShowForm(false)} />
             )}
 
             {loading ? (
@@ -226,7 +226,7 @@ const Qoatation = ({ onLogout }) => {
                                 <Search className="h-7 w-7" />
                               </div>
                               <p className="text-sm font-medium text-slate-900">No items found</p>
-                              <p className="mt-1 text-sm text-slate-500">Try another search or add a qoatation.</p>
+                              <p className="mt-1 text-sm text-slate-500">Try another search or add a quotation.</p>
                             </div>
                           </td>
                         </tr>
@@ -235,13 +235,13 @@ const Qoatation = ({ onLogout }) => {
                           return (
                           <tr
                             key={o.quotation_id ?? i}
-                            onClick={() => navigate(`/qoatation-details/${o.quotation_id}`)}
+                            onClick={() => navigate(`/quotation-details/${o.quotation_id}`)}
                             role="button"
                             tabIndex={0}
                             onKeyDown={(e) => {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
-                                navigate(`/qoatation-details/${o.quotation_id}`);
+                                navigate(`/quotation-details/${o.quotation_id}`);
                               }
                             }}
                             className={`cursor-pointer transition-colors hover:bg-amber-50/50 focus:bg-amber-50/50 focus:outline-none ${(indexOfFirstRow + i) % 2 === 1 ? "bg-slate-50/50" : "bg-white"}`}
@@ -335,4 +335,4 @@ const Qoatation = ({ onLogout }) => {
   );
 };
 
-export default Qoatation;
+export default Quotation;

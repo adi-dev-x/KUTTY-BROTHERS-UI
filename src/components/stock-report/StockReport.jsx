@@ -149,6 +149,7 @@ const StockReport = ({ onLogout }) => {
   const calculateTotalSum = (item) => {
     const counts = [
       item.available_count || 0,
+      item.site_count || 0,
       item.rented_count || 0,
       item.damaged_count || 0,
       item.not_initiated_count || 0,
@@ -258,6 +259,7 @@ const StockReport = ({ onLogout }) => {
       "Sub Code": s.sub_code,
       "HSN Code": s.hsn_code ?? "",
       "Available": s.available_count || 0,
+      "Site": s.site_count || 0,
       "Rented": s.rented_count || 0,
       "Damaged": s.damaged_count || 0,
       "Repairing": s.not_initiated_count || 0,
@@ -503,6 +505,7 @@ const StockReport = ({ onLogout }) => {
                           className={formFieldClass}
                         >
                           <option value="AVAILABLE">Available</option>
+                          <option value="SITE">Site</option>
                           <option value="RENTED">Rented</option>
                           <option value="DAMAGED">Damaged</option>
                           <option value="REPAIRING">Repairing</option>
@@ -551,6 +554,7 @@ const StockReport = ({ onLogout }) => {
                         <th className={`${thClass} border-b border-slate-200/70`}>Sub code</th>
                         <th className={`${thClass} border-b border-slate-200/70`}>HSN code</th>
                         <th className={`${thNumClass} border-b border-slate-200/70`}>Avail.</th>
+                        <th className={`${thNumClass} border-b border-slate-200/70`}>Site</th>
                         <th className={`${thNumClass} border-b border-slate-200/70`}>Rented</th>
                         <th className={`${thNumClass} border-b border-slate-200/70`}>Damaged</th>
                         <th className={`${thNumClass} border-b border-slate-200/70`}>Repair</th>
@@ -564,7 +568,7 @@ const StockReport = ({ onLogout }) => {
                     <tbody>
                       {currentItems.length === 0 ? (
                         <tr>
-                          <td colSpan={16} className="px-6 py-20 text-center text-sm text-slate-400">
+                          <td colSpan={17} className="px-6 py-20 text-center text-sm text-slate-400">
                             No results
                           </td>
                         </tr>
@@ -611,6 +615,7 @@ const StockReport = ({ onLogout }) => {
                                 {item.hsn_code || "—"}
                               </td>
                               <NumCell value={item.available_count} />
+                              <NumCell value={item.site_count} />
                               <NumCell value={item.rented_count} />
                               <NumCell value={item.damaged_count} />
                               <NumCell value={item.not_initiated_count} />
