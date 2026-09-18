@@ -10,9 +10,10 @@ import {
   ImagePreviewLightbox,
   DamageImagePreviewTrigger,
 } from "./DamageImagePreview";
+import { API_BASE_URL } from "../../config/api";
 
-const DAMAGED_LIST_URL = "https://ems.binlaundry.com/irrl/damaged/list";
-const MARK_REPAIRING_URL = "https://ems.binlaundry.com/irrl/markRepairing";
+const DAMAGED_LIST_URL = `${API_BASE_URL}/irrl/damaged/list`;
+const MARK_REPAIRING_URL = `${API_BASE_URL}/irrl/markRepairing`;
 
 const thClass =
   "whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-600";

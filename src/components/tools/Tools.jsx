@@ -4,6 +4,7 @@ import Footer from "../footer/Footer";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import { FiEdit, FiTrash2, FiDownload } from "react-icons/fi";
 import * as XLSX from "xlsx";
+import { API_BASE_URL } from "../../config/api";
 
 const ToolsDashboard = ({ onLogout }) => {
   const [tools, setTools] = useState([]);
@@ -28,7 +29,7 @@ const ToolsDashboard = ({ onLogout }) => {
 
   // Fetch tools API
   useEffect(() => {
-    fetch("https://ems.binlaundry.com/irrl/genericApiUnjoin/toolslist")
+    fetch(`${API_BASE_URL}/irrl/genericApiUnjoin/toolslist`)
       .then((res) => res.json())
       .then((data) => {
         console.log("API Response:", data);

@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/api";
 
-const IRRL_ORIGIN = "https://ems.binlaundry.com";
+const IRRL_ORIGIN = API_BASE_URL;
 const IRRL_UPLOAD_URL = `${IRRL_ORIGIN}/irrl/upload`;
 
 function normalizeIrrlPublicUrl(pathOrUrl) {

@@ -14,15 +14,16 @@ import {
   FaFileInvoice,
   FaExclamationTriangle,
 } from "react-icons/fa";
+import { API_BASE_URL } from "../../config/api";
 
 /** POST body: item_id, delivery_item_id, damage_images, clear */
-const ORDER_ITEM_DAMAGE_URL = "https://ems.binlaundry.com/irrl/markDamage";
+const ORDER_ITEM_DAMAGE_URL = `${API_BASE_URL}/irrl/markDamage`;
 
 /** POST body: order_id, guarantee_images */
-const INITIATE_ORDER_URL = "https://ems.binlaundry.com/irrl/initiateOrder";
+const INITIATE_ORDER_URL = `${API_BASE_URL}/irrl/initiateOrder`;
 
 /** POST body: OrderPassRequest */
-const UPDATE_ORDER_PASS_URL = "https://ems.binlaundry.com/irrl/updateOrderPass";
+const UPDATE_ORDER_PASS_URL = `${API_BASE_URL}/irrl/updateOrderPass`;
 
 const DAMAGE_RESTRICTED_STATUSES = ["INITIATED", "RESERVED"];
 
@@ -446,7 +447,7 @@ const OrderDetails = ({ onLogout }) => {
       });
 
       const res = await axios.get(
-        `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
       );
       const data = res.data?.data || [];
       setOrderItems(data);
@@ -516,7 +517,7 @@ const OrderDetails = ({ onLogout }) => {
       });
 
       const res = await axios.get(
-        `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
       );
       const refreshed = res.data?.data || [];
       setOrderItems(refreshed);
@@ -599,7 +600,7 @@ const OrderDetails = ({ onLogout }) => {
       });
 
       const res = await axios.get(
-        `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
       );
       setOrderItems(res.data?.data || []);
       closeDamageModal();
@@ -615,7 +616,7 @@ const OrderDetails = ({ onLogout }) => {
     const fetchOrderDetails = async () => {
       try {
         const res = await axios.get(
-          `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+          `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
         );
         const data = res.data?.data || [];
         setOrderItems(data);
@@ -1314,13 +1315,13 @@ const OrderDetails = ({ onLogout }) => {
         after_images: item.after_images,
       };
 
-      await axios.post("https://ems.binlaundry.com/irrl/updateOrderItem", payload, {
+      await axios.post(`${API_BASE_URL}/irrl/updateOrderItem`, payload, {
         headers: { "Content-Type": "application/json" },
       });
 
       // Refresh data
       const res = await axios.get(
-        `https://ems.binlaundry.com/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
+        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
       );
       setOrderItems(res.data?.data || []);
     } catch (err) {
@@ -1357,7 +1358,7 @@ const OrderDetails = ({ onLogout }) => {
 
     try {
       setUploading(true);
-      const res = await axios.post("https://ems.binlaundry.com/irrl/upload", form, {
+      const res = await axios.post(`${API_BASE_URL}/irrl/upload`, form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -1385,7 +1386,7 @@ const OrderDetails = ({ onLogout }) => {
         after_images: selectedItem.after_images,
       };
 
-      await axios.post("https://ems.binlaundry.com/irrl/updateOrderItem", payload, {
+      await axios.post(`${API_BASE_URL}/irrl/updateOrderItem`, payload, {
         headers: { "Content-Type": "application/json" },
       });
 
@@ -1393,7 +1394,7 @@ const OrderDetails = ({ onLogout }) => {
       setAfterImageFile(null);
 
       const res = await axios.get(
-        `https://ems.binlaundry.com/irrl/genericApiJoin/orderDetails?order_id='${delivery_id}'`
+        `${API_BASE_URL}/irrl/genericApiJoin/orderDetails?order_id='${delivery_id}'`
       );
       setOrderItems(res.data?.data || []);
     } catch (err) {

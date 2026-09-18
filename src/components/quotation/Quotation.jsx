@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { API_BASE_URL } from "../../config/api";
 import * as XLSX from "xlsx";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -34,7 +35,7 @@ const Quotation = ({ onLogout }) => {
     const fetchOrders = async () => {
       try {
         const response = await axios.get(
-          "https://ems.binlaundry.com/irrl/quotation"
+          `${API_BASE_URL}/irrl/quotation`
         );
         setOrders(response.data?.data || []);
       } catch (err) {
@@ -55,7 +56,7 @@ const Quotation = ({ onLogout }) => {
   const handleStatusChange = async (delivery_id, newStatus) => {
     try {
       await axios.get(
-        `https://ems.binlaundry.com/irrl/quotation/${delivery_id}?status=${newStatus}`
+        `${API_BASE_URL}/irrl/quotation/${delivery_id}?status=${newStatus}`
       );
       setOrders(
         orders.map((o) =>
@@ -71,7 +72,7 @@ const Quotation = ({ onLogout }) => {
   const handleDelete = async (quotation_id) => {
     try {
       await axios.delete(
-        `https://ems.binlaundry.com/irrl/quotation/${quotation_id}`
+        `${API_BASE_URL}/irrl/quotation/${quotation_id}`
       );
       setOrders(orders.filter((o) => o.quotation_id !== quotation_id));
     } catch (err) {

@@ -14,6 +14,7 @@ import {
   Search,
   Filter
 } from "lucide-react";
+import { API_BASE_URL } from "../../config/api";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import "./irlDashboardDetails.css";
@@ -78,7 +79,7 @@ const DashboardDetails = ({ onLogout }) => {
     const fetchData = async () => {
       try {
         const res = await axios.get(
-          `https://ems.binlaundry.com/irrl/genericApiUnjoin/productSingle?category='${status}'`
+          `${API_BASE_URL}/irrl/genericApiUnjoin/productSingle?category='${status}'`
         );
         setData(res.data?.data || []);
       } catch (err) {

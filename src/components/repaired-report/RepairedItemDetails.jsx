@@ -4,9 +4,10 @@ import axios from "axios";
 import { ArrowLeft, Package } from "lucide-react";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
+import { API_BASE_URL } from "../../config/api";
 
-const REPAIRING_LIST_URL = "https://ems.binlaundry.com/irrl/repairing/list";
-const MARK_REPAIRING_URL = "https://ems.binlaundry.com/irrl/markRepairing";
+const REPAIRING_LIST_URL = `${API_BASE_URL}/irrl/repairing/list`;
+const MARK_REPAIRING_URL = `${API_BASE_URL}/irrl/markRepairing`;
 
 const thClass =
   "whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-600";

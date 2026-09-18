@@ -13,6 +13,7 @@ import {
   UserCheck,
   Filter,
 } from "lucide-react";
+import { API_BASE_URL } from "../../config/api";
 import * as XLSX from "xlsx";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
@@ -25,8 +26,8 @@ function initials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-const CUSTOMERS_API = "https://ems.binlaundry.com/irrl/customers";
-const GENERIC_DELETE_URL = "https://ems.binlaundry.com/irrl/genericDelete";
+const CUSTOMERS_API = `${API_BASE_URL}/irrl/customers`;
+const GENERIC_DELETE_URL = `${API_BASE_URL}/irrl/genericDelete`;
 /** DB table name for genericDelete payload (`table_name`). Change if your backend expects another identifier. */
 const CUSTOMER_TABLE_NAME = "customer";
 
@@ -79,7 +80,7 @@ const Customer = ({ onLogout }) => {
 
   // Fetch customers
   useEffect(() => {
-    fetch("https://ems.binlaundry.com/irrl/genericApiUnjoin/customerlist")
+    fetch(`${API_BASE_URL}/irrl/genericApiUnjoin/customerlist`)
       .then((res) => res.json())
       .then((data) => {
         setCustomers(Array.isArray(data.data) ? data.data : []);

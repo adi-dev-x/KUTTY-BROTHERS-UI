@@ -4,6 +4,7 @@ import axios from "axios";
 import { FaArrowLeft } from "react-icons/fa";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
+import { API_BASE_URL } from "../../config/api";
 
 const QuotationDetails = ({ onLogout }) => {
   const { id } = useParams();
@@ -17,7 +18,7 @@ const QuotationDetails = ({ onLogout }) => {
     const fetchDetails = async () => {
       try {
         const res = await axios.get(
-          `https://ems.binlaundry.com/irrl/quotation/${id}`
+          `${API_BASE_URL}/irrl/quotation/${id}`
         );
         setquotation(res.data?.data ?? null);
       } catch (err) {

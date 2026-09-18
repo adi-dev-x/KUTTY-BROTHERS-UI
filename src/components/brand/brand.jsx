@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Search, ChevronLeft, ChevronRight, Tag, Filter } from "lucide-react";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
+import { API_BASE_URL } from "../../config/api";
 
 const tableClass =
   "min-w-full border-collapse divide-y divide-slate-100 text-xs [&_td]:border-r [&_td]:border-slate-100 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-slate-100 [&_th:last-child]:border-r-0";
@@ -17,7 +18,7 @@ const BrandDashboard = ({ onLogout }) => {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetch("https://ems.binlaundry.com/irrl/attribute/brand")
+    fetch(`${API_BASE_URL}/irrl/attribute/brand`)
       .then((res) => res.json())
       .then((data) => {
         setBrands(Array.isArray(data.data) ? data.data : []);

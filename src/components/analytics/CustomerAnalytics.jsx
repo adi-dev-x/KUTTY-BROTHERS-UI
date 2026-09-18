@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { API_BASE_URL } from "../../config/api";
 import { Bar } from "react-chartjs-2";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
@@ -16,9 +17,9 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const API_DAMAGE = "https://ems.binlaundry.com/irrl/analytics/customer-damage";
-const API_BLOCKED = "https://ems.binlaundry.com/irrl/analytics/customer-blocked";
-const API_REVENUE = "https://ems.binlaundry.com/irrl/analytics/customer-revenue";
+const API_DAMAGE = `${API_BASE_URL}/irrl/analytics/customer-damage`;
+const API_BLOCKED = `${API_BASE_URL}/irrl/analytics/customer-blocked`;
+const API_REVENUE = `${API_BASE_URL}/irrl/analytics/customer-revenue`;
 
 const chartFillClass = "relative min-h-0 w-full flex-1";
 

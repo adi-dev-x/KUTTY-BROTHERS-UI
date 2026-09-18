@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import Footer from "../footer/Footer";
+import { API_BASE_URL } from "../../config/api";
 
 function pickHsnFromRow(s) {
   if (!s || typeof s !== "object") return "";
@@ -31,7 +32,7 @@ const StockDetail = ({ onLogout }) => {
   useEffect(() => {
     // ✅ updated API call to use sub_code
     fetch(
-      `https://ems.binlaundry.com/irrl/genericApiUnjoin/productSingle?sub_code='${sub_code}'`
+      `${API_BASE_URL}/irrl/genericApiUnjoin/productSingle?sub_code='${sub_code}'`
     )
       .then((res) => res.json())
       .then((data) => {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import { uploadIrrlOrderImages } from "../../utils/irrlUploadImages";
+import { API_BASE_URL } from "../../config/api";
 
 /** Match item row from itemRetrive — API keys vary (item_code, sub_code, item_id, etc.) */
 function findItemInOptions(options, partial) {
@@ -49,7 +50,7 @@ function resolveCustomerFromList(customers, customerName) {
   return customers.find((c) => (c.name || "").trim().toLowerCase() === lower) || null;
 }
 
-const ADD_ORDER_URL = "https://ems.binlaundry.com/irrl/addOrder";
+const ADD_ORDER_URL = `${API_BASE_URL}/irrl/addOrder`;
 
 /** Order-level status for new orders created from this form (quotation). */
 const ORDER_STATUS_QUOTATION = "RESERVED";
@@ -99,12 +100,12 @@ const OrderForm = ({ onAddOrder, onClose }) => {
 
   useEffect(() => {
     axios
-      .get("https://ems.binlaundry.com/irrl/genericApiUnjoin/customer")
+      .get(`${API_BASE_URL}/irrl/genericApiUnjoin/customer`)
       .then((res) => setCustomers(res.data.data || []))
       .catch((err) => console.error(err));
 
     axios
-      .get("https://ems.binlaundry.com/irrl/genericApiUnjoin/itemRetrive")
+      .get(`${API_BASE_URL}/irrl/genericApiUnjoin/itemRetrive`)
       .then((res) => setItemOptions(res.data.data || []))
       .catch((err) => console.error(err));
   }, []);

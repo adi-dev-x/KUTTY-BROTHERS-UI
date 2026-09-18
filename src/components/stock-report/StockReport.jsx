@@ -13,6 +13,7 @@ import {
   Filter,
   BarChart3,
 } from "lucide-react";
+import { API_BASE_URL } from "../../config/api";
 import * as XLSX from "xlsx";
 
 const autocompleteInputClass =
@@ -163,7 +164,7 @@ const StockReport = ({ onLogout }) => {
 
   // Fetch stocks
   useEffect(() => {
-    fetch("https://ems.binlaundry.com/irrl/genericApiUnjoin/productMain")
+    fetch(`${API_BASE_URL}/irrl/genericApiUnjoin/productMain`)
       .then((res) => res.json())
       .then((data) => {
         const raw = Array.isArray(data?.data) ? data.data : [];
@@ -179,7 +180,7 @@ const StockReport = ({ onLogout }) => {
 
   // Fetch brands
   useEffect(() => {
-    fetch("https://ems.binlaundry.com/irrl/attribute/brand")
+    fetch(`${API_BASE_URL}/irrl/attribute/brand`)
       .then((res) => res.json())
       .then((data) => {
         setBrands(Array.isArray(data?.data) ? data.data : []);
@@ -189,7 +190,7 @@ const StockReport = ({ onLogout }) => {
 
   // Fetch main types
   useEffect(() => {
-    fetch("https://ems.binlaundry.com/irrl/attribute/ItemMainType")
+    fetch(`${API_BASE_URL}/irrl/attribute/ItemMainType`)
       .then((res) => res.json())
       .then((data) => {
         setMainTypes(Array.isArray(data?.data) ? data.data : []);
@@ -199,7 +200,7 @@ const StockReport = ({ onLogout }) => {
 
   // Fetch sub types
   useEffect(() => {
-    fetch("https://ems.binlaundry.com/irrl/attribute/ItemSubType")
+    fetch(`${API_BASE_URL}/irrl/attribute/ItemSubType`)
       .then((res) => res.json())
       .then((data) => {
         setSubTypes(Array.isArray(data?.data) ? data.data : []);
@@ -227,7 +228,7 @@ const StockReport = ({ onLogout }) => {
         category: formData.status,
       };
 
-      const response = await fetch("https://ems.binlaundry.com/irrl/addProduct", {
+      const response = await fetch(`${API_BASE_URL}/irrl/addProduct`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

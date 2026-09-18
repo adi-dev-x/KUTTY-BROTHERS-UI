@@ -13,6 +13,7 @@ import {
   Legend,
   Filler,
 } from "chart.js";
+import { API_BASE_URL } from "../../config/api";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
@@ -31,7 +32,7 @@ ChartJS.register(
   Filler
 );
 
-const API_BASE = "https://ems.binlaundry.com/irrl/analytics";
+const API_BASE = `${API_BASE_URL}/irrl/analytics`;
 const API_ITEM_DAMAGE = `${API_BASE}/item-damage`;
 const API_ITEM_RENTAL = `${API_BASE}/item-rental`;
 const API_ORDER_STATUS = `${API_BASE}/order-status`;

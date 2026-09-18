@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Wrench,
 } from "lucide-react";
+import { API_BASE_URL } from "../../config/api";
 
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
@@ -117,7 +118,7 @@ const IrlDashboard = ({ onLogout }) => {
         const totalsData = {};
         for (let status of statuses) {
           const response = await axios.get(
-            `https://ems.binlaundry.com/irrl/genericApiUnjoin/listProductCount?category='${status}'`
+            `${API_BASE_URL}/irrl/genericApiUnjoin/listProductCount?category='${status}'`
           );
           totalsData[status] = response.data?.data[0]?.count || 0;
         }
@@ -132,10 +133,10 @@ const IrlDashboard = ({ onLogout }) => {
     const fetchTransactions = async () => {
       try {
         const completedRes = await axios.get(
-          "https://ems.binlaundry.com/irrl/genericApiUnjoin/listTransactionCount?status='COMPLETED'"
+          `${API_BASE_URL}/irrl/genericApiUnjoin/listTransactionCount?status='COMPLETED'`
         );
         const pendingRes = await axios.get(
-          "https://ems.binlaundry.com/irrl/genericApiUnjoin/listTransactionCount?status='PENDING'"
+          `${API_BASE_URL}/irrl/genericApiUnjoin/listTransactionCount?status='PENDING'`
         );
 
         setTransactions({
@@ -150,7 +151,7 @@ const IrlDashboard = ({ onLogout }) => {
     const fetchTopProducts = async () => {
       try {
         const res = await axios.get(
-          "https://ems.binlaundry.com/irrl/genericApiUnjoin/topRentedProduct"
+          `${API_BASE_URL}/irrl/genericApiUnjoin/topRentedProduct`
         );
         setTopProducts(res.data?.data || []);
       } catch (err) {

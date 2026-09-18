@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
+import { API_BASE_URL } from "../../config/api";
 
 const CategoryDashboard = ({ onLogout }) => {
   const [categories, setCategories] = useState([]);
@@ -11,7 +12,7 @@ const CategoryDashboard = ({ onLogout }) => {
 
   // Fetch categories API
   useEffect(() => {
-    fetch("https://ems.binlaundry.com/irrl/attribute/category")
+    fetch(`${API_BASE_URL}/irrl/attribute/category`)
       .then((res) => res.json())
       .then((data) => {
         setCategories(Array.isArray(data.data) ? data.data : []);

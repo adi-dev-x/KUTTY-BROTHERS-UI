@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Search,
 } from "lucide-react";
+import { API_BASE_URL } from "../../config/api";
 import axios from "axios";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
@@ -29,7 +30,7 @@ const ListOrders = ({ onLogout }) => {
     const fetchOrders = async () => {
       try {
         const res = await axios.get(
-          "https://ems.binlaundry.com/irrl/genericApiJoin/listAllOrders"
+          `${API_BASE_URL}/irrl/genericApiJoin/listAllOrders`
         );
         const data = res.data?.data || [];
         setOrders(data);
@@ -46,7 +47,7 @@ const ListOrders = ({ onLogout }) => {
   const handleDownloadExcel = async () => {
     try {
       const response = await axios.get(
-        "https://ems.binlaundry.com/irrl/reports/delivery",
+        `${API_BASE_URL}/irrl/reports/delivery`,
         {
           params: {
             date_range: excelDays || "",

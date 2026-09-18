@@ -10,8 +10,9 @@ import {
   ImagePreviewLightbox,
   DamageImagePreviewTrigger,
 } from "./DamageImagePreview";
+import { API_BASE_URL } from "../../config/api";
 
-const REPAIR_HISTORY_URL = "https://ems.binlaundry.com/irrl/repairHistory";
+const REPAIR_HISTORY_URL = `${API_BASE_URL}/irrl/repairHistory`;
 
 const thClass =
   "whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-600";

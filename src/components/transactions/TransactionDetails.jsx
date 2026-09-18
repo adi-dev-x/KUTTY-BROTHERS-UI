@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, X, ExternalLink } from "lucide-react";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
+import { API_BASE_URL } from "../../config/api";
 
 const statusOptions = ["PENDING", "COMPLETED", "FAILED"];
 
@@ -22,7 +23,7 @@ function formatRupee(value) {
   return `₹${n.toLocaleString("en-IN")}`;
 }
 
-const IRRL_ORIGIN = "https://ems.binlaundry.com";
+const IRRL_ORIGIN = API_BASE_URL;
 
 function normalizeIrrlPublicUrl(pathOrUrl) {
   const s = String(pathOrUrl ?? "").trim();
@@ -78,7 +79,7 @@ const TransactionDetails = ({ onLogout }) => {
     setLoading(true);
     try {
       const res = await axios.get(
-        `https://ems.binlaundry.com/irrl/genericApiUnjoin/subTransaction?main_transaction_id=${mainTransactionId}`
+        `${API_BASE_URL}/irrl/genericApiUnjoin/subTransaction?main_transaction_id=${mainTransactionId}`
       );
       setSubTransactions(res.data?.data || []);
     } catch (err) {
@@ -95,7 +96,7 @@ const TransactionDetails = ({ onLogout }) => {
   const handleStatusChange = async (transactionId, newStatus) => {
     try {
       await axios.get(
-        `https://ems.binlaundry.com/irrl/editTransaction/${transactionId}?status=${newStatus}&table=transac`
+        `${API_BASE_URL}/irrl/editTransaction/${transactionId}?status=${newStatus}&table=transac`
       );
       setSubTransactions((prev) =>
         prev.map((t) => (t.id === transactionId ? { ...t, status: newStatus } : t))
@@ -268,7 +269,7 @@ const TransactionDetails = ({ onLogout }) => {
                       const imageHref = t.image
                         ? t.image.startsWith("http")
                           ? t.image
-                          : `https://ems.binlaundry.com/${t.image}`
+                          : `${API_BASE_URL}/${t.image}`
                         : null;
 
                       return (

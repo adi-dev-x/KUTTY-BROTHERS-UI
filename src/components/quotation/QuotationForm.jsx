@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../config/api";
 
 function findItemInOptions(options, partial) {
   if (!Array.isArray(options) || !partial) return null;
@@ -47,7 +48,7 @@ function resolveCustomerFromList(customers, customerName) {
   return customers.find((c) => (c.name || "").trim().toLowerCase() === lower) || null;
 }
 
-const ADD_ORDER_URL = "https://ems.binlaundry.com/irrl/quotation";
+const ADD_ORDER_URL = `${API_BASE_URL}/irrl/quotation`;
 
 const ORDER_STATUS_QUOTATION = "RESERVED";
 
@@ -87,12 +88,12 @@ const QuotationForm = ({ onAddOrder, onClose }) => {
 
   useEffect(() => {
     axios
-      .get("https://ems.binlaundry.com/irrl/genericApiUnjoin/customer")
+      .get(`${API_BASE_URL}/irrl/genericApiUnjoin/customer`)
       .then((res) => setCustomers(res.data.data || []))
       .catch((err) => console.error(err));
 
     axios
-      .get("https://ems.binlaundry.com/irrl/genericApiUnjoin/itemRetrive")
+      .get(`${API_BASE_URL}/irrl/genericApiUnjoin/itemRetrive`)
       .then((res) => setItemOptions(res.data.data || []))
       .catch((err) => console.error(err));
   }, []);

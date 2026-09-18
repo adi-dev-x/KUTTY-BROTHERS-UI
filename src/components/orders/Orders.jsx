@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { API_BASE_URL } from "../../config/api";
 import * as XLSX from "xlsx";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -47,7 +48,7 @@ const Orders = ({ onLogout }) => {
     const fetchOrders = async () => {
       try {
         const response = await axios.get(
-          "https://ems.binlaundry.com/irrl/genericApiUnjoin/listOrders"
+          `${API_BASE_URL}/irrl/genericApiUnjoin/listOrders`
         );
         setOrders(response.data?.data || []);
       } catch (err) {
@@ -68,7 +69,7 @@ const Orders = ({ onLogout }) => {
   const handleStatusChange = async (delivery_id, newStatus) => {
     try {
       await axios.get(
-        `https://ems.binlaundry.com/irrl/updateOrder/${delivery_id}?status=${newStatus}`
+        `${API_BASE_URL}/irrl/updateOrder/${delivery_id}?status=${newStatus}`
       );
       setOrders(
         orders.map((o) =>
@@ -84,7 +85,7 @@ const Orders = ({ onLogout }) => {
   const handleDelete = async (delivery_id) => {
     try {
       await axios.get(
-        `https://ems.binlaundry.com/irrl/updateOrder/${delivery_id}?status=DELETED`
+        `${API_BASE_URL}/irrl/updateOrder/${delivery_id}?status=DELETED`
       );
       setOrders(orders.filter((o) => o.delivery_id !== delivery_id));
     } catch (err) {

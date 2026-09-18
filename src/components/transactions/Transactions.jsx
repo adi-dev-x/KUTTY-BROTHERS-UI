@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
+import { API_BASE_URL } from "../../config/api";
 
 const statusOptions = ["PENDING", "COMPLETED"];
 
@@ -41,7 +42,7 @@ const Transactions = ({ onLogout }) => {
     setLoading(true);
     try {
       const res = await axios.get(
-        `https://ems.binlaundry.com/irrl/genericApiUnjoin/mainTransaction?order_id='${orderIdFromNav}'`
+        `${API_BASE_URL}/irrl/genericApiUnjoin/mainTransaction?order_id='${orderIdFromNav}'`
       );
       setTransactions(res.data?.data || []);
     } catch (err) {
@@ -59,7 +60,7 @@ const Transactions = ({ onLogout }) => {
     try {
       const intAmount = transactionAmountForApi(row);
       await axios.get(
-        `https://ems.binlaundry.com/irrl/editTransaction/${row.transaction_id}?status=${encodeURIComponent(
+        `${API_BASE_URL}/irrl/editTransaction/${row.transaction_id}?status=${encodeURIComponent(
           newStatus
         )}&amount=${intAmount}`
       );
