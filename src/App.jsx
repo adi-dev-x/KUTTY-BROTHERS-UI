@@ -194,7 +194,7 @@ function App() {
           element={isLoggedIn ? <StockReport onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
         <Route
-          path="/stock/:sub_code"
+          path="/stock/:product_code"
           element={isLoggedIn ? <StockDetail onLogout={handleLogout} /> : <Navigate to="/login" />}
         />
         <Route

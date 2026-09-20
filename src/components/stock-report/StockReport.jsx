@@ -12,6 +12,10 @@ import {
   Package,
   Filter,
   BarChart3,
+  Upload,
+  FileSpreadsheet,
+  CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { API_BASE_URL } from "../../config/api";
 import * as XLSX from "xlsx";
@@ -91,6 +95,57 @@ const AutocompleteInput = ({ list = [], value = "", setValue, keyName }) => {
   );
 };
 
+const ITEM_SHEET_REQUIRED_HEADERS = [
+  "ITEM NAME",
+  "BRAND",
+  "HSN CODE",
+  "DESCRIPTION",
+  "ADD COUNT",
+  "STATUS",
+];
+
+function parseJsonSafe(raw) {
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Formats the varied `msg` shapes the sheet-upload endpoint returns: a plain
+ * string, `{ error }`, `{ "missing-headers": [...] }`, or per-row field
+ * errors like `{ "row 2": { CATEGORY: ["Give valid Category"] } }`. */
+function formatUploadError(body, rawFallback) {
+  const msg = body?.msg;
+  if (msg == null) return rawFallback?.trim() || "Upload failed";
+  if (typeof msg === "string") return msg;
+  if (typeof msg === "object") {
+    const parts = [];
+    if (typeof msg.error === "string") parts.push(msg.error);
+    if (Array.isArray(msg["missing-headers"]) && msg["missing-headers"].length) {
+      parts.push(`Missing required column(s): ${msg["missing-headers"].join(", ")}`);
+    }
+    for (const [key, val] of Object.entries(msg)) {
+      if (key === "error" || key === "missing-headers" || key === "partial_result") continue;
+      if (val && typeof val === "object" && !Array.isArray(val)) {
+        for (const [field, errs] of Object.entries(val)) {
+          const errList = Array.isArray(errs) ? errs.join("; ") : String(errs);
+          parts.push(`${key} — ${field}: ${errList}`);
+        }
+      } else {
+        parts.push(`${key}: ${Array.isArray(val) ? val.join(", ") : String(val)}`);
+      }
+    }
+    if (msg.partial_result?.rows_processed != null) {
+      parts.push(
+        `${msg.partial_result.items_created ?? 0} item(s) were created from ${msg.partial_result.rows_processed} row(s) before the failure.`
+      );
+    }
+    if (parts.length) return parts.join("\n");
+  }
+  return rawFallback?.trim() || "Upload failed";
+}
+
 // ===================== StockReport Component =====================
 const StockReport = ({ onLogout }) => {
   const [stocks, setStocks] = useState([]);
@@ -110,19 +165,31 @@ const StockReport = ({ onLogout }) => {
     item_main_type: "",
     item_sub_type: "",
     description: "",
-    main_code: "",
-    sub_code: "",
+    product_code: "",
     hsn_code: "",
     add_count: "",
     status: "AVAILABLE",
   });
+
+  /** "create" = full Add stock form, "restock" = pre-filled from listStockCnt, only count/status editable */
+  const [formMode, setFormMode] = useState("create");
+  /** product_code currently being fetched via the row "+" button */
+  const [restockingCode, setRestockingCode] = useState(null);
+
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+  const [uploadError, setUploadError] = useState(null);
 
   const navigate = useNavigate();
 
   // Normalize stock (API field names vary — collect HSN from common keys)
   const normalizeStock = (s) => {
     if (!s || typeof s !== "object") return s;
-    const maybeSub =
+    const productCode =
+      s.product_code ??
+      s.productCode ??
       s.sub_code ??
       s.subCode ??
       s.subcode ??
@@ -143,7 +210,7 @@ const StockReport = ({ onLogout }) => {
       s.Item_HSN_Code ??
       "";
     const hsnStr = hsn === null || hsn === undefined ? "" : String(hsn).trim();
-    return { ...s, sub_code: maybeSub, hsn_code: hsnStr };
+    return { ...s, product_code: productCode, hsn_code: hsnStr };
   };
 
   // Total sum for an item
@@ -210,7 +277,7 @@ const StockReport = ({ onLogout }) => {
 
   // Add stock
   const handleAddStock = async () => {
-    if (!formData.item_name || !formData.main_code || !formData.add_count) {
+    if (!formData.item_name || !formData.product_code || !formData.add_count) {
       return alert("Please fill all required fields");
     }
 
@@ -221,8 +288,7 @@ const StockReport = ({ onLogout }) => {
         item_main_type: formData.item_main_type, // send main type string
         new_sub_code: formData.item_sub_type, // send sub type string
         description: formData.description,
-        main_code: formData.main_code,
-        sub_code: formData.sub_code,
+        product_code: formData.product_code,
         hsn_code: formData.hsn_code?.trim() || undefined,
         units: Number(formData.add_count),
         category: formData.status,
@@ -247,6 +313,108 @@ const StockReport = ({ onLogout }) => {
     }
   };
 
+  const emptyFormData = {
+    item_name: "",
+    brand: "",
+    item_main_type: "",
+    item_sub_type: "",
+    description: "",
+    product_code: "",
+    hsn_code: "",
+    add_count: "",
+    status: "AVAILABLE",
+  };
+
+  const openAddStockForm = () => {
+    setFormMode("create");
+    setFormData(emptyFormData);
+    setShowForm(true);
+  };
+
+  // Row "+" button: pull existing product info, only count/status stay editable
+  const openRestockForm = async (item) => {
+    const pc = item?.product_code;
+    if (!pc) {
+      alert("Cannot restock: product_code missing");
+      return;
+    }
+
+    setRestockingCode(pc);
+    try {
+      const res = await fetch(`${API_BASE_URL}/irrl/listStockCnt/${encodeURIComponent(pc)}`);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || `HTTP ${res.status}`);
+      }
+      const body = await res.json();
+      const data = body?.data || {};
+
+      setFormData({
+        ...emptyFormData,
+        item_name: data.item_name || "",
+        brand: data.brand || "",
+        description: data.description || "",
+        product_code: data.product_code || pc,
+        hsn_code: data.hsn_code || "",
+      });
+      setFormMode("restock");
+      setShowForm(true);
+    } catch (error) {
+      console.error("Error fetching product info:", error);
+      alert("Failed to load product info. Check console for details.");
+    } finally {
+      setRestockingCode(null);
+    }
+  };
+
+  const openUploadModal = () => {
+    setUploadFile(null);
+    setUploadResult(null);
+    setUploadError(null);
+    setShowUploadModal(true);
+  };
+
+  const handleDownloadTemplate = () => {
+    const worksheet = XLSX.utils.aoa_to_sheet([ITEM_SHEET_REQUIRED_HEADERS]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+    XLSX.writeFile(workbook, "stock_upload_template.xlsx");
+  };
+
+  const handleUploadSheet = async () => {
+    if (!uploadFile) {
+      setUploadError("Please choose an Excel file first.");
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+    setUploadResult(null);
+    try {
+      const form = new FormData();
+      form.append("file", uploadFile);
+
+      const res = await fetch(`${API_BASE_URL}/irrl/uploadItemSheet`, {
+        method: "POST",
+        body: form,
+      });
+
+      const raw = await res.text();
+      const body = parseJsonSafe(raw);
+
+      if (!res.ok) {
+        throw new Error(formatUploadError(body, raw));
+      }
+
+      setUploadResult(body?.data || null);
+    } catch (error) {
+      console.error("Error uploading item sheet:", error);
+      setUploadError(error?.message || "Upload failed. Try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // Download Excel
   const handleDownloadExcel = () => {
     const tableData = stocks.map((s, i) => ({
@@ -256,8 +424,7 @@ const StockReport = ({ onLogout }) => {
       "Main Type": s.item_main_type,
       "Sub Type": s.item_sub_type,
       "Description": s.description,
-      "Main Code": s.main_code,
-      "Sub Code": s.sub_code,
+      "Product Code": s.product_code,
       "HSN Code": s.hsn_code ?? "",
       "Available": s.available_count || 0,
       "Site": s.site_count || 0,
@@ -282,7 +449,7 @@ const StockReport = ({ onLogout }) => {
     return stocks.filter((s) => {
       const name = (s.item_name || "").toLowerCase();
       const brand = (s.brand || "").toLowerCase();
-      const code = (s.sub_code || "").toLowerCase();
+      const code = (s.product_code || "").toLowerCase();
       const hsn = (s.hsn_code || "").toLowerCase();
       return name.includes(q) || brand.includes(q) || code.includes(q) || hsn.includes(q);
     });
@@ -308,12 +475,12 @@ const StockReport = ({ onLogout }) => {
   const totalPages = Math.ceil(filteredStock.length / itemsPerPage);
 
   const handleRowClick = (item) => {
-    const sc = item.sub_code;
-    if (!sc) {
-      alert("Cannot open details: sub_code missing");
+    const pc = item.product_code;
+    if (!pc) {
+      alert("Cannot open details: product_code missing");
       return;
     }
-    navigate(`/stock/${encodeURIComponent(sc)}`);
+    navigate(`/stock/${encodeURIComponent(pc)}`);
   };
 
   const formFieldClass =
@@ -378,7 +545,7 @@ const StockReport = ({ onLogout }) => {
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search item, brand, sub code, HSN…"
+                      placeholder="Search item, brand, product code, HSN…"
                       className="w-full rounded-xl border border-slate-200/90 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 shadow-inner shadow-slate-900/5 placeholder:text-slate-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
@@ -387,11 +554,19 @@ const StockReport = ({ onLogout }) => {
                   <div className="flex shrink-0 flex-wrap items-center gap-2 sm:ml-auto">
                     <button
                       type="button"
-                      onClick={() => setShowForm(true)}
+                      onClick={openAddStockForm}
                       className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-500/25 transition hover:from-amber-600 hover:to-amber-700"
                     >
                       <Plus className="h-4 w-4" strokeWidth={2.5} />
                       Add stock
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openUploadModal}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-100 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Upload Excel
                     </button>
                     <button
                       type="button"
@@ -411,7 +586,14 @@ const StockReport = ({ onLogout }) => {
                 <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200/90 bg-white shadow-2xl shadow-slate-900/20 ring-1 ring-slate-100">
                   <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-amber-100/90 bg-gradient-to-r from-amber-50/95 via-white to-amber-50/40 px-5 py-4 sm:px-6 sm:py-5">
                     <div>
-                      <h2 className="text-lg font-bold tracking-tight text-slate-900">Add stock</h2>
+                      <h2 className="text-lg font-bold tracking-tight text-slate-900">
+                        {formMode === "restock" ? "Restock" : "Add stock"}
+                      </h2>
+                      {formMode === "restock" && (
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Product details are locked — only count and status can be changed.
+                        </p>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -431,37 +613,39 @@ const StockReport = ({ onLogout }) => {
                           type="text"
                           value={formData.item_name}
                           onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
-                          className={formFieldClass}
+                          disabled={formMode === "restock"}
+                          className={`${formFieldClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
                         />
                       </div>
 
                       <div>
                         <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Brand</label>
-                        <AutocompleteInput
-                          list={brands}
-                          value={formData.brand}
-                          setValue={(val) => setFormData({ ...formData, brand: val })}
-                          keyName="name"
-                        />
+                        {formMode === "restock" ? (
+                          <input
+                            type="text"
+                            value={formData.brand}
+                            disabled
+                            className={`${formFieldClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
+                          />
+                        ) : (
+                          <AutocompleteInput
+                            list={brands}
+                            value={formData.brand}
+                            setValue={(val) => setFormData({ ...formData, brand: val })}
+                            keyName="name"
+                          />
+                        )}
                       </div>
 
 
-                      <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Main code</label>
+                      <div className="sm:col-span-2">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Product code</label>
                         <input
                           type="text"
-                          value={formData.main_code}
-                          onChange={(e) => setFormData({ ...formData, main_code: e.target.value })}
-                          className={formFieldClass}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sub code</label>
-                        <input
-                          type="text"
-                          value={formData.sub_code}
-                          onChange={(e) => setFormData({ ...formData, sub_code: e.target.value })}
-                          className={formFieldClass}
+                          value={formData.product_code}
+                          onChange={(e) => setFormData({ ...formData, product_code: e.target.value })}
+                          disabled={formMode === "restock"}
+                          className={`${formFieldClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
                         />
                       </div>
 
@@ -473,7 +657,8 @@ const StockReport = ({ onLogout }) => {
                           autoComplete="off"
                           value={formData.hsn_code}
                           onChange={(e) => setFormData({ ...formData, hsn_code: e.target.value })}
-                          className={formFieldClass}
+                          disabled={formMode === "restock"}
+                          className={`${formFieldClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
                           placeholder="e.g. 9967"
                         />
                       </div>
@@ -484,7 +669,8 @@ const StockReport = ({ onLogout }) => {
                           type="text"
                           value={formData.description}
                           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                          className={formFieldClass}
+                          disabled={formMode === "restock"}
+                          className={`${formFieldClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
                         />
                       </div>
 
@@ -528,8 +714,135 @@ const StockReport = ({ onLogout }) => {
                         className="rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-500/25 hover:from-amber-600 hover:to-amber-700"
                         onClick={handleAddStock}
                       >
-                        Add stock
+                        {formMode === "restock" ? "Restock" : "Add stock"}
                       </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showUploadModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+                <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200/90 bg-white shadow-2xl shadow-slate-900/20 ring-1 ring-slate-100">
+                  <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-amber-100/90 bg-gradient-to-r from-amber-50/95 via-white to-amber-50/40 px-5 py-4 sm:px-6 sm:py-5">
+                    <div>
+                      <h2 className="text-lg font-bold tracking-tight text-slate-900">Upload stock sheet</h2>
+                      <p className="mt-0.5 text-sm text-slate-600">
+                        Adds one product per row from an Excel file.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-xl bg-slate-100 p-2 text-slate-600 transition hover:bg-slate-200 hover:text-slate-900"
+                      onClick={() => setShowUploadModal(false)}
+                      aria-label="Close"
+                    >
+                      <X className="h-5 w-5" strokeWidth={2.5} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-5 p-6">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Required columns (first row)
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {ITEM_SHEET_REQUIRED_HEADERS.map((h) => (
+                          <span
+                            key={h}
+                            className="inline-flex items-center rounded-md bg-white px-2 py-1 font-mono text-[11px] font-semibold text-slate-700 ring-1 ring-inset ring-slate-200"
+                          >
+                            {h}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleDownloadTemplate}
+                        className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:text-amber-800 hover:underline"
+                      >
+                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                        Download blank template
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Excel file
+                      </label>
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                        onChange={(e) => {
+                          setUploadFile(e.target.files?.[0] || null);
+                          setUploadResult(null);
+                          setUploadError(null);
+                        }}
+                        className="mt-1.5 block w-full cursor-pointer rounded-xl border border-slate-200 bg-white text-sm text-slate-700 shadow-sm file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-amber-50 file:px-3.5 file:py-2.5 file:text-sm file:font-semibold file:text-amber-800 hover:file:bg-amber-100"
+                      />
+                    </div>
+
+                    {uploadError && (
+                      <div className="flex gap-2 whitespace-pre-line rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-800 ring-1 ring-rose-100">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+                        <span>{uploadError}</span>
+                      </div>
+                    )}
+
+                    {uploadResult && (
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm text-emerald-900 ring-1 ring-emerald-100">
+                        <div className="flex gap-2">
+                          <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                          <p className="font-semibold">
+                            {uploadResult.items_created ?? 0} item(s) created from{" "}
+                            {uploadResult.rows_processed ?? 0} row(s).
+                          </p>
+                        </div>
+                        {Array.isArray(uploadResult.results) && uploadResult.results.length > 0 && (
+                          <ul className="mt-2 max-h-32 space-y-1 overflow-auto pl-6 text-xs text-emerald-800">
+                            {uploadResult.results.map((r, i) => (
+                              <li key={i} className="list-disc">
+                                Row {r.row} · {r.item_name} →{" "}
+                                <span className="font-mono font-semibold">{r.product_code}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+                      <button
+                        type="button"
+                        className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                        onClick={() => {
+                          if (uploadResult) window.location.reload();
+                          else setShowUploadModal(false);
+                        }}
+                      >
+                        {uploadResult ? "Done" : "Cancel"}
+                      </button>
+                      {!uploadResult && (
+                        <button
+                          type="button"
+                          disabled={uploading || !uploadFile}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-500/25 hover:from-amber-600 hover:to-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={handleUploadSheet}
+                        >
+                          {uploading ? (
+                            <>
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              Uploading…
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4" />
+                              Upload
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -551,8 +864,7 @@ const StockReport = ({ onLogout }) => {
                         <th className={`${thClass} border-b border-slate-200/70`}>Item</th>
                         <th className={`${thClass} border-b border-slate-200/70`}>Brand</th>
                         <th className={`${thClass} border-b border-slate-200/70`}>Description</th>
-                        <th className={`${thClass} border-b border-slate-200/70`}>Main code</th>
-                        <th className={`${thClass} border-b border-slate-200/70`}>Sub code</th>
+                        <th className={`${thClass} border-b border-slate-200/70`}>Product code</th>
                         <th className={`${thClass} border-b border-slate-200/70`}>HSN code</th>
                         <th className={`${thNumClass} border-b border-slate-200/70`}>Avail.</th>
                         <th className={`${thNumClass} border-b border-slate-200/70`}>Site</th>
@@ -564,6 +876,9 @@ const StockReport = ({ onLogout }) => {
                         <th className={`${thNumClass} border-b border-slate-200/70`}>Reserved</th>
                         <th className={`${thNumClass} border-b border-slate-200/70`}>Pending</th>
                         <th className={`${thNumClass} border-b border-slate-200/70`}>Total</th>
+                        <th className="whitespace-nowrap border-b border-slate-200/70 px-3 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -578,7 +893,7 @@ const StockReport = ({ onLogout }) => {
                           const total = calculateTotalSum(item);
                           return (
                             <tr
-                              key={`${item.sub_code || "no-sub"}-${index}`}
+                              key={`${item.product_code || "no-code"}-${index}`}
                               onClick={() => handleRowClick(item)}
                               role="button"
                               tabIndex={0}
@@ -600,13 +915,10 @@ const StockReport = ({ onLogout }) => {
                               <td className="max-w-[140px] truncate px-3 py-2.5 text-slate-500" title={item.description}>
                                 {item.description || "—"}
                               </td>
-                              <td className="whitespace-nowrap px-3 py-2.5 font-mono text-[11px] text-slate-500">
-                                {item.main_code || "—"}
-                              </td>
                               <td className="whitespace-nowrap px-3 py-2.5">
-                                {item.sub_code ? (
+                                {item.product_code ? (
                                   <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-200/70">
-                                    {item.sub_code}
+                                    {item.product_code}
                                   </span>
                                 ) : (
                                   <span className="text-slate-300">—</span>
@@ -634,6 +946,25 @@ const StockReport = ({ onLogout }) => {
                                 >
                                   {total}
                                 </span>
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-2.5 text-right">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openRestockForm(item);
+                                  }}
+                                  disabled={restockingCode === item.product_code}
+                                  title="Restock this product"
+                                  aria-label="Restock this product"
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {restockingCode === item.product_code ? (
+                                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                                  ) : (
+                                    <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                  )}
+                                </button>
                               </td>
                             </tr>
                           );

@@ -40,6 +40,21 @@ function findItemInOptions(options, partial) {
   return null;
 }
 
+/** Rental days for a line item: from now (order placed) to its return/expiry
+ * date, matching the day-count used for invoicing in OrderDetails.jsx. */
+function calculateItemDays(expiredAt) {
+  if (!expiredAt) return 1;
+  const placedDate = new Date();
+  const returnDate = new Date(expiredAt);
+  const diffTime = returnDate - placedDate;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays > 0 ? diffDays : 1;
+}
+
+function calculateItemTotal(item) {
+  return (Number(item.amount) || 0) * calculateItemDays(item.expired_at);
+}
+
 function resolveCustomerFromList(customers, customerName) {
   if (!Array.isArray(customers) || customerName == null) return null;
   const q = String(customerName).trim();
@@ -90,8 +105,7 @@ const OrderForm = ({ onAddOrder, onClose }) => {
   });
 
   const itemsSubtotal = useMemo(
-    () =>
-      formData.items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0),
+    () => formData.items.reduce((sum, it) => sum + calculateItemTotal(it), 0),
     [formData.items]
   );
 
@@ -651,8 +665,12 @@ const OrderForm = ({ onAddOrder, onClose }) => {
                 </div>
                 <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
                   <span className="inline-flex items-center rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/10 px-3 py-1.5 text-sm font-bold tabular-nums text-amber-900 ring-1 ring-amber-500/20">
-                    ₹{Number(it.amount || 0).toLocaleString("en-IN")}
+                    ₹{calculateItemTotal(it).toLocaleString("en-IN")}
                   </span>
+                  <p className="text-right text-[11px] text-slate-500">
+                    ₹{Number(it.amount || 0).toLocaleString("en-IN")}/day × {calculateItemDays(it.expired_at)} day
+                    {calculateItemDays(it.expired_at) === 1 ? "" : "s"}
+                  </p>
                   {it.images.length > 0 && (
                     <div className="flex flex-wrap justify-end gap-1.5">
                       {it.images.map((img, jdx) => (
