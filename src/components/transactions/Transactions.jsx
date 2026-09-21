@@ -34,15 +34,25 @@ function buildInvoiceOrderInfo(data, deliveryId, invoiceIdFallback) {
   };
 }
 
-const statusOptions = ["PENDING", "COMPLETED"];
+const statusOptions = ["PENDING", "COMPLETED", "FAILED"];
 
 const selectClass =
   "rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20";
 
+function getValidFileUrl(img) {
+  if (!img || typeof img !== "string") return "";
+  const s = img.trim();
+  if (!s || s.toLowerCase().includes("not available")) return "";
+  if (/^https?:\/\//i.test(s)) return s;
+  const path = s.startsWith("/") ? s : `/${s}`;
+  return `${API_BASE_URL}${path}`;
+}
+
 function transactionAmountForDisplay(t) {
+  if (t?.amount !== undefined && t?.amount !== null && t?.amount !== "") return t.amount;
   const g = t?.generated_amount;
   if (g !== undefined && g !== null && g !== "") return g;
-  return t?.amount;
+  return 0;
 }
 
 function transactionAmountForApi(t) {
@@ -86,12 +96,31 @@ const Transactions = ({ onLogout }) => {
     if (!orderIdFromNav) return;
     setLoading(true);
     try {
-      const res = await axios.get(
-        `${API_BASE_URL}/irrl/genericApiUnjoin/mainTransaction?order_id='${orderIdFromNav}'`
+      let res = await axios.get(
+        `${API_BASE_URL}/irrl/subTransactions?order_id=${orderIdFromNav}`
       );
-      setTransactions(res.data?.data || []);
+      let data = res.data?.data ?? (Array.isArray(res.data) ? res.data : []);
+      if (!data || data.length === 0) {
+        try {
+          const resFallback = await axios.get(
+            `${API_BASE_URL}/irrl/subTransactions?order_id='${orderIdFromNav}'`
+          );
+          const dataFallback = resFallback.data?.data ?? (Array.isArray(resFallback.data) ? resFallback.data : []);
+          if (dataFallback && dataFallback.length > 0) {
+            data = dataFallback;
+          }
+        } catch (_) {}
+      }
+      setTransactions(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Error fetching transactions:", err);
+      console.error("Error fetching sub transactions:", err);
+      try {
+        const resFallback = await axios.get(
+          `${API_BASE_URL}/irrl/subTransactions?order_id='${orderIdFromNav}'`
+        );
+        const dataFallback = resFallback.data?.data ?? (Array.isArray(resFallback.data) ? resFallback.data : []);
+        setTransactions(Array.isArray(dataFallback) ? dataFallback : []);
+      } catch (_) {}
     } finally {
       setLoading(false);
     }
@@ -128,20 +157,27 @@ const Transactions = ({ onLogout }) => {
 
   const handleStatusChange = async (row, newStatus) => {
     try {
-      const intAmount = transactionAmountForApi(row);
-      await axios.get(
-        `${API_BASE_URL}/irrl/editTransaction/${row.transaction_id}?status=${encodeURIComponent(
-          newStatus
-        )}&amount=${intAmount}`
-      );
+      const id = row.id ?? row.transaction_id;
+      const intAmount = row.amount ? parseInt(row.amount, 10) : 0;
+      try {
+        await axios.get(
+          `${API_BASE_URL}/irrl/editTransaction/${id}?status=${encodeURIComponent(
+            newStatus
+          )}&amount=${intAmount}&table=transac`
+        );
+      } catch (_) {
+        await axios.get(
+          `${API_BASE_URL}/irrl/editTransaction/${id}?status=${encodeURIComponent(
+            newStatus
+          )}&amount=${intAmount}`
+        );
+      }
       setTransactions((prev) =>
-        prev.map((t) =>
-          t.transaction_id === row.transaction_id ? { ...t, status: newStatus } : t
-        )
+        prev.map((t) => ((t.id ?? t.transaction_id) === id ? { ...t, status: newStatus } : t))
       );
     } catch (err) {
-      console.error("Failed to update transaction", err);
-      alert("Failed to update transaction");
+      console.error("Failed to update transaction status", err);
+      alert("Failed to update transaction status");
     }
   };
 
@@ -149,7 +185,7 @@ const Transactions = ({ onLogout }) => {
     () =>
       transactions
         .filter((t) => (t.status || "").toUpperCase() === "COMPLETED")
-        .reduce((sum, t) => sum + transactionAmountForApi(t), 0),
+        .reduce((sum, t) => sum + (parseInt(t.amount, 10) || 0), 0),
     [transactions]
   );
 
@@ -302,49 +338,83 @@ const Transactions = ({ onLogout }) => {
                     <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
                       <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-slate-600 shadow-sm">
                         <tr>
-                          <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">
-                            Transaction ID
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
+                            ID
                           </th>
-                          <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">
-                            Generated amount
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
+                            Order ID
                           </th>
-                          <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
+                            Invoice ID
+                          </th>
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
+                            Amount
+                          </th>
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
                             Status
+                          </th>
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
+                            Type
+                          </th>
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
+                            From Date
+                          </th>
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
+                            To Date
+                          </th>
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
+                            Tax Type
+                          </th>
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
+                            Image
                           </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 bg-white">
-                        {transactions.map((t) => {
-                          const displayAmt = transactionAmountForDisplay(t);
+                        {transactions.map((t, idx) => {
                           const statusUpper = (t.status || "").toUpperCase();
                           const selectValue = statusOptions.includes(statusUpper)
                             ? statusUpper
                             : statusOptions[0];
+                          const fileUrl = getValidFileUrl(t.image);
 
                           return (
                             <tr
-                              key={t.transaction_id}
-                              className="cursor-pointer transition-colors hover:bg-amber-50/50"
-                              onClick={() =>
-                                navigate("/transaction-details", {
-                                  state: { transaction_id: t.transaction_id },
-                                })
-                              }
+                              key={t.id ?? idx}
+                              className="transition-colors hover:bg-amber-50/40"
                             >
-                              <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[11px] text-slate-700 sm:px-3">
-                                {t.transaction_id}
+                              <td className="whitespace-nowrap px-2.5 py-2 font-mono text-xs font-semibold text-slate-700">
+                                {t.id ?? "—"}
                               </td>
-                              <td className="whitespace-nowrap px-2 py-1.5 tabular-nums font-medium text-slate-900 sm:px-3">
-                                {displayAmt !== undefined && displayAmt !== null && displayAmt !== ""
-                                  ? formatRupee(displayAmt)
+                              <td
+                                className="max-w-[130px] truncate px-2.5 py-2 font-mono text-[11px] text-slate-600"
+                                title={t.order_id || ""}
+                              >
+                                {t.order_id || "—"}
+                              </td>
+                              <td
+                                className="whitespace-nowrap px-2.5 py-2 font-mono text-xs font-medium text-slate-800"
+                                title={t.invoice_id || ""}
+                              >
+                                {t.invoice_id || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-2.5 py-2 font-mono text-xs font-semibold tabular-nums text-slate-900">
+                                {t.amount !== undefined && t.amount !== null && t.amount !== ""
+                                  ? formatRupee(t.amount)
                                   : "—"}
                               </td>
                               <td
-                                className="whitespace-nowrap px-2 py-1.5 sm:px-3"
+                                className="whitespace-nowrap px-2.5 py-2"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <select
-                                  className={selectClass}
+                                  className={`${selectClass} text-xs font-semibold ${
+                                    selectValue === "COMPLETED"
+                                      ? "border-emerald-200 bg-emerald-50/50 text-emerald-800"
+                                      : selectValue === "FAILED"
+                                      ? "border-rose-200 bg-rose-50/50 text-rose-800"
+                                      : "border-amber-200 bg-amber-50/50 text-amber-800"
+                                  }`}
                                   value={selectValue}
                                   onChange={(e) => handleStatusChange(t, e.target.value)}
                                 >
@@ -354,6 +424,42 @@ const Transactions = ({ onLogout }) => {
                                     </option>
                                   ))}
                                 </select>
+                              </td>
+                              <td className="whitespace-nowrap px-2.5 py-2 text-xs font-medium text-slate-700">
+                                {t.type || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-2.5 py-2 text-xs text-slate-600">
+                                {t.from_date || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-2.5 py-2 text-xs text-slate-600">
+                                {t.to_date || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-2.5 py-2 text-xs text-slate-600">
+                                {t.tax_type || "—"}
+                              </td>
+                              <td
+                                className="whitespace-nowrap px-2.5 py-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {fileUrl ? (
+                                  <a
+                                    href={fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-blue-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                                  >
+                                    <FaFileInvoice className="shrink-0 text-blue-500" /> View PDF
+                                  </a>
+                                ) : t.image ? (
+                                  <span
+                                    className="max-w-[120px] truncate text-[11px] text-slate-400 block"
+                                    title={t.image}
+                                  >
+                                    {t.image.toLowerCase().includes("not available") ? "Unavailable" : t.image}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
                               </td>
                             </tr>
                           );
