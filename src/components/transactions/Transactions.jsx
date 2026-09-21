@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, X } from "lucide-react";
+import { FaArrowLeft, FaFileInvoice, FaTimes } from "react-icons/fa";
 import Header from "../header/Header";
 import Rentalsidebar from "../Rental-sidebar/Rentalsidebar";
 import { API_BASE_URL } from "../../config/api";
@@ -13,7 +13,7 @@ import {
   DEFAULT_TAX_TYPE,
 } from "../../utils/proformaInvoice";
 
-/** Trimmed version of Order Details' order-info builder — only the fields the invoice needs. */
+/** Trimmed version of Order Details' order-info builder — only the fields the invoice/summary need. */
 function buildInvoiceOrderInfo(data, deliveryId, invoiceIdFallback) {
   if (!data?.length) return null;
   return {
@@ -25,6 +25,7 @@ function buildInvoiceOrderInfo(data, deliveryId, invoiceIdFallback) {
       ? new Date(data[0].placed_at).toLocaleDateString()
       : new Date().toLocaleDateString(),
     advance_amount: parseInt(data[0].advance_amount || 0, 10) || 0,
+    total_value: data.reduce((sum, item) => sum + (parseInt(item.generated_amount, 10) || 0), 0),
     invoice_id: resolveOrderLevelInvoiceId(data, invoiceIdFallback),
     invoice_number: data[0].invoice_number ?? data[0].invoiceNumber ?? data[0].Invoice_Number ?? "",
   };
@@ -61,10 +62,11 @@ const Transactions = ({ onLogout }) => {
   const navigate = useNavigate();
   const orderIdFromNav = location.state?.order_id ?? null;
 
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [orderInfoLoading, setOrderInfoLoading] = useState(false);
   const [orderItemsForInvoice, setOrderItemsForInvoice] = useState([]);
   const [orderInfoForInvoice, setOrderInfoForInvoice] = useState(null);
+
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [invoiceFormData, setInvoiceFormData] = useState({
     customerName: "",
     customerAddress: "",
@@ -74,47 +76,6 @@ const Transactions = ({ onLogout }) => {
     modeOfPayment: "Immediate",
     taxType: DEFAULT_TAX_TYPE,
   });
-
-  const openInvoiceModal = async () => {
-    if (!orderIdFromNav) return;
-    setInvoiceLoading(true);
-    try {
-      const res = await axios.get(
-        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${orderIdFromNav}'`
-      );
-      const data = res.data?.data || [];
-      const info = buildInvoiceOrderInfo(data, orderIdFromNav, "");
-      setOrderItemsForInvoice(data);
-      setOrderInfoForInvoice(info);
-      setInvoiceFormData((prev) => ({
-        ...prev,
-        customerName: info?.customer_name || "",
-        customerGSTIN: info?.customer_gst || "",
-      }));
-      setShowInvoiceModal(true);
-    } catch (err) {
-      console.error("Error fetching order details for invoice:", err);
-      alert("Could not load order details for the invoice.");
-    } finally {
-      setInvoiceLoading(false);
-    }
-  };
-
-  const handlePrintInvoice = () => {
-    setShowInvoiceModal(false);
-    const invoiceNo = resolveInvoiceNumberForPrint(
-      orderItemsForInvoice,
-      orderInfoForInvoice,
-      "",
-      orderIdFromNav
-    );
-    openProformaInvoicePdf({
-      orderInfo: orderInfoForInvoice,
-      orderItems: orderItemsForInvoice,
-      invoiceFormData,
-      invoiceNo,
-    });
-  };
 
   const fetchTransactions = async () => {
     if (!orderIdFromNav) return;
@@ -131,8 +92,33 @@ const Transactions = ({ onLogout }) => {
     }
   };
 
+  const fetchOrderInfo = async () => {
+    if (!orderIdFromNav) return;
+    setOrderInfoLoading(true);
+    try {
+      const res = await axios.get(
+        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${orderIdFromNav}'`
+      );
+      const data = res.data?.data || [];
+      const info = buildInvoiceOrderInfo(data, orderIdFromNav, "");
+      setOrderItemsForInvoice(data);
+      setOrderInfoForInvoice(info);
+      setInvoiceFormData((prev) => ({
+        ...prev,
+        customerName: info?.customer_name || "",
+        customerGSTIN: info?.customer_gst || "",
+      }));
+    } catch (err) {
+      console.error("Error fetching order details:", err);
+    } finally {
+      setOrderInfoLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchTransactions();
+    fetchOrderInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderIdFromNav]);
 
   const handleStatusChange = async (row, newStatus) => {
@@ -154,125 +140,205 @@ const Transactions = ({ onLogout }) => {
     }
   };
 
+  const totalAmountPaid = useMemo(
+    () =>
+      transactions
+        .filter((t) => (t.status || "").toUpperCase() === "COMPLETED")
+        .reduce((sum, t) => sum + transactionAmountForApi(t), 0),
+    [transactions]
+  );
+
+  const orderTotalValue = orderInfoForInvoice?.total_value || 0;
+  const balanceAmount = orderTotalValue - totalAmountPaid;
+
+  const openInvoiceModal = () => {
+    if (!orderIdFromNav) return;
+    setShowInvoiceModal(true);
+  };
+
+  const handlePrintInvoice = () => {
+    setShowInvoiceModal(false);
+    const invoiceNo = resolveInvoiceNumberForPrint(
+      orderItemsForInvoice,
+      orderInfoForInvoice,
+      "",
+      orderIdFromNav
+    );
+    openProformaInvoicePdf({
+      orderInfo: orderInfoForInvoice,
+      orderItems: orderItemsForInvoice,
+      invoiceFormData,
+      invoiceNo,
+    });
+  };
+
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-slate-50">
-      <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_120%_80%_at_50%_-30%,rgba(251,191,36,0.06),transparent)]"
-        aria-hidden
-      />
+    <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
       <Header onLogout={onLogout} />
-
-      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden bg-gradient-to-b from-slate-100 to-slate-50">
         <Rentalsidebar />
-
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
-            <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  className="mb-2 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-slate-800"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
-                  Back
-                </button>
-                <h1 className="text-base font-semibold tracking-tight text-slate-900">Transactions</h1>
-                {orderIdFromNav != null && orderIdFromNav !== "" && (
-                  <p className="mt-0.5 font-mono text-[11px] text-slate-500">Order {orderIdFromNav}</p>
-                )}
-              </div>
+        <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-3 overflow-hidden px-3 py-3 sm:px-4 sm:py-3 lg:px-5">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-200/90 bg-white/95 pb-2.5 pt-0.5 shadow-sm ring-1 ring-slate-100/80 backdrop-blur-sm">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
               <button
                 type="button"
-                disabled={!orderIdFromNav || invoiceLoading}
-                onClick={openInvoiceModal}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => navigate(-1)}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-amber-300 hover:bg-amber-50/80 sm:px-3 sm:text-sm"
               >
-                <FileText className="h-3.5 w-3.5" strokeWidth={2.5} />
-                {invoiceLoading ? "Loading…" : "Invoice"}
+                <FaArrowLeft className="text-slate-500" /> Back
+              </button>
+              <h2 className="truncate text-base font-bold tracking-tight text-slate-900 sm:text-lg">Invoices</h2>
+              {orderIdFromNav != null && orderIdFromNav !== "" && (
+                <span className="truncate font-mono text-[11px] text-slate-500">Order {orderIdFromNav}</span>
+              )}
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={!orderIdFromNav || orderInfoLoading}
+                onClick={openInvoiceModal}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:px-3 sm:text-sm"
+              >
+                <FaFileInvoice className="shrink-0" /> Invoice
               </button>
             </div>
-
-            {!orderIdFromNav ? (
-              <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/80 px-4 py-12 text-center">
-                <p className="max-w-sm text-sm text-slate-600">
-                  Open this page from <span className="font-medium text-slate-800">Orders</span> using{" "}
-                  <span className="font-medium text-slate-800">View</span> so an order is selected.
-                </p>
-              </div>
-            ) : loading ? (
-              <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-slate-200 bg-white">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
-                <p className="mt-3 text-xs font-medium text-slate-500">Loading transactions…</p>
-              </div>
-            ) : transactions.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-12">
-                <p className="text-sm text-slate-600">No transactions for this order.</p>
-              </div>
-            ) : (
-              <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                <table className="min-w-full border-collapse text-xs">
-                  <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/95 backdrop-blur-sm">
-                    <tr>
-                      <th className="whitespace-nowrap px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                        Transaction ID
-                      </th>
-                      <th className="whitespace-nowrap px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                        Generated amount
-                      </th>
-                      <th className="whitespace-nowrap px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {transactions.map((t) => {
-                      const displayAmt = transactionAmountForDisplay(t);
-                      const statusUpper = (t.status || "").toUpperCase();
-                      const selectValue = statusOptions.includes(statusUpper)
-                        ? statusUpper
-                        : statusOptions[0];
-
-                      return (
-                        <tr
-                          key={t.transaction_id}
-                          className="cursor-pointer transition-colors hover:bg-slate-50/80"
-                          onClick={() =>
-                            navigate("/transaction-details", {
-                              state: { transaction_id: t.transaction_id },
-                            })
-                          }
-                        >
-                          <td className="whitespace-nowrap px-4 py-3 font-mono text-[11px] text-slate-700">
-                            {t.transaction_id}
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-3 tabular-nums font-medium text-slate-900">
-                            {displayAmt !== undefined && displayAmt !== null && displayAmt !== ""
-                              ? formatRupee(displayAmt)
-                              : "—"}
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                            <select
-                              className={selectClass}
-                              value={selectValue}
-                              onChange={(e) => handleStatusChange(t, e.target.value)}
-                            >
-                              {statusOptions.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
-        </main>
+
+          {!orderIdFromNav ? (
+            <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/80 px-4 py-12 text-center">
+              <p className="max-w-sm text-sm text-slate-600">
+                Open this page from <span className="font-medium text-slate-800">Orders</span> using{" "}
+                <span className="font-medium text-slate-800">View</span> so an order is selected.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="shrink-0 rounded-xl border border-slate-200/90 bg-white p-3 shadow-sm ring-1 ring-slate-100 sm:p-4">
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Order information
+                </h4>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm lg:grid-cols-4">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium text-slate-500">Customer</div>
+                    <div className="truncate font-medium text-slate-900">
+                      {orderInfoLoading ? "—" : orderInfoForInvoice?.customer_name || "—"}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium text-slate-500">Invoice ID</div>
+                    <div className="truncate font-mono text-xs font-medium text-slate-900">
+                      {orderInfoLoading
+                        ? "—"
+                        : orderInfoForInvoice?.invoice_id || orderInfoForInvoice?.invoice_number || "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-medium text-slate-500">Advance</div>
+                    <div className="font-medium text-slate-900">
+                      {orderInfoLoading ? "—" : formatRupee(orderInfoForInvoice?.advance_amount || 0)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-medium text-slate-500">Total value</div>
+                    <div className="font-semibold text-blue-600">
+                      {orderInfoLoading ? "—" : formatRupee(orderTotalValue)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-medium text-slate-500">Total amount paid</div>
+                    <div className="font-semibold text-emerald-600">{formatRupee(totalAmountPaid)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-medium text-slate-500">Balance amount</div>
+                    <div className={`font-semibold ${balanceAmount > 0 ? "text-rose-600" : "text-slate-900"}`}>
+                      {orderInfoLoading ? "—" : formatRupee(balanceAmount)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+                <h3 className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Transactions
+                </h3>
+                {loading ? (
+                  <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                    <p className="mt-3 text-xs font-medium text-slate-500">Loading transactions…</p>
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-slate-200/90 bg-white px-4 py-12 shadow-sm ring-1 ring-slate-100">
+                    <p className="text-sm text-slate-600">No transactions for this order.</p>
+                  </div>
+                ) : (
+                  <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
+                    <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
+                      <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-slate-600 shadow-sm">
+                        <tr>
+                          <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">
+                            Transaction ID
+                          </th>
+                          <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">
+                            Generated amount
+                          </th>
+                          <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {transactions.map((t) => {
+                          const displayAmt = transactionAmountForDisplay(t);
+                          const statusUpper = (t.status || "").toUpperCase();
+                          const selectValue = statusOptions.includes(statusUpper)
+                            ? statusUpper
+                            : statusOptions[0];
+
+                          return (
+                            <tr
+                              key={t.transaction_id}
+                              className="cursor-pointer transition-colors hover:bg-amber-50/50"
+                              onClick={() =>
+                                navigate("/transaction-details", {
+                                  state: { transaction_id: t.transaction_id },
+                                })
+                              }
+                            >
+                              <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[11px] text-slate-700 sm:px-3">
+                                {t.transaction_id}
+                              </td>
+                              <td className="whitespace-nowrap px-2 py-1.5 tabular-nums font-medium text-slate-900 sm:px-3">
+                                {displayAmt !== undefined && displayAmt !== null && displayAmt !== ""
+                                  ? formatRupee(displayAmt)
+                                  : "—"}
+                              </td>
+                              <td
+                                className="whitespace-nowrap px-2 py-1.5 sm:px-3"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <select
+                                  className={selectClass}
+                                  value={selectValue}
+                                  onChange={(e) => handleStatusChange(t, e.target.value)}
+                                >
+                                  {statusOptions.map((s) => (
+                                    <option key={s} value={s}>
+                                      {s}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {showInvoiceModal && (
@@ -284,7 +350,7 @@ const Transactions = ({ onLogout }) => {
               onClick={() => setShowInvoiceModal(false)}
               aria-label="Close"
             >
-              <X className="h-4 w-4" />
+              <FaTimes className="h-4 w-4" />
             </button>
 
             <h3 className="mb-4 text-center text-lg font-semibold text-gray-900">Invoice Details</h3>
@@ -387,7 +453,7 @@ const Transactions = ({ onLogout }) => {
                   type="submit"
                   className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
                 >
-                  <FileText className="h-4 w-4" /> Generate & Print Invoice
+                  <FaFileInvoice /> Generate & Print Invoice
                 </button>
               </div>
             </form>
