@@ -11,6 +11,8 @@ import {
   openProformaInvoicePdf,
   TAX_TYPE_OPTIONS,
   DEFAULT_TAX_TYPE,
+  INVOICE_TYPE_OPTIONS,
+  DEFAULT_INVOICE_TYPE,
 } from "../../utils/proformaInvoice";
 
 /** Trimmed version of Order Details' order-info builder — only the fields the invoice/summary need. */
@@ -75,6 +77,7 @@ const Transactions = ({ onLogout }) => {
     returnDate: "",
     modeOfPayment: "Immediate",
     taxType: DEFAULT_TAX_TYPE,
+    invoiceType: DEFAULT_INVOICE_TYPE,
   });
 
   const fetchTransactions = async () => {
@@ -207,8 +210,9 @@ const Transactions = ({ onLogout }) => {
           {!orderIdFromNav ? (
             <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/80 px-4 py-12 text-center">
               <p className="max-w-sm text-sm text-slate-600">
-                Open this page from <span className="font-medium text-slate-800">Orders</span> using{" "}
-                <span className="font-medium text-slate-800">View</span> so an order is selected.
+                Open this page from <span className="font-medium text-slate-800">Orders</span> (using{" "}
+                <span className="font-medium text-slate-800">View</span>) or <span className="font-medium text-slate-800">Order Details</span> (using{" "}
+                <span className="font-medium text-slate-800">Invoice</span>) so an order is selected.
               </p>
             </div>
           ) : (
@@ -426,19 +430,35 @@ const Transactions = ({ onLogout }) => {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-gray-700">Tax Type</label>
-                <select
-                  value={invoiceFormData.taxType}
-                  onChange={(e) => setInvoiceFormData((prev) => ({ ...prev, taxType: e.target.value }))}
-                  className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
-                >
-                  {TAX_TYPE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Invoice Type</label>
+                  <select
+                    value={invoiceFormData.invoiceType || DEFAULT_INVOICE_TYPE}
+                    onChange={(e) => setInvoiceFormData((prev) => ({ ...prev, invoiceType: e.target.value }))}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                  >
+                    {INVOICE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Tax Type</label>
+                  <select
+                    value={invoiceFormData.taxType}
+                    onChange={(e) => setInvoiceFormData((prev) => ({ ...prev, taxType: e.target.value }))}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                  >
+                    {TAX_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="mt-2 flex justify-end gap-2">

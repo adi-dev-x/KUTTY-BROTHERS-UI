@@ -9,6 +9,13 @@ export const TAX_TYPE_OPTIONS = [
 
 export const DEFAULT_TAX_TYPE = "CGST_SGST";
 
+export const INVOICE_TYPE_OPTIONS = [
+  { value: "PROFORMA", label: "Proforma Invoice" },
+  { value: "TAX", label: "Tax Invoice" },
+];
+
+export const DEFAULT_INVOICE_TYPE = "PROFORMA";
+
 /** Same key fallbacks used across the order/customer/stock APIs. */
 export function pickInvoiceIdFromAPI(row) {
   if (!row) return "";
@@ -105,6 +112,8 @@ function numberToWords(num) {
  */
 export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData, invoiceNo }) {
   const invoiceWindow = window.open('', '_blank');
+  const isTaxInvoice = (invoiceFormData?.invoiceType || "").toUpperCase() === "TAX";
+  const invoiceTitle = isTaxInvoice ? "TAX INVOICE" : "PROFORMA INVOICE";
   const formattedInvoiceDate = new Date(invoiceFormData.invoiceDate).toLocaleDateString('en-GB');
   const formattedReturnDate = invoiceFormData.returnDate
     ? new Date(invoiceFormData.returnDate).toLocaleDateString('en-GB')
@@ -172,7 +181,7 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Invoice - ${invoiceNo}</title>
+        <title>${invoiceTitle} - ${invoiceNo}</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -280,7 +289,7 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
             <div><strong>GSTIN/UIN:</strong> 33AAAPI1135L2Z4 | <strong>State:</strong> Tamil Nadu (Code: 33)</div>
           </div>
 
-          <div class="invoice-title">PROFORMA INVOICE</div>
+          <div class="invoice-title">${invoiceTitle}</div>
 
           <div class="section">
             <div class="flex-row">

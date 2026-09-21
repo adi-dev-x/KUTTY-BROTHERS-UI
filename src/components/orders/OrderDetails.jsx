@@ -23,6 +23,8 @@ import {
   openProformaInvoicePdf,
   TAX_TYPE_OPTIONS,
   DEFAULT_TAX_TYPE,
+  INVOICE_TYPE_OPTIONS,
+  DEFAULT_INVOICE_TYPE,
 } from "../../utils/proformaInvoice";
 
 /** POST body: item_id, delivery_item_id, damage_images, clear */
@@ -280,6 +282,7 @@ const OrderDetails = ({ onLogout }) => {
     returnDate: '',
     modeOfPayment: 'Immediate',
     taxType: DEFAULT_TAX_TYPE,
+    invoiceType: DEFAULT_INVOICE_TYPE,
   });
 
   const [damageModalItem, setDamageModalItem] = useState(null);
@@ -1092,8 +1095,13 @@ const OrderDetails = ({ onLogout }) => {
               </button>
               <button
                 type="button"
-                onClick={() => setShowInvoicePreview(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 sm:px-3 sm:text-sm"
+                onClick={() => {
+                  navigate("/transaction", {
+                    state: { order_id: orderInfo?.delivery_id || delivery_id },
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-amber-700 sm:px-3 sm:text-sm"
+                title="View transactions & invoice"
               >
                 <FaFileInvoice className="shrink-0" /> Invoice
               </button>
@@ -1536,19 +1544,35 @@ const OrderDetails = ({ onLogout }) => {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-gray-700">Tax Type</label>
-                <select
-                  value={invoiceFormData.taxType}
-                  onChange={(e) => setInvoiceFormData(prev => ({ ...prev, taxType: e.target.value }))}
-                  className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
-                >
-                  {TAX_TYPE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Invoice Type</label>
+                  <select
+                    value={invoiceFormData.invoiceType || DEFAULT_INVOICE_TYPE}
+                    onChange={(e) => setInvoiceFormData(prev => ({ ...prev, invoiceType: e.target.value }))}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                  >
+                    {INVOICE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Tax Type</label>
+                  <select
+                    value={invoiceFormData.taxType}
+                    onChange={(e) => setInvoiceFormData(prev => ({ ...prev, taxType: e.target.value }))}
+                    className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                  >
+                    {TAX_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="mt-2 flex justify-end gap-2">
