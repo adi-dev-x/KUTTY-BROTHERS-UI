@@ -1,3 +1,7 @@
+import axios from "axios";
+import html2pdf from "html2pdf.js";
+import { API_BASE_URL } from "../config/api";
+
 /** Shared proforma-invoice PDF generation, used by both the Order Details
  * "Invoice" button and the Transactions page "Invoice" button so the two
  * stay in sync. */
@@ -102,23 +106,9 @@ function numberToWords(num) {
 }
 
 /**
- * Opens a new window with the proforma invoice HTML and triggers the print UI.
- *
- * @param {object} params
- * @param {object} params.orderInfo - { customer_name, customer_gst, delivery_chelan_number, order_date, advance_amount }
- * @param {Array} params.orderItems - order line rows (item_name, rent_amount, placed_at, hsn_code, ...)
- * @param {object} params.invoiceFormData - { customerName, customerAddress, customerGSTIN, invoiceDate, returnDate, modeOfPayment, taxType }
- * @param {string} params.invoiceNo - already-resolved invoice number
+ * Calculates item totals, taxes, and final balance for the invoice.
  */
-export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData, invoiceNo }) {
-  const invoiceWindow = window.open('', '_blank');
-  const isTaxInvoice = (invoiceFormData?.invoiceType || "").toUpperCase() === "TAX";
-  const invoiceTitle = isTaxInvoice ? "TAX INVOICE" : "PROFORMA INVOICE";
-  const formattedInvoiceDate = new Date(invoiceFormData.invoiceDate).toLocaleDateString('en-GB');
-  const formattedReturnDate = invoiceFormData.returnDate
-    ? new Date(invoiceFormData.returnDate).toLocaleDateString('en-GB')
-    : '-';
-
+export function calculateInvoiceTotals(orderItems = [], invoiceFormData = {}, orderInfo = {}) {
   const getDaysAndTotal = (item) => {
     if (!invoiceFormData.returnDate || !item.placed_at) {
       return { days: 1, total: parseInt(item.generated_amount) || 0 };
@@ -141,6 +131,43 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
   const advanceAmount = orderInfo?.advance_amount || 0;
   const balanceAmount = totalAmount - advanceAmount;
   const amountInWords = numberToWords(Math.round(totalAmount));
+
+  return {
+    getDaysAndTotal,
+    subTotal,
+    isIgst,
+    cgst,
+    sgst,
+    igst,
+    totalTax,
+    totalAmount,
+    advanceAmount,
+    balanceAmount,
+    amountInWords,
+  };
+}
+
+/**
+ * Builds the complete HTML string for an invoice.
+ */
+export function generateInvoiceHTML({
+  orderInfo,
+  orderItems = [],
+  invoiceFormData = {},
+  invoiceNo,
+  includePrintActions = true,
+}) {
+  const isTaxInvoice = (invoiceFormData?.invoiceType || "").toUpperCase() === "TAX";
+  const invoiceTitle = isTaxInvoice ? "TAX INVOICE" : "PROFORMA INVOICE";
+  const formattedInvoiceDate = invoiceFormData.invoiceDate
+    ? new Date(invoiceFormData.invoiceDate).toLocaleDateString("en-GB")
+    : "-";
+  const formattedReturnDate = invoiceFormData.returnDate
+    ? new Date(invoiceFormData.returnDate).toLocaleDateString("en-GB")
+    : "-";
+
+  const totals = calculateInvoiceTotals(orderItems, invoiceFormData, orderInfo);
+  const { getDaysAndTotal, subTotal, isIgst, cgst, sgst, igst, totalAmount, advanceAmount, balanceAmount, amountInWords } = totals;
 
   const taxRowsHTML = isIgst
     ? `
@@ -177,7 +204,11 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
                 <span>₹${sgst.toFixed(2)}</span>
               </div>`;
 
-  const invoiceHTML = `
+  const logoSrc = typeof window !== "undefined" && window.location?.origin
+    ? `${window.location.origin}/irr.png`
+    : "/irr.png";
+
+  return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -283,7 +314,7 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
       <body>
         <div class="invoice-container">
           <div class="header">
-            <img src="/irr.png" alt="IRR Logo" class="logo" />
+            <img src="${logoSrc}" alt="IRR Logo" class="logo" />
             <div class="company-name">IRR TECHNO FAB FY-2024-2025</div>
             <div>NO.276-D, VANAGARAM ROAD, ATHIPET, AMBATTUR, CHENNAI – 600 058</div>
             <div><strong>GSTIN/UIN:</strong> 33AAAPI1135L2Z4 | <strong>State:</strong> Tamil Nadu (Code: 33)</div>
@@ -300,7 +331,7 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
                 <div><strong>Delivery Note Date:</strong> ${orderInfo?.order_date || '-'}</div>
               </div>
               <div class="half-width text-right">
-                <div><strong>Mode/Terms of Payment:</strong> ${invoiceFormData.modeOfPayment}</div>
+                <div><strong>Mode/Terms of Payment:</strong> ${invoiceFormData.modeOfPayment || 'Immediate'}</div>
                 <div><strong>Return Date:</strong> ${formattedReturnDate}</div>
               </div>
             </div>
@@ -350,7 +381,6 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
                     </tr>
                   `;
                 }).join('')}
-                <!-- Fill empty rows if needed -->
                 ${Array.from({ length: Math.max(0, 5 - orderItems.length) }, () => `
                   <tr>
                     <td>&nbsp;</td>
@@ -373,7 +403,8 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
                   <th>Description</th>
                   <th>Rate</th>
                   <th>Amount (₹)</th>
-                </tr>${taxRowsHTML}
+                </tr>
+                ${taxRowsHTML}
               </table>
               <div style="margin-top: 10px;">
                 <strong>Amount in Words:</strong><br>
@@ -384,7 +415,8 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
               <div class="flex-row" style="margin-bottom: 5px;">
                 <span>Sub Total:</span>
                 <span>₹${subTotal.toFixed(2)}</span>
-              </div>${taxSummaryHTML}
+              </div>
+              ${taxSummaryHTML}
               <div class="flex-row" style="border-top: 1px solid black; padding-top: 5px; font-weight: bold;">
                 <span>Total Invoice Amount:</span>
                 <span>₹${totalAmount.toFixed(2)}</span>
@@ -427,6 +459,7 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
 
         </div>
 
+        ${includePrintActions ? `
         <div class="no-print" style="text-align: center; margin: 20px;">
           <button onclick="window.print()" style="padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer;">
             Print Invoice
@@ -434,11 +467,165 @@ export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData,
           <button onclick="window.close()" style="padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer;">
             Close
           </button>
-        </div>
+        </div>` : ""}
       </body>
       </html>
     `;
+}
+
+/**
+ * Generates an actual PDF Blob in memory from the invoice HTML.
+ */
+export async function generateInvoicePdfBlob({ orderInfo, orderItems, invoiceFormData, invoiceNo }) {
+  const invoiceHTML = generateInvoiceHTML({
+    orderInfo,
+    orderItems,
+    invoiceFormData,
+    invoiceNo,
+    includePrintActions: false,
+  });
+
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.width = "800px";
+  container.style.background = "#ffffff";
+  container.style.color = "#000000";
+  container.innerHTML = invoiceHTML;
+
+  const noPrintEls = container.querySelectorAll(".no-print");
+  noPrintEls.forEach((el) => el.remove());
+
+  document.body.appendChild(container);
+
+  try {
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `invoice_${invoiceNo || "INV"}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    };
+
+    const pdfBlob = await html2pdf().from(container).set(opt).output("blob");
+    return pdfBlob;
+  } finally {
+    if (container.parentNode) {
+      container.parentNode.removeChild(container);
+    }
+  }
+}
+
+/**
+ * Opens a new window with the proforma invoice HTML and triggers the print UI.
+ */
+export function openProformaInvoicePdf({ orderInfo, orderItems, invoiceFormData, invoiceNo }) {
+  const invoiceWindow = window.open("", "_blank");
+  if (!invoiceWindow) {
+    console.warn("Could not open invoice window (popup blocked?)");
+    return null;
+  }
+
+  const invoiceHTML = generateInvoiceHTML({
+    orderInfo,
+    orderItems,
+    invoiceFormData,
+    invoiceNo,
+    includePrintActions: true,
+  });
 
   invoiceWindow.document.write(invoiceHTML);
   invoiceWindow.document.close();
+  return invoiceWindow;
+}
+
+/**
+ * Automatically generates the PDF, uploads it to /irrl/upload,
+ * and calls /irrl/addSubTransaction with the result.
+ */
+export async function uploadInvoicePdfAndAddSubTransaction({
+  orderInfo,
+  orderItems = [],
+  invoiceFormData = {},
+  invoiceNo,
+  orderId,
+}) {
+  const totals = calculateInvoiceTotals(orderItems, invoiceFormData, orderInfo);
+
+  // 1. Generate PDF Blob
+  const pdfBlob = await generateInvoicePdfBlob({
+    orderInfo,
+    orderItems,
+    invoiceFormData,
+    invoiceNo,
+  });
+
+  // 2. Upload to ${API_BASE_URL}/irrl/upload
+  const file = new File([pdfBlob], `${invoiceNo || "invoice"}.pdf`, {
+    type: "application/pdf",
+  });
+
+  const form = new FormData();
+  form.append("images", file);
+
+  const uploadRes = await axios.post(`${API_BASE_URL}/irrl/upload`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+  let uploadedUrl = "";
+  const d = uploadRes.data;
+  if (d) {
+    if (Array.isArray(d.urls) && d.urls.length > 0 && d.urls[0]) {
+      uploadedUrl = d.urls[0];
+    } else if (typeof d.url === "string" && d.url.trim()) {
+      uploadedUrl = d.url.trim();
+    } else if (typeof d.filePath === "string" && d.filePath.trim()) {
+      uploadedUrl = d.filePath.trim();
+    } else if (Array.isArray(d.data) && d.data.length > 0) {
+      const first = d.data[0];
+      uploadedUrl = typeof first === "string" ? first : (first?.url || first?.filePath || first?.file_url || "");
+    }
+  }
+
+  if (uploadedUrl && !/^https?:\/\//i.test(uploadedUrl)) {
+    const path = uploadedUrl.startsWith("/") ? uploadedUrl : `/${uploadedUrl}`;
+    uploadedUrl = `${API_BASE_URL}${path}`;
+  }
+
+  // 3. Post to ${API_BASE_URL}/irrl/addSubTransaction
+  const effectiveOrderId = String(
+    orderId ||
+    orderInfo?.order_number ||
+    orderInfo?.delivery_id ||
+    ""
+  );
+
+  const isTaxInvoice = (invoiceFormData?.invoiceType || "").toUpperCase() === "TAX";
+  const taxTypeSelected = isTaxInvoice ? "TAX" : (invoiceFormData?.taxType || "CGST_SGST");
+
+  const subTxPayload = {
+    id: 0,
+    order_id: effectiveOrderId,
+    invoice_id: String(invoiceNo || ""),
+    amount: Math.round(totals.totalAmount || 0),
+    image: uploadedUrl,
+    "upladed pdf url": uploadedUrl,
+    uploaded_pdf_url: uploadedUrl,
+    status: "PENDING",
+    type: invoiceFormData?.modeOfPayment || "Immediate",
+    from_date: invoiceFormData?.invoiceDate || "",
+    to_date: invoiceFormData?.returnDate || "",
+    tax_type: taxTypeSelected,
+    invoice_type: invoiceFormData?.invoiceType || "PROFORMA",
+  };
+
+  const addTxRes = await axios.post(`${API_BASE_URL}/irrl/addSubTransaction`, subTxPayload);
+
+  return {
+    uploadedUrl,
+    subTxPayload,
+    addTxRes,
+    totals,
+  };
 }

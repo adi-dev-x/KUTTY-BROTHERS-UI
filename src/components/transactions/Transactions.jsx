@@ -9,6 +9,7 @@ import {
   resolveOrderLevelInvoiceId,
   resolveInvoiceNumberForPrint,
   openProformaInvoicePdf,
+  uploadInvoicePdfAndAddSubTransaction,
   TAX_TYPE_OPTIONS,
   DEFAULT_TAX_TYPE,
   INVOICE_TYPE_OPTIONS,
@@ -69,6 +70,7 @@ const Transactions = ({ onLogout }) => {
   const [orderInfoForInvoice, setOrderInfoForInvoice] = useState(null);
 
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [submittingInvoice, setSubmittingInvoice] = useState(false);
   const [invoiceFormData, setInvoiceFormData] = useState({
     customerName: "",
     customerAddress: "",
@@ -159,20 +161,41 @@ const Transactions = ({ onLogout }) => {
     setShowInvoiceModal(true);
   };
 
-  const handlePrintInvoice = () => {
-    setShowInvoiceModal(false);
+  const handlePrintInvoice = async () => {
     const invoiceNo = resolveInvoiceNumberForPrint(
       orderItemsForInvoice,
       orderInfoForInvoice,
       "",
       orderIdFromNav
     );
+
     openProformaInvoicePdf({
       orderInfo: orderInfoForInvoice,
       orderItems: orderItemsForInvoice,
       invoiceFormData,
       invoiceNo,
     });
+
+    setSubmittingInvoice(true);
+    try {
+      await uploadInvoicePdfAndAddSubTransaction({
+        orderInfo: orderInfoForInvoice,
+        orderItems: orderItemsForInvoice,
+        invoiceFormData,
+        invoiceNo,
+        orderId: orderIdFromNav,
+      });
+      setShowInvoiceModal(false);
+      await fetchTransactions();
+    } catch (err) {
+      console.error("Failed to upload invoice or add sub-transaction:", err);
+      alert(
+        "Invoice opened for print, but automated upload/sub-transaction failed: " +
+          (err?.response?.data?.message || err.message)
+      );
+    } finally {
+      setSubmittingInvoice(false);
+    }
   };
 
   return (
@@ -471,9 +494,10 @@ const Transactions = ({ onLogout }) => {
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700"
+                  disabled={submittingInvoice}
+                  className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <FaFileInvoice /> Generate & Print Invoice
+                  <FaFileInvoice /> {submittingInvoice ? "Generating & Uploading…" : "Generate & Print Invoice"}
                 </button>
               </div>
             </form>
