@@ -234,7 +234,7 @@ const Orders = ({ onLogout }) => {
                         <th className={thClass}>Advance</th>
                         <th className={thClass}>Placed</th>
                         <th className={thClass}>Returned</th>
-                        <th className={thClass}>Transactions</th>
+                        <th className={thClass}>Invoice</th>
                         <th className={thClass}>Status</th>
                         <th className={`${thClass} text-right`}>Actions</th>
                       </tr>
