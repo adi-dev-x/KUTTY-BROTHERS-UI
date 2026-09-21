@@ -92,6 +92,11 @@ const Transactions = ({ onLogout }) => {
     invoiceType: DEFAULT_INVOICE_TYPE,
   });
 
+  const [showRowInvoiceModal, setShowRowInvoiceModal] = useState(false);
+  const [selectedRowForInvoice, setSelectedRowForInvoice] = useState(null);
+  const [rowTaxType, setRowTaxType] = useState("CGST_SGST");
+  const [generatingRowInvoice, setGeneratingRowInvoice] = useState(false);
+
   const fetchTransactions = async () => {
     if (!orderIdFromNav) return;
     setLoading(true);
@@ -234,6 +239,88 @@ const Transactions = ({ onLogout }) => {
     }
   };
 
+  const getOrderDataForTransaction = async (tx) => {
+    const targetOrderId = tx?.order_id || orderIdFromNav;
+    if (orderItemsForInvoice && orderItemsForInvoice.length > 0 && targetOrderId === orderIdFromNav) {
+      return { items: orderItemsForInvoice, info: orderInfoForInvoice };
+    }
+    if (!targetOrderId) {
+      return { items: orderItemsForInvoice || [], info: orderInfoForInvoice };
+    }
+    try {
+      const res = await axios.get(
+        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${targetOrderId}'`
+      );
+      const data = res.data?.data || [];
+      const info = buildInvoiceOrderInfo(data, targetOrderId, tx?.invoice_id || "");
+      return { items: data, info };
+    } catch (err) {
+      console.error("Failed to fetch order details for transaction row:", err);
+      return { items: orderItemsForInvoice || [], info: orderInfoForInvoice };
+    }
+  };
+
+  const handleOpenRowInvoiceModal = (row) => {
+    setSelectedRowForInvoice(row);
+    const existingTax = (row?.tax_type || "").toUpperCase();
+    if (existingTax === "IGST") {
+      setRowTaxType("IGST");
+    } else {
+      setRowTaxType("CGST_SGST");
+    }
+    setShowRowInvoiceModal(true);
+  };
+
+  const handleGenerateRowInvoice = async () => {
+    if (!selectedRowForInvoice) return;
+
+    setGeneratingRowInvoice(true);
+    try {
+      const row = selectedRowForInvoice;
+      const { items, info } = await getOrderDataForTransaction(row);
+
+      const effectiveInvoiceNo =
+        row.invoice_id ||
+        resolveInvoiceNumberForPrint(
+          items,
+          info,
+          "",
+          row.order_id || orderIdFromNav
+        );
+
+      const invoiceData = {
+        customerName: info?.customer_name || invoiceFormData.customerName || "N/A",
+        customerAddress: invoiceFormData.customerAddress || "",
+        customerGSTIN: info?.customer_gst || invoiceFormData.customerGSTIN || "",
+        invoiceDate:
+          row.from_date ||
+          invoiceFormData.invoiceDate ||
+          new Date().toISOString().split("T")[0],
+        returnDate: row.to_date || invoiceFormData.returnDate || "",
+        modeOfPayment: row.type || invoiceFormData.modeOfPayment || "Immediate",
+        taxType: rowTaxType,
+        invoiceType:
+          row.invoice_type ||
+          (rowTaxType === "TAX" ? "TAX" : invoiceFormData.invoiceType || "PROFORMA"),
+      };
+
+      openProformaInvoicePdf({
+        orderInfo: info,
+        orderItems: items,
+        invoiceFormData: invoiceData,
+        invoiceNo: effectiveInvoiceNo,
+      });
+
+      setShowRowInvoiceModal(false);
+      setSelectedRowForInvoice(null);
+    } catch (err) {
+      console.error("Error generating row invoice:", err);
+      alert("Failed to generate invoice: " + (err.message || "Unknown error"));
+    } finally {
+      setGeneratingRowInvoice(false);
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
       <Header onLogout={onLogout} />
@@ -368,6 +455,9 @@ const Transactions = ({ onLogout }) => {
                           <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
                             Image
                           </th>
+                          <th className="whitespace-nowrap px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-wide">
+                            Action
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 bg-white">
@@ -460,6 +550,18 @@ const Transactions = ({ onLogout }) => {
                                 ) : (
                                   <span className="text-slate-400">—</span>
                                 )}
+                              </td>
+                              <td
+                                className="whitespace-nowrap px-2.5 py-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenRowInvoiceModal(t)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 shadow-sm transition hover:border-amber-400 hover:bg-amber-100"
+                                >
+                                  <FaFileInvoice className="text-amber-600" /> Generate Invoice
+                                </button>
                               </td>
                             </tr>
                           );
@@ -604,6 +706,100 @@ const Transactions = ({ onLogout }) => {
                   className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <FaFileInvoice /> {submittingInvoice ? "Generating & Uploading…" : "Generate & Print Invoice"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showRowInvoiceModal && selectedRowForInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl ring-1 ring-slate-900/10">
+            <button
+              type="button"
+              className="absolute right-3.5 top-3.5 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              onClick={() => {
+                setShowRowInvoiceModal(false);
+                setSelectedRowForInvoice(null);
+              }}
+              aria-label="Close"
+            >
+              <FaTimes className="h-4 w-4" />
+            </button>
+
+            <div className="mb-4">
+              <h3 className="text-base font-bold text-slate-900 sm:text-lg">
+                Generate Invoice
+              </h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Choose tax type to generate and print invoice for transaction #{selectedRowForInvoice.id}
+              </p>
+            </div>
+
+            <div className="mb-4 space-y-1.5 rounded-lg border border-slate-200/80 bg-slate-50 p-3 text-xs text-slate-600">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Invoice ID:</span>
+                <span className="font-mono font-medium text-slate-800">
+                  {selectedRowForInvoice.invoice_id || "—"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Order ID:</span>
+                <span
+                  className="max-w-[200px] truncate font-mono font-medium text-slate-800"
+                  title={selectedRowForInvoice.order_id}
+                >
+                  {selectedRowForInvoice.order_id || "—"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Amount:</span>
+                <span className="font-semibold text-slate-900">
+                  {formatRupee(selectedRowForInvoice.amount)}
+                </span>
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleGenerateRowInvoice();
+              }}
+              className="flex flex-col gap-4"
+            >
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  Tax Type
+                </label>
+                <select
+                  value={rowTaxType}
+                  onChange={(e) => setRowTaxType(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                >
+                  <option value="CGST_SGST">CGST + SGST</option>
+                  <option value="IGST">IGST</option>
+                </select>
+              </div>
+
+              <div className="mt-2 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRowInvoiceModal(false);
+                    setSelectedRowForInvoice(null);
+                  }}
+                  className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={generatingRowInvoice}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <FaFileInvoice className="text-white" />
+                  {generatingRowInvoice ? "Preparing Invoice…" : "Generate & Print Invoice"}
                 </button>
               </div>
             </form>
