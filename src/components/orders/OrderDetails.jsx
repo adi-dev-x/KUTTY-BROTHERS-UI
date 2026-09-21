@@ -13,6 +13,10 @@ import {
   FaDownload,
   FaFileInvoice,
   FaExclamationTriangle,
+  FaCalendarAlt,
+  FaChevronLeft,
+  FaChevronRight,
+  FaCheck,
 } from "react-icons/fa";
 import { API_BASE_URL } from "../../config/api";
 import {
@@ -255,10 +259,17 @@ const OrderDetails = ({ onLogout }) => {
         (orderItems.length && orderInfo
           ? pickInvoiceIdFromRow(orderItems[0], orderInfo)
           : "") ||
-          resolveOrderLevelInvoiceId(orderItems, invoiceIdFromOrdersPage) ||
-          ""
+        resolveOrderLevelInvoiceId(orderItems, invoiceIdFromOrdersPage) ||
+        ""
       ).trim(),
     [orderItems, orderInfo, invoiceIdFromOrdersPage]
+  );
+
+  const [showExtendOrderModal, setShowExtendOrderModal] = useState(false);
+  const [extendedOrderDate, setExtendedOrderDate] = useState("");
+  const [calendarViewDate, setCalendarViewDate] = useState(new Date());
+  const [selectedExtendDate, setSelectedExtendDate] = useState(
+    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
   );
 
   const [selectedItem, setSelectedItem] = useState(null);
@@ -412,9 +423,9 @@ const OrderDetails = ({ onLogout }) => {
       console.error("Update order pass failed:", err);
       alert(
         err.response?.data?.msg ||
-          err.response?.data?.message ||
-          err.message ||
-          "Could not save pass."
+        err.response?.data?.message ||
+        err.message ||
+        "Could not save pass."
       );
     } finally {
       setPassSaving(false);
@@ -520,10 +531,10 @@ const OrderDetails = ({ onLogout }) => {
       /** Inventory / SKU id for markDamage — not the delivery line id */
       const catalogItemId = String(
         damageModalItem.item_newid ??
-          damageModalItem.item_id ??
-          damageModalItem.inventory_id ??
-          damageModalItem.Item_Id ??
-          ""
+        damageModalItem.item_id ??
+        damageModalItem.inventory_id ??
+        damageModalItem.Item_Id ??
+        ""
       ).trim();
 
       if (!deliveryItemId) {
@@ -938,7 +949,7 @@ const OrderDetails = ({ onLogout }) => {
       console.error("Failed to upload invoice or add sub-transaction:", err);
       alert(
         "Invoice opened for print, but automated upload/sub-transaction failed: " +
-          (err?.response?.data?.message || err.message)
+        (err?.response?.data?.message || err.message)
       );
     } finally {
       setSubmittingInvoice(false);
@@ -1139,19 +1150,22 @@ const OrderDetails = ({ onLogout }) => {
                   <div className="truncate font-medium text-slate-900">{orderInfo.customer_name}</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[11px] font-medium text-slate-500">Order date</div>
+                  <div className="text-[11px] font-medium text-slate-500">Placed date</div>
                   <div className="font-medium text-slate-900">{orderInfo.order_date}</div>
                 </div>
-                {orderInfo.customer_gst && (
+                {(orderInfo.customer_gst || orderInfo.delivery_challan_number || orderInfo.delivery_chelan_number) ? (
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium text-slate-500">
+                      {orderInfo.customer_gst ? "Customer GST" : "DC number"}
+                    </div>
+                    <div className="truncate font-mono text-xs font-medium text-slate-900">
+                      {orderInfo.customer_gst || orderInfo.delivery_challan_number || orderInfo.delivery_chelan_number}
+                    </div>
+                  </div>
+                ) : (
                   <div className="min-w-0">
                     <div className="text-[11px] font-medium text-slate-500">Customer GST</div>
-                    <div className="truncate font-mono text-xs font-medium text-slate-900">{orderInfo.customer_gst}</div>
-                  </div>
-                )}
-                {orderInfo.delivery_challan_number && (
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-medium text-slate-500">DC number</div>
-                    <div className="font-mono text-xs font-medium text-slate-900">{orderInfo.delivery_challan_number}</div>
+                    <div className="text-xs font-medium text-slate-400">—</div>
                   </div>
                 )}
                 <div className="min-w-0">
@@ -1176,6 +1190,20 @@ const OrderDetails = ({ onLogout }) => {
                   <div className="font-semibold uppercase tracking-wide text-slate-900">
                     {orderLevelStatus || "—"}
                   </div>
+                </div>
+                <div className="min-w-0 pt-2 sm:pt-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowExtendOrderModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 shadow-sm transition hover:border-amber-400 hover:bg-amber-100"
+                  >
+                    <FaCalendarAlt className="text-amber-700" /> Extend Order
+                  </button>
+                  {extendedOrderDate && (
+                    <div className="mt-1 text-[11px] font-semibold text-emerald-700">
+                      Extended: {new Date(extendedOrderDate).toLocaleDateString()}
+                    </div>
+                  )}
                 </div>
                 <div className="col-span-2 flex flex-col gap-2 border-t border-slate-200 pt-2 sm:flex-row sm:items-end sm:justify-between lg:col-span-4">
                   <div className="min-w-0">
@@ -1245,117 +1273,117 @@ const OrderDetails = ({ onLogout }) => {
               Items in order
             </h3>
             <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
-            <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
-              <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-slate-600 shadow-sm">
-                <tr>
-                  <th className="w-10 whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">S.No</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Item code</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Invoice ID</th>
-                  <th className="min-w-[8rem] px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Item name</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Rent</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Current</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Generated</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Status</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Damage</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Placed</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Returned</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Before</th>
-                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">After</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {orderItems.map((item, idx) => {
-                  const cleanAfterUrl = item.after_images
-                    ? item.after_images.replace(/[{}]/g, "").trim()
-                    : null;
+              <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
+                <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-slate-600 shadow-sm">
+                  <tr>
+                    <th className="w-10 whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">S.No</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Item code</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Invoice ID</th>
+                    <th className="min-w-[8rem] px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Item name</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Rent</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Current</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Generated</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Status</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Damage</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Placed</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Returned</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Before</th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">After</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {orderItems.map((item, idx) => {
+                    const cleanAfterUrl = item.after_images
+                      ? item.after_images.replace(/[{}]/g, "").trim()
+                      : null;
 
-                  const currentAmount = parseInt(item.current_amount) || 0;
-                  const generatedAmount = Math.round(item.generated_amount);
+                    const currentAmount = parseInt(item.current_amount) || 0;
+                    const generatedAmount = Math.round(item.generated_amount);
 
-                  const normalizedLineStatus = normalizeLineItemStatusForSelect(item.status);
-                  const lineStatusUpper = String(normalizedLineStatus || "").toUpperCase();
-                  const lineStatusEditable = LINE_ITEM_STATUS_EDIT_OPTIONS.includes(lineStatusUpper);
+                    const normalizedLineStatus = normalizeLineItemStatusForSelect(item.status);
+                    const lineStatusUpper = String(normalizedLineStatus || "").toUpperCase();
+                    const lineStatusEditable = LINE_ITEM_STATUS_EDIT_OPTIONS.includes(lineStatusUpper);
 
-                  return (
-                    <tr key={`${item.delivery_item_id}-${idx}`} className="transition-colors hover:bg-amber-50/50">
-                      <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-600 sm:px-3">{idx + 1}</td>
-                      <td className="max-w-[7rem] truncate px-2 py-1.5 font-medium text-slate-900 sm:px-3">{item.item_code || "N/A"}</td>
-                      <td className="max-w-[6rem] truncate px-2 py-1.5 font-mono text-[11px] text-slate-800 sm:px-3">
-                        {pickInvoiceIdFromRow(item, orderInfo) || "—"}
-                      </td>
-                      <td className="max-w-[12rem] truncate px-2 py-1.5 text-slate-900 sm:max-w-none sm:px-3">{item.item_name || "N/A"}</td>
-                      <td className="whitespace-nowrap px-2 py-1.5 tabular-nums sm:px-3">₹{item.rent_amount}</td>
-                      <td className="whitespace-nowrap px-2 py-1.5 tabular-nums sm:px-3">₹{currentAmount}</td>
-                      <td className="whitespace-nowrap px-2 py-1.5 font-semibold tabular-nums text-blue-600 sm:px-3">₹{generatedAmount}</td>
-                      <td className="px-2 py-1.5 sm:px-3">
-                        {(item.status || "").toUpperCase() === "DAMAGED" ? (
-                          <span className="inline-flex rounded-md bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-rose-800 ring-1 ring-rose-200 sm:text-xs">
-                            DAMAGED
-                          </span>
-                        ) : (
-                          <select
-                            value={lineStatusEditable ? lineStatusUpper : ""}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              if (v) handleInlineStatusChange(item, v);
+                    return (
+                      <tr key={`${item.delivery_item_id}-${idx}`} className="transition-colors hover:bg-amber-50/50">
+                        <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-600 sm:px-3">{idx + 1}</td>
+                        <td className="max-w-[7rem] truncate px-2 py-1.5 font-medium text-slate-900 sm:px-3">{item.item_code || "N/A"}</td>
+                        <td className="max-w-[6rem] truncate px-2 py-1.5 font-mono text-[11px] text-slate-800 sm:px-3">
+                          {pickInvoiceIdFromRow(item, orderInfo) || "—"}
+                        </td>
+                        <td className="max-w-[12rem] truncate px-2 py-1.5 text-slate-900 sm:max-w-none sm:px-3">{item.item_name || "N/A"}</td>
+                        <td className="whitespace-nowrap px-2 py-1.5 tabular-nums sm:px-3">₹{item.rent_amount}</td>
+                        <td className="whitespace-nowrap px-2 py-1.5 tabular-nums sm:px-3">₹{currentAmount}</td>
+                        <td className="whitespace-nowrap px-2 py-1.5 font-semibold tabular-nums text-blue-600 sm:px-3">₹{generatedAmount}</td>
+                        <td className="px-2 py-1.5 sm:px-3">
+                          {(item.status || "").toUpperCase() === "DAMAGED" ? (
+                            <span className="inline-flex rounded-md bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-rose-800 ring-1 ring-rose-200 sm:text-xs">
+                              DAMAGED
+                            </span>
+                          ) : (
+                            <select
+                              value={lineStatusEditable ? lineStatusUpper : ""}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                if (v) handleInlineStatusChange(item, v);
+                              }}
+                              className="min-w-[6.5rem] max-w-full rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 sm:min-w-[7.5rem] sm:text-xs"
+                            >
+                              {!lineStatusEditable ? (
+                                <option value="" disabled>
+                                  {normalizedLineStatus || item.status || "—"}
+                                </option>
+                              ) : null}
+                              {LINE_ITEM_STATUS_EDIT_OPTIONS.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                        <td className="px-2 py-1.5 sm:px-3">
+                          <button
+                            type="button"
+                            disabled={
+                              (item.status || "").toUpperCase() === "DAMAGED" ||
+                              isItemDamageFlagTrue(item)
+                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDamageModal(item);
                             }}
-                            className="min-w-[6.5rem] max-w-full rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 sm:min-w-[7.5rem] sm:text-xs"
+                            className="inline-flex max-w-full items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold leading-tight text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
                           >
-                            {!lineStatusEditable ? (
-                              <option value="" disabled>
-                                {normalizedLineStatus || item.status || "—"}
-                              </option>
-                            ) : null}
-                            {LINE_ITEM_STATUS_EDIT_OPTIONS.map((s) => (
-                              <option key={s} value={s}>
-                                {s}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </td>
-                      <td className="px-2 py-1.5 sm:px-3">
-                        <button
-                          type="button"
-                          disabled={
-                            (item.status || "").toUpperCase() === "DAMAGED" ||
-                            isItemDamageFlagTrue(item)
-                          }
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openDamageModal(item);
-                          }}
-                          className="inline-flex max-w-full items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold leading-tight text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
-                        >
-                          <FaExclamationTriangle className="shrink-0 text-rose-600" />
-                          <span className="hidden sm:inline">Move to damage</span>
-                          <span className="sm:hidden">Damage</span>
-                        </button>
-                      </td>
-                      <td className="max-w-[5rem] truncate px-2 py-1.5 text-[11px] text-slate-700 sm:max-w-none sm:px-3 sm:text-sm">{item.placed_at}</td>
-                      <td className="max-w-[5rem] truncate px-2 py-1.5 text-[11px] text-slate-700 sm:max-w-none sm:px-3 sm:text-sm">{item.returned_at}</td>
-                      <td className="px-2 py-1.5 sm:px-3">{renderBeforeImage(item.before_images, item)}</td>
-                      <td className="px-2 py-1.5 sm:px-3">
-                        {cleanAfterUrl ? (
-                          <a
-                            className="font-medium text-blue-600 underline-offset-2 hover:text-blue-700 hover:underline"
-                            href={cleanAfterUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            View
-                          </a>
-                        ) : (
-                          <span className="text-[11px] text-slate-400">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                            <FaExclamationTriangle className="shrink-0 text-rose-600" />
+                            <span className="hidden sm:inline">Move to damage</span>
+                            <span className="sm:hidden">Damage</span>
+                          </button>
+                        </td>
+                        <td className="max-w-[5rem] truncate px-2 py-1.5 text-[11px] text-slate-700 sm:max-w-none sm:px-3 sm:text-sm">{item.placed_at}</td>
+                        <td className="max-w-[5rem] truncate px-2 py-1.5 text-[11px] text-slate-700 sm:max-w-none sm:px-3 sm:text-sm">{item.returned_at}</td>
+                        <td className="px-2 py-1.5 sm:px-3">{renderBeforeImage(item.before_images, item)}</td>
+                        <td className="px-2 py-1.5 sm:px-3">
+                          {cleanAfterUrl ? (
+                            <a
+                              className="font-medium text-blue-600 underline-offset-2 hover:text-blue-700 hover:underline"
+                              href={cleanAfterUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              View
+                            </a>
+                          ) : (
+                            <span className="text-[11px] text-slate-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
         </div>
       </div>
 
@@ -1618,6 +1646,239 @@ const OrderDetails = ({ onLogout }) => {
         </div>
 
       )}
+
+      {showExtendOrderModal && (() => {
+        const calYear = calendarViewDate.getFullYear();
+        const calMonth = calendarViewDate.getMonth();
+        const calMonthName = calendarViewDate.toLocaleString("default", { month: "long" });
+
+        const firstDayOfWeek = new Date(calYear, calMonth, 1).getDay();
+        const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+        const daysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
+
+        const prevMonthDays = [];
+        for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+          prevMonthDays.push(daysInPrevMonth - i);
+        }
+
+        const currentMonthDays = [];
+        for (let d = 1; d <= daysInMonth; d++) {
+          currentMonthDays.push(d);
+        }
+
+        const totalCells = prevMonthDays.length + currentMonthDays.length;
+        const remainingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+        const nextMonthDays = [];
+        for (let d = 1; d <= remainingCells; d++) {
+          nextMonthDays.push(d);
+        }
+
+        const todayStr = new Date().toISOString().split("T")[0];
+
+        const handleSetQuickDays = (days) => {
+          const target = new Date();
+          target.setDate(target.getDate() + days);
+          const s = target.toISOString().split("T")[0];
+          setSelectedExtendDate(s);
+          setCalendarViewDate(target);
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+              <button
+                type="button"
+                className="absolute right-3.5 top-3.5 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                onClick={() => setShowExtendOrderModal(false)}
+                aria-label="Close"
+              >
+                <FaTimes className="h-4 w-4" />
+              </button>
+
+              <div className="border-b border-slate-100 bg-slate-50/70 p-5 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800 shadow-sm">
+                    <FaCalendarAlt className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">Extend Order</h3>
+                    <p className="text-xs text-slate-500">Pick a new end date to extend order duration</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-slate-200/80 bg-white p-2.5 text-xs text-slate-600">
+                  <div>
+                    <span className="text-[11px] text-slate-400 block">Placed Date:</span>
+                    <span className="font-semibold text-slate-800">{orderInfo?.order_date || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-400 block">Extend Until:</span>
+                    <span className="font-bold text-amber-800">
+                      {selectedExtendDate
+                        ? new Date(selectedExtendDate).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })
+                        : "Select a date"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-5">
+                <div className="mb-3 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarViewDate(new Date(calYear, calMonth - 1, 1))}
+                    className="rounded-lg border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-100"
+                    title="Previous month"
+                  >
+                    <FaChevronLeft className="h-3 w-3" />
+                  </button>
+                  <span className="text-sm font-bold text-slate-800">
+                    {calMonthName} {calYear}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarViewDate(new Date(calYear, calMonth + 1, 1))}
+                    className="rounded-lg border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-100"
+                    title="Next month"
+                  >
+                    <FaChevronRight className="h-3 w-3" />
+                  </button>
+                </div>
+
+                <div className="mb-1 grid grid-cols-7 text-center text-[11px] font-semibold text-slate-400">
+                  <span>Su</span>
+                  <span>Mo</span>
+                  <span>Tu</span>
+                  <span>We</span>
+                  <span>Th</span>
+                  <span>Fr</span>
+                  <span>Sa</span>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                  {prevMonthDays.map((d) => (
+                    <button
+                      key={`prev-${d}`}
+                      type="button"
+                      onClick={() => {
+                        const prevM = new Date(calYear, calMonth - 1, d);
+                        const s = prevM.toISOString().split("T")[0];
+                        setSelectedExtendDate(s);
+                        setCalendarViewDate(new Date(calYear, calMonth - 1, 1));
+                      }}
+                      className="h-8 rounded-lg text-slate-300 hover:bg-slate-50"
+                    >
+                      {d}
+                    </button>
+                  ))}
+
+                  {currentMonthDays.map((d) => {
+                    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                    const isSelected = selectedExtendDate === dateStr;
+                    const isToday = todayStr === dateStr;
+
+                    return (
+                      <button
+                        key={`cur-${d}`}
+                        type="button"
+                        onClick={() => setSelectedExtendDate(dateStr)}
+                        className={`h-8 rounded-lg font-medium transition ${isSelected
+                            ? "bg-amber-600 font-bold text-white shadow-sm"
+                            : isToday
+                              ? "border border-amber-400 bg-amber-50 font-bold text-amber-900 hover:bg-amber-100"
+                              : "text-slate-700 hover:bg-slate-100"
+                          }`}
+                      >
+                        {d}
+                      </button>
+                    );
+                  })}
+
+                  {nextMonthDays.map((d) => (
+                    <button
+                      key={`next-${d}`}
+                      type="button"
+                      onClick={() => {
+                        const nextM = new Date(calYear, calMonth + 1, d);
+                        const s = nextM.toISOString().split("T")[0];
+                        setSelectedExtendDate(s);
+                        setCalendarViewDate(new Date(calYear, calMonth + 1, 1));
+                      }}
+                      className="h-8 rounded-lg text-slate-300 hover:bg-slate-50"
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span className="text-[11px] font-medium">Quick add:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSetQuickDays(7)}
+                      className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-amber-50 hover:text-amber-900"
+                    >
+                      +7d
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSetQuickDays(15)}
+                      className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-amber-50 hover:text-amber-900"
+                    >
+                      +15d
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSetQuickDays(30)}
+                      className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:bg-amber-50 hover:text-amber-900"
+                    >
+                      +30d
+                    </button>
+                  </div>
+                  <input
+                    type="date"
+                    value={selectedExtendDate}
+                    onChange={(e) => {
+                      setSelectedExtendDate(e.target.value);
+                      if (e.target.value) {
+                        const [y, m] = e.target.value.split("-").map(Number);
+                        if (y && m) setCalendarViewDate(new Date(y, m - 1, 1));
+                      }
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/50 p-4">
+                <button
+                  type="button"
+                  onClick={() => setShowExtendOrderModal(false)}
+                  className="rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedExtendDate) return;
+                    setExtendedOrderDate(selectedExtendDate);
+                    setShowExtendOrderModal(false);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-amber-700"
+                >
+                  <FaCheck className="h-3 w-3" /> Confirm Extension
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {initiatedModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
