@@ -46,47 +46,27 @@ const DAMAGE_RESTRICTED_STATUSES = ["INITIATED", "RESERVED"];
 /** Same as Orders list: line-item Status dropdown only allows these values */
 const LINE_ITEM_STATUS_EDIT_OPTIONS = ["COMPLETED", "BLOCKED"];
 
-/** If every line shares the same `status`, treat it as order-level (detail payload quirks). */
-function uniformLineItemStatus(items) {
-  if (!items?.length) return "";
-  const statuses = items.map((r) => String(r.status ?? "").trim()).filter(Boolean);
-  if (!statuses.length) return "";
-  const upper = statuses.map((s) => s.toUpperCase());
-  if (new Set(upper).size !== 1) return "";
-  return statuses[0];
+/** GET: returns { data: order } with line items under `order_items` */
+const orderDetailsUrl = (orderId) =>
+  `${API_BASE_URL}/irrl/orderDetails/${encodeURIComponent(orderId)}`;
+
+/** Order status from the API, then status passed from Orders list (navigation) */
+function resolveOrderLevelStatus(order, statusFromOrdersList = "") {
+  const raw = String(order?.status ?? "").trim() || String(statusFromOrdersList ?? "").trim();
+  return raw.toUpperCase() || "INITIATED";
 }
 
-/** Same intent as listOrders row `o.status`: scan joined rows for delivery/order-level columns first. */
-function pickOrderLevelDeliveryStatus(items) {
-  if (!items?.length) return "";
-  const keys = [
-    "order_status",
-    "order_delivery_status",
-    "delivery_order_status",
-    "Order_Status",
-    "orderStatus",
-  ];
-  for (const row of items) {
-    for (const key of keys) {
-      const v = row[key];
-      if (v != null && String(v).trim() !== "") return String(v).trim();
-    }
-  }
-  return "";
+/** Image fields come as URL arrays (orderDetails) or legacy "{url}" strings */
+function firstImageUrl(images) {
+  if (!images) return "";
+  if (Array.isArray(images)) return String(images.find(Boolean) ?? "").trim();
+  return String(images).replace(/[{}]/g, "").split(",")[0].trim();
 }
 
-/**
- * Prefer API order/delivery fields, then status passed from Orders list (navigation),
- * then uniform line `status`, then first line `status`.
- */
-function resolveOrderLevelStatus(items, statusFromOrdersList = "") {
-  const fromDelivery = pickOrderLevelDeliveryStatus(items);
-  const fromNav = String(statusFromOrdersList ?? "").trim();
-  const uniform = uniformLineItemStatus(items);
-  const firstLine = items?.[0] ? String(items[0].status ?? "").trim() : "";
-  const raw = fromDelivery || fromNav || uniform || firstLine || "";
-  const u = raw.toUpperCase().trim();
-  return u || "INITIATED";
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString();
 }
 
 function parseGuaranteeImagesFromRow(row) {
@@ -126,20 +106,6 @@ function parseGuaranteeImagesFromRow(row) {
     return [s];
   }
   return [];
-}
-
-function collectGuaranteeImagesFromItems(items) {
-  const out = [];
-  const seen = new Set();
-  for (const row of items || []) {
-    for (const u of parseGuaranteeImagesFromRow(row)) {
-      if (!seen.has(u)) {
-        seen.add(u);
-        out.push(u);
-      }
-    }
-  }
-  return out;
 }
 
 /** Legacy API used RETURNED; UI/API now use BLOCKED */
@@ -185,15 +151,6 @@ function pickVehicleNumberFromOrderRow(row) {
   return normalizeVehicleValue(v);
 }
 
-/** First line item row that has a real vehicle number, else first row (for pass fields) */
-function findRowForOrderLevelPassAndVehicle(data) {
-  if (!data?.length) return null;
-  for (const row of data) {
-    if (pickVehicleNumberFromOrderRow(row)) return row;
-  }
-  return data[0];
-}
-
 function pickPassFieldsFromOrderRow(row) {
   if (!row || typeof row !== "object") return {};
   const g = (snake, camel) => row[snake] ?? row[camel];
@@ -209,28 +166,38 @@ function orderHasVehicleNumber(vehicleVal) {
   return normalizeVehicleValue(vehicleVal).length > 0;
 }
 
-function buildOrderDetailsFromItems(data, deliveryId, invoiceIdFallback) {
-  if (!data?.length) return null;
-  const calculateGeneratedTotal = (items) =>
-    items.reduce((sum, item) => sum + parseInt(item.generated_amount || 0), 0);
-  const invoiceIdResolved = resolveOrderLevelInvoiceId(data, invoiceIdFallback);
-  const headerRow = findRowForOrderLevelPassAndVehicle(data);
-  const passFields = pickPassFieldsFromOrderRow(headerRow || data[0]);
+/** Maps the orderDetails `data` object to the header fields shown on this page */
+function buildOrderInfo(order, deliveryId, invoiceIdFallback) {
+  if (!order) return null;
+  const items = order.order_items || [];
+  const itemsGeneratedTotal = items.reduce(
+    (sum, item) => sum + (Number(item.generated_amount) || 0),
+    0
+  );
   return {
-    customer_name: data[0].customer_name || "N/A",
-    customer_gst: data[0].customer_gst || "",
-    delivery_chelan_number: data[0].delivery_chelan_number || "",
-    invoice_id: invoiceIdResolved,
-    invoice_number:
-      data[0].invoice_number ?? data[0].invoiceNumber ?? data[0].Invoice_Number ?? "",
-    order_number: data[0].order_number || deliveryId,
-    order_date: data[0].placed_at
-      ? new Date(data[0].placed_at).toLocaleDateString()
+    delivery_id: order.delivery_id || deliveryId,
+    customer_id: order.customer_id || "",
+    customer_name: order.customer_name || "N/A",
+    customer_gst: order.customer_gst || "",
+    contact_name: order.contact_name || "",
+    contact_number: order.contact_number || "",
+    shipping_address: order.shipping_address || "",
+    delivery_chelan_number: order.delivery_chelan_number || "",
+    invoice_id: String(pickInvoiceIdFromAPI(order) || invoiceIdFallback || "").trim(),
+    invoice_number: order.invoice_number || "",
+    order_number: order.order_number || deliveryId,
+    order_date: order.placed_at
+      ? new Date(order.placed_at).toLocaleDateString()
       : new Date().toLocaleDateString(),
-    advance_amount: parseInt(data[0].advance_amount || 0),
-    total_value: calculateGeneratedTotal(data),
-    vehicle_number: pickVehicleNumberFromOrderRow(headerRow || data[0]),
-    ...passFields,
+    expiry_at: order.expiry_at || "",
+    returned_at: order.returned_at || "",
+    advance_amount: Number(order.advance_amount) || 0,
+    discount: Number(order.discount) || 0,
+    current_amount: Number(order.current_amount) || 0,
+    total_value: Number(order.generated_amount) || itemsGeneratedTotal,
+    guarantee_images: parseGuaranteeImagesFromRow(order),
+    vehicle_number: pickVehicleNumberFromOrderRow(order),
+    ...pickPassFieldsFromOrderRow(order),
   };
 }
 
@@ -247,11 +214,8 @@ const OrderDetails = ({ onLogout }) => {
   const [orderItems, setOrderItems] = useState([]);
   const [orderInfo, setOrderInfo] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const guaranteeImageUrls = useMemo(
-    () => collectGuaranteeImagesFromItems(orderItems),
-    [orderItems]
-  );
+  console.log("this ----order infosss",orderInfo)
+  const guaranteeImageUrls = orderInfo?.guarantee_images || [];
 
   const previewInvoiceIdDisplay = useMemo(
     () =>
@@ -296,6 +260,7 @@ const OrderDetails = ({ onLogout }) => {
     modeOfPayment: 'Immediate',
     taxType: DEFAULT_TAX_TYPE,
     invoiceType: DEFAULT_INVOICE_TYPE,
+    daily_amount: '',
   });
 
   const [damageModalItem, setDamageModalItem] = useState(null);
@@ -325,6 +290,17 @@ const OrderDetails = ({ onLogout }) => {
     pass_exit_date: "",
     pass_exit_time: "",
   });
+
+  /** Fetches orderDetails and refreshes header info, line items and order status */
+  const loadOrderDetails = async (statusFallback = "") => {
+    const res = await axios.get(orderDetailsUrl(delivery_id));
+    const order = res.data?.data || null;
+    const od = buildOrderInfo(order, delivery_id, invoiceIdFromOrdersPage);
+    setOrderItems(order?.order_items || []);
+    setOrderInfo(od);
+    setOrderLevelStatus(resolveOrderLevelStatus(order, statusFallback));
+    return od;
+  };
 
   const openDamageModal = (item) => {
     const s = (item?.status || "").toUpperCase();
@@ -404,15 +380,8 @@ const OrderDetails = ({ onLogout }) => {
         headers: { "Content-Type": "application/json" },
       });
 
-      const res = await axios.get(
-        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
-      );
-      const data = res.data?.data || [];
-      setOrderItems(data);
-      if (data.length > 0) {
-        setOrderLevelStatus(resolveOrderLevelStatus(data, orderStatusFromOrdersList));
-        const od = buildOrderDetailsFromItems(data, delivery_id, invoiceIdFromOrdersPage);
-        setOrderInfo(od);
+      const od = await loadOrderDetails(orderStatusFromOrdersList);
+      if (od) {
         setDCFormData((prev) => ({
           ...prev,
           vehicleNumber: normalizeVehicleValue(od.vehicle_number).toUpperCase(),
@@ -474,14 +443,7 @@ const OrderDetails = ({ onLogout }) => {
         headers: { "Content-Type": "application/json" },
       });
 
-      const res = await axios.get(
-        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
-      );
-      const refreshed = res.data?.data || [];
-      setOrderItems(refreshed);
-      if (refreshed.length > 0) {
-        setOrderLevelStatus(resolveOrderLevelStatus(refreshed, ""));
-      }
+      await loadOrderDetails();
       closeInitiatedModal();
     } catch (err) {
       console.error("Initiate order failed:", err);
@@ -557,10 +519,7 @@ const OrderDetails = ({ onLogout }) => {
         headers: { "Content-Type": "application/json" },
       });
 
-      const res = await axios.get(
-        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
-      );
-      setOrderItems(res.data?.data || []);
+      await loadOrderDetails(orderStatusFromOrdersList);
       closeDamageModal();
     } catch (err) {
       console.error("Move to damage failed:", err);
@@ -573,25 +532,10 @@ const OrderDetails = ({ onLogout }) => {
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
-        const res = await axios.get(
-          `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
-        );
-        const data = res.data?.data || [];
-        setOrderItems(data);
+        const orderDetails = await loadOrderDetails(orderStatusFromOrdersList);
 
-        if (data.length > 0) {
-          setOrderLevelStatus(
-            resolveOrderLevelStatus(data, orderStatusFromOrdersList)
-          );
-        } else if (orderStatusFromOrdersList) {
-          setOrderLevelStatus(orderStatusFromOrdersList.toUpperCase());
-        }
-
-        if (data.length > 0) {
-          const orderDetails = buildOrderDetailsFromItems(data, delivery_id, invoiceIdFromOrdersPage);
-          setOrderInfo(orderDetails);
-
-          // Pre-populate DC form with API data (vehicle from order lines / pass)
+        if (orderDetails) {
+          // Pre-populate DC form with API data (vehicle from order pass)
           setDCFormData({
             vehicleNumber: normalizeVehicleValue(orderDetails.vehicle_number).toUpperCase(),
             partyGSTIN: orderDetails.customer_gst,
@@ -602,12 +546,13 @@ const OrderDetails = ({ onLogout }) => {
 
           setInvoiceFormData({
             customerName: orderDetails.customer_name,
-            customerAddress: "",
+            customerAddress: orderDetails.shipping_address,
             customerGSTIN: orderDetails.customer_gst,
             invoiceDate: new Date().toISOString().split("T")[0],
             returnDate: "",
             modeOfPayment: "Immediate",
             taxType: DEFAULT_TAX_TYPE,
+            daily_amount: "",
           });
         }
       } catch (err) {
@@ -969,10 +914,7 @@ const OrderDetails = ({ onLogout }) => {
       });
 
       // Refresh data
-      const res = await axios.get(
-        `${API_BASE_URL}/irrl/genericApiUnjoin/orderDetails?order_id='${delivery_id}'`
-      );
-      setOrderItems(res.data?.data || []);
+      await loadOrderDetails(orderStatusFromOrdersList);
     } catch (err) {
       console.error("Status update failed:", err);
       alert("Status update failed!");
@@ -980,9 +922,8 @@ const OrderDetails = ({ onLogout }) => {
   };
 
   const renderBeforeImage = (images, item) => {
-    if (!images || images === "{}") return <span>No images</span>;
-
-    const url = images.replace(/[{}]/g, "").trim();
+    const url = firstImageUrl(images);
+    if (!url) return <span className="text-[11px] text-slate-400">No images</span>;
 
     return (
       <button
@@ -1042,10 +983,7 @@ const OrderDetails = ({ onLogout }) => {
       setSelectedItem(null);
       setAfterImageFile(null);
 
-      const res = await axios.get(
-        `${API_BASE_URL}/irrl/genericApiJoin/orderDetails?order_id='${delivery_id}'`
-      );
-      setOrderItems(res.data?.data || []);
+      await loadOrderDetails(orderStatusFromOrdersList);
     } catch (err) {
       console.error("Save failed:", err);
       alert("Save failed!");
@@ -1089,7 +1027,8 @@ const OrderDetails = ({ onLogout }) => {
       </div>
     );
   }
-
+  console.log("second checkk---orderInfo.delivery_chelan_number--",orderInfo.delivery_chelan_number)
+    console.log("third checkk-----",orderInfo)
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-50">
       <Header onLogout={onLogout} />
@@ -1150,22 +1089,43 @@ const OrderDetails = ({ onLogout }) => {
                   <div className="truncate font-medium text-slate-900">{orderInfo.customer_name}</div>
                 </div>
                 <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-slate-500">Order number</div>
+                  <div className="truncate font-mono text-xs font-medium text-slate-900">{orderInfo.order_number || "—"}</div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-slate-500">Order number</div>
+                  <div className="truncate font-mono text-xs font-medium text-slate-900">{orderInfo.order_number || "—"}</div>
+                </div>
+                <div className="min-w-0">
                   <div className="text-[11px] font-medium text-slate-500">Placed date</div>
                   <div className="font-medium text-slate-900">{orderInfo.order_date}</div>
                 </div>
-                {(orderInfo.customer_gst || orderInfo.delivery_challan_number || orderInfo.delivery_chelan_number) ? (
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-medium text-slate-500">
-                      {orderInfo.customer_gst ? "Customer GST" : "DC number"}
-                    </div>
-                    <div className="truncate font-mono text-xs font-medium text-slate-900">
-                      {orderInfo.customer_gst || orderInfo.delivery_challan_number || orderInfo.delivery_chelan_number}
-                    </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-slate-500">Expiry date</div>
+                  <div className="font-medium text-slate-900">{formatDate(orderInfo.expiry_at)}</div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-slate-500">Contact</div>
+                  <div className="truncate font-medium text-slate-900">
+                    {[orderInfo.contact_name, orderInfo.contact_number].filter(Boolean).join(" · ") || "—"}
                   </div>
-                ) : (
+                </div>
+                <div className="min-w-0 lg:col-span-2">
+                  <div className="text-[11px] font-medium text-slate-500">Shipping address</div>
+                  <div className="truncate font-medium text-slate-900" title={orderInfo.shipping_address}>
+                    {orderInfo.shipping_address || "—"}
+                  </div>
+                </div>
+                {orderInfo.customer_gst && (
                   <div className="min-w-0">
                     <div className="text-[11px] font-medium text-slate-500">Customer GST</div>
-                    <div className="text-xs font-medium text-slate-400">—</div>
+                    <div className="truncate font-mono text-xs font-medium text-slate-900">{orderInfo.customer_gst}</div>
+                  </div>
+                )}
+                {orderInfo.delivery_chelan_number && (
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-medium text-slate-500">DC number</div>
+                    <div className="font-mono text-xs font-medium text-slate-900">{orderInfo.delivery_chelan_number}</div>
                   </div>
                 )}
                 <div className="min-w-0">
@@ -1184,6 +1144,14 @@ const OrderDetails = ({ onLogout }) => {
                 <div>
                   <div className="text-[11px] font-medium text-slate-500">Total value</div>
                   <div className="font-semibold text-blue-600">₹{orderInfo.total_value}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-medium text-slate-500">Current amount</div>
+                  <div className="font-medium text-slate-900">₹{orderInfo.current_amount}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] font-medium text-slate-500">Discount</div>
+                  <div className="font-medium text-slate-900">₹{orderInfo.discount}</div>
                 </div>
                 <div>
                   <div className="text-[11px] font-medium text-slate-500">Order status</div>
@@ -1273,29 +1241,27 @@ const OrderDetails = ({ onLogout }) => {
               Items in order
             </h3>
             <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100">
-              <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
-                <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-slate-600 shadow-sm">
-                  <tr>
-                    <th className="w-10 whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">S.No</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Item code</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Invoice ID</th>
-                    <th className="min-w-[8rem] px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Item name</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Rent</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Current</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Generated</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Status</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Damage</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Placed</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Returned</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Before</th>
-                    <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">After</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {orderItems.map((item, idx) => {
-                    const cleanAfterUrl = item.after_images
-                      ? item.after_images.replace(/[{}]/g, "").trim()
-                      : null;
+            <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
+              <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-slate-600 shadow-sm">
+                <tr>
+                  <th className="w-10 whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">S.No</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Item code</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Invoice ID</th>
+                  <th className="min-w-[8rem] px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Item name</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Rent</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Current</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Generated</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Status</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Damage</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Placed</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Return</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">Before</th>
+                  <th className="whitespace-nowrap px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide sm:px-3">After</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {orderItems.map((item, idx) => {
+                  const cleanAfterUrl = firstImageUrl(item.after_images);
 
                     const currentAmount = parseInt(item.current_amount) || 0;
                     const generatedAmount = Math.round(item.generated_amount);
@@ -1304,86 +1270,86 @@ const OrderDetails = ({ onLogout }) => {
                     const lineStatusUpper = String(normalizedLineStatus || "").toUpperCase();
                     const lineStatusEditable = LINE_ITEM_STATUS_EDIT_OPTIONS.includes(lineStatusUpper);
 
-                    return (
-                      <tr key={`${item.delivery_item_id}-${idx}`} className="transition-colors hover:bg-amber-50/50">
-                        <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-600 sm:px-3">{idx + 1}</td>
-                        <td className="max-w-[7rem] truncate px-2 py-1.5 font-medium text-slate-900 sm:px-3">{item.item_code || "N/A"}</td>
-                        <td className="max-w-[6rem] truncate px-2 py-1.5 font-mono text-[11px] text-slate-800 sm:px-3">
-                          {pickInvoiceIdFromRow(item, orderInfo) || "—"}
-                        </td>
-                        <td className="max-w-[12rem] truncate px-2 py-1.5 text-slate-900 sm:max-w-none sm:px-3">{item.item_name || "N/A"}</td>
-                        <td className="whitespace-nowrap px-2 py-1.5 tabular-nums sm:px-3">₹{item.rent_amount}</td>
-                        <td className="whitespace-nowrap px-2 py-1.5 tabular-nums sm:px-3">₹{currentAmount}</td>
-                        <td className="whitespace-nowrap px-2 py-1.5 font-semibold tabular-nums text-blue-600 sm:px-3">₹{generatedAmount}</td>
-                        <td className="px-2 py-1.5 sm:px-3">
-                          {(item.status || "").toUpperCase() === "DAMAGED" ? (
-                            <span className="inline-flex rounded-md bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-rose-800 ring-1 ring-rose-200 sm:text-xs">
-                              DAMAGED
-                            </span>
-                          ) : (
-                            <select
-                              value={lineStatusEditable ? lineStatusUpper : ""}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                if (v) handleInlineStatusChange(item, v);
-                              }}
-                              className="min-w-[6.5rem] max-w-full rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 sm:min-w-[7.5rem] sm:text-xs"
-                            >
-                              {!lineStatusEditable ? (
-                                <option value="" disabled>
-                                  {normalizedLineStatus || item.status || "—"}
-                                </option>
-                              ) : null}
-                              {LINE_ITEM_STATUS_EDIT_OPTIONS.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                        </td>
-                        <td className="px-2 py-1.5 sm:px-3">
-                          <button
-                            type="button"
-                            disabled={
-                              (item.status || "").toUpperCase() === "DAMAGED" ||
-                              isItemDamageFlagTrue(item)
-                            }
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openDamageModal(item);
+                  return (
+                    <tr key={`${item.delivery_item_id}-${idx}`} className="transition-colors hover:bg-amber-50/50">
+                      <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-600 sm:px-3">{idx + 1}</td>
+                      <td className="max-w-[7rem] truncate px-2 py-1.5 font-medium text-slate-900 sm:px-3">{item.item_code || "N/A"}</td>
+                      <td className="max-w-[6rem] truncate px-2 py-1.5 font-mono text-[11px] text-slate-800 sm:px-3">
+                        {pickInvoiceIdFromRow(item, orderInfo) || "—"}
+                      </td>
+                      <td className="max-w-[12rem] truncate px-2 py-1.5 text-slate-900 sm:max-w-none sm:px-3">{item.item_name || "N/A"}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5 tabular-nums sm:px-3">₹{item.rent_amount}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5 tabular-nums sm:px-3">₹{currentAmount}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5 font-semibold tabular-nums text-blue-600 sm:px-3">₹{generatedAmount}</td>
+                      <td className="px-2 py-1.5 sm:px-3">
+                        {(item.status || "").toUpperCase() === "DAMAGED" ? (
+                          <span className="inline-flex rounded-md bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-rose-800 ring-1 ring-rose-200 sm:text-xs">
+                            DAMAGED
+                          </span>
+                        ) : (
+                          <select
+                            value={lineStatusEditable ? lineStatusUpper : ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v) handleInlineStatusChange(item, v);
                             }}
-                            className="inline-flex max-w-full items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold leading-tight text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
+                            className="min-w-[6.5rem] max-w-full rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 sm:min-w-[7.5rem] sm:text-xs"
                           >
-                            <FaExclamationTriangle className="shrink-0 text-rose-600" />
-                            <span className="hidden sm:inline">Move to damage</span>
-                            <span className="sm:hidden">Damage</span>
-                          </button>
-                        </td>
-                        <td className="max-w-[5rem] truncate px-2 py-1.5 text-[11px] text-slate-700 sm:max-w-none sm:px-3 sm:text-sm">{item.placed_at}</td>
-                        <td className="max-w-[5rem] truncate px-2 py-1.5 text-[11px] text-slate-700 sm:max-w-none sm:px-3 sm:text-sm">{item.returned_at}</td>
-                        <td className="px-2 py-1.5 sm:px-3">{renderBeforeImage(item.before_images, item)}</td>
-                        <td className="px-2 py-1.5 sm:px-3">
-                          {cleanAfterUrl ? (
-                            <a
-                              className="font-medium text-blue-600 underline-offset-2 hover:text-blue-700 hover:underline"
-                              href={cleanAfterUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              View
-                            </a>
-                          ) : (
-                            <span className="text-[11px] text-slate-400">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            {!lineStatusEditable ? (
+                              <option value="" disabled>
+                                {normalizedLineStatus || item.status || "—"}
+                              </option>
+                            ) : null}
+                            {LINE_ITEM_STATUS_EDIT_OPTIONS.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                      <td className="px-2 py-1.5 sm:px-3">
+                        <button
+                          type="button"
+                          disabled={
+                            (item.status || "").toUpperCase() === "DAMAGED" ||
+                            isItemDamageFlagTrue(item)
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDamageModal(item);
+                          }}
+                          className="inline-flex max-w-full items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-[10px] font-semibold leading-tight text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
+                        >
+                          <FaExclamationTriangle className="shrink-0 text-rose-600" />
+                          <span className="hidden sm:inline">Move to damage</span>
+                          <span className="sm:hidden">Damage</span>
+                        </button>
+                      </td>
+                      <td className="max-w-[5rem] truncate px-2 py-1.5 text-[11px] text-slate-700 sm:max-w-none sm:px-3 sm:text-sm">{formatDate(item.placed_at)}</td>
+                      <td className="max-w-[5rem] truncate px-2 py-1.5 text-[11px] text-slate-700 sm:max-w-none sm:px-3 sm:text-sm">{formatDate(item.returned_at)}</td>
+                      <td className="px-2 py-1.5 sm:px-3">{renderBeforeImage(item.before_images, item)}</td>
+                      <td className="px-2 py-1.5 sm:px-3">
+                        {cleanAfterUrl ? (
+                          <a
+                            className="font-medium text-blue-600 underline-offset-2 hover:text-blue-700 hover:underline"
+                            href={cleanAfterUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            View
+                          </a>
+                        ) : (
+                          <span className="text-[11px] text-slate-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
+        </div>
         </div>
       </div>
 
@@ -1592,6 +1558,21 @@ const OrderDetails = ({ onLogout }) => {
                     className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Daily Amount (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Leave blank to use each item's own rate"
+                  value={invoiceFormData.daily_amount}
+                  onChange={(e) => setInvoiceFormData(prev => ({ ...prev, daily_amount: e.target.value }))}
+                  className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  When set, this rate is used for every line item instead of its stored rent amount.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -2336,11 +2317,11 @@ const OrderDetails = ({ onLogout }) => {
                     <FaUpload /> {uploading ? "Uploading..." : "Upload After Image"}
                   </button>
 
-                  {selectedItem.after_images && (
+                  {firstImageUrl(selectedItem.after_images) && (
                     <>
                       <h4 className="text-base font-semibold text-gray-900">After Image Preview</h4>
                       <img
-                        src={selectedItem.after_images.replace(/[{}]/g, "").trim()}
+                        src={firstImageUrl(selectedItem.after_images)}
                         alt="after"
                         className="max-h-[60vh] w-full rounded-md object-contain"
                       />

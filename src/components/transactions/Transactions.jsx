@@ -90,6 +90,7 @@ const Transactions = ({ onLogout }) => {
     modeOfPayment: "Immediate",
     taxType: DEFAULT_TAX_TYPE,
     invoiceType: DEFAULT_INVOICE_TYPE,
+    daily_amount: "",
   });
 
   const [showRowInvoiceModal, setShowRowInvoiceModal] = useState(false);
@@ -659,6 +660,21 @@ const Transactions = ({ onLogout }) => {
                     className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Daily Amount (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Leave blank to use each item's own rate"
+                  value={invoiceFormData.daily_amount}
+                  onChange={(e) => setInvoiceFormData((prev) => ({ ...prev, daily_amount: e.target.value }))}
+                  className="w-full rounded-md border-2 border-gray-200 px-3 py-2 text-sm focus:border-yellow-600 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  When set, this rate is used for every line item instead of its stored rent amount.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

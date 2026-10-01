@@ -109,16 +109,20 @@ function numberToWords(num) {
  * Calculates item totals, taxes, and final balance for the invoice.
  */
 export function calculateInvoiceTotals(orderItems = [], invoiceFormData = {}, orderInfo = {}) {
+  const dailyAmountOverride = parseInt(invoiceFormData.daily_amount, 10);
+  const hasDailyAmountOverride = Number.isFinite(dailyAmountOverride) && dailyAmountOverride >= 0;
+
   const getDaysAndTotal = (item) => {
+    const rate = hasDailyAmountOverride ? dailyAmountOverride : parseInt(item.rent_amount) || 0;
     if (!invoiceFormData.returnDate || !item.placed_at) {
-      return { days: 1, total: parseInt(item.generated_amount) || 0 };
+      return { days: 1, rate, total: hasDailyAmountOverride ? rate : parseInt(item.generated_amount) || 0 };
     }
     const placedDate = new Date(item.placed_at);
     const returnDate = new Date(invoiceFormData.returnDate);
     const diffTime = returnDate - placedDate;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const days = diffDays > 0 ? diffDays : 1;
-    return { days, total: days * (parseInt(item.rent_amount) || 0) };
+    return { days, rate, total: days * rate };
   };
 
   const subTotal = orderItems.reduce((sum, item) => sum + getDaysAndTotal(item).total, 0);
@@ -368,7 +372,7 @@ export function generateInvoiceHTML({
               </thead>
               <tbody>
                 ${orderItems.map((item, index) => {
-                  const { days, total } = getDaysAndTotal(item);
+                  const { days, rate, total } = getDaysAndTotal(item);
                   const hsn = pickHsnFromOrderItem(item) || "—";
                   return `
                     <tr>
@@ -376,7 +380,7 @@ export function generateInvoiceHTML({
                       <td>${item.item_name || 'Item'}</td>
                       <td class="text-center">${hsn}</td>
                       <td class="text-center">${days}</td>
-                      <td class="text-right">${item.rent_amount}</td>
+                      <td class="text-right">${rate}</td>
                       <td class="text-right">${Math.round(total)}</td>
                     </tr>
                   `;
