@@ -27,13 +27,16 @@ export const installServerStatusInterceptor = () => {
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (...args) => {
     const response = await originalFetch(...args);
+    // Check the body regardless of content-type; the backend may not label it JSON.
     const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      response
-        .clone()
-        .json()
-        .then((data) => isServerStarting(data) && notify())
-        .catch(() => {});
+    const isBinary = /image|pdf|octet-stream|zip|spreadsheet|video|audio/.test(contentType);
+    if (!isBinary) {
+      try {
+        const text = await response.clone().text();
+        if (text.includes("server_starting") && isServerStarting(text)) notify();
+      } catch {
+        // ignore unreadable bodies
+      }
     }
     return response;
   };
