@@ -277,7 +277,7 @@ const StockReport = ({ onLogout }) => {
 
   // Add stock
   const handleAddStock = async () => {
-    if (!formData.item_name || !formData.product_code || !formData.add_count) {
+    if (!formData.item_name || !formData.add_count) {
       return alert("Please fill all required fields");
     }
 
@@ -638,7 +638,7 @@ const StockReport = ({ onLogout }) => {
                       </div>
 
 
-                      <div className="sm:col-span-2">
+                      {/* <div className="sm:col-span-2">
                         <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Product code</label>
                         <input
                           type="text"
@@ -647,7 +647,7 @@ const StockReport = ({ onLogout }) => {
                           disabled={formMode === "restock"}
                           className={`${formFieldClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
                         />
-                      </div>
+                      </div> */}
 
                       <div className="sm:col-span-2">
                         <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">HSN code</label>
