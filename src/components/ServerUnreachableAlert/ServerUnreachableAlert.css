@@ -1,0 +1,132 @@
+.sua-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+  animation: sua-fade 0.2s ease-out;
+}
+
+.sua-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 28px 24px 22px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  font-family: inherit;
+  animation: sua-pop 0.25s ease-out;
+}
+
+.sua-icon {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d97706;
+  background: #fef3c7;
+}
+
+.sua-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid #f59e0b;
+  animation: sua-pulse 1.6s ease-out infinite;
+}
+
+.sua-title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sua-message {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.sua-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  overflow: hidden;
+}
+
+.sua-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+  transition: width 1s linear;
+}
+
+.sua-countdown {
+  margin: 8px 0 20px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.sua-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.sua-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.sua-btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.sua-btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.sua-btn-primary {
+  background: #d97706;
+  color: #fff;
+}
+
+.sua-btn-primary:hover:not(:disabled) {
+  background: #b45309;
+}
+
+.sua-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes sua-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sua-pop {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes sua-pulse {
+  from { transform: scale(1); opacity: 0.8; }
+  to { transform: scale(1.5); opacity: 0; }
+}
